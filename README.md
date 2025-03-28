@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Getting Started
 
-First, run the development server:
+📌 MyDebugTools
 
-```bash
+A developer’s all-in-one debugging toolkit — JSON Formatter, JWT Decoder, API Tester, and more!
+
+🚀 Live Demo: [Coming Soon]
+
+⚡ Features
+
+✅ JSON Formatter & Beautifier
+✅ JWT Decoder
+✅ Base64 Encode & Decode
+✅ Lightweight API Tester (like Postman)
+✅ Icon Finder
+
+📦 Tech Stack
+	•	Frontend: Next.js + Tailwind CSS
+	•	Deployment: Vercel
+
+🚀 Installation & Setup
+	1.	Clone the repo:
+
+git clone https://github.com/yourusername/mydebugtools.git
+cd mydebugtools
+
+
+	2.	Install dependencies:
+
+npm install
+
+
+	3.	Run the app:
+
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+	4.	Open http://localhost:3000 in your browser.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Learn More
+💡 Roadmap
 
-To learn more about Next.js, take a look at the following resources:
+✅ Phase 1 - Core Features
+🟡 Phase 2 - User Accounts & History
+🔜 Phase 3 - Chrome Extension
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+📜 License
 
-## Deploy on Vercel
+MIT License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+🔗 Contribute & Star this repo! 🌟
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+ Here’s a basic structure for your landing page:
+
+📌 Header: “Your all-in-one debugging toolkit”
+💡 Hero Section: Screenshot + Quick Feature List
+🎯 Why Use MyDebugTools? Speed, Clean UI, Free Forever
+🚀 Tools Preview: Grid layout of 5 tools
+✅ Call to Action: “Try Now” button
