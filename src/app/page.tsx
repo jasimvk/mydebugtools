@@ -5,7 +5,7 @@ import ToolsPreview from './components/ToolsPreview';
 
 export default function Home() {
   return (
-    <main>
+    <main className="min-h-screen">
       <Hero />
       <Features />
       <WhyUse />
