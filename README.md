@@ -51,6 +51,7 @@ MIT License
 
 🔗 Contribute & Star this repo! 🌟
 
+<<<<<<< HEAD
  Here’s a basic structure for your landing page:
 
 📌 Header: “Your all-in-one debugging toolkit”
@@ -58,3 +59,6 @@ MIT License
 🎯 Why Use MyDebugTools? Speed, Clean UI, Free Forever
 🚀 Tools Preview: Grid layout of 5 tools
 ✅ Call to Action: “Try Now” button
+=======
+ 
+>>>>>>> 7ae0fe1e8a470fac8bf6e12e524e137b0dfda4b5
