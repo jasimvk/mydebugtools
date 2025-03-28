@@ -17,7 +17,6 @@ library.add(fas, far, fab);
 
 type IconStyle = 'outline' | 'solid' | 'regular' | 'brands';
 type IconProvider = 'heroicons' | 'material-ui' | 'fontawesome' | 'simple-icons';
-type CopyFormat = 'react' | 'html' | 'svg';
 
 interface IconProviderInfo {
   name: string;
@@ -53,22 +52,9 @@ const iconProviders: Record<IconProvider, IconProviderInfo> = {
   }
 };
 
-// Icon categories for better organization
-const categories = {
-  'Interface': ['Plus', 'Minus', 'X', 'Check', 'Menu', 'Search', 'ArrowLeft', 'ArrowRight'],
-  'Communication': ['Mail', 'Phone', 'Chat', 'Bell'],
-  'Media': ['Photo', 'Video', 'Music', 'Play', 'Pause'],
-  'Files': ['Document', 'Folder', 'Download', 'Upload'],
-  'Commerce': ['ShoppingCart', 'CreditCard', 'Cash', 'Tag'],
-  'Security': ['Lock', 'Shield', 'Key'],
-  'Social': ['Facebook', 'Twitter', 'Instagram', 'LinkedIn', 'GitHub'],
-  'Other': [] as string[]
-};
-
 interface IconInfo {
   name: string;
   provider: IconProvider;
-  category: string;
   Component: React.ComponentType<any>;
   styles: IconStyle[];
 }
@@ -80,9 +66,6 @@ const getIconsFromProvider = (provider: IconProvider): IconInfo[] => {
       return Object.keys(OutlineIcons).map(name => ({
         name: name.replace(/Icon$/, ''),
         provider: 'heroicons' as const,
-        category: Object.entries(categories).find(([_, icons]) => 
-          icons.includes(name.replace(/Icon$/, ''))
-        )?.[0] || 'Other',
         Component: (OutlineIcons as any)[name],
         styles: ['outline', 'solid'] as IconStyle[]
       }));
@@ -95,7 +78,6 @@ const getIconsFromProvider = (provider: IconProvider): IconInfo[] => {
         .map(name => ({
           name: name.replace(/([A-Z])/g, ' $1').trim(),
           provider: 'material-ui' as const,
-          category: 'Other',
           Component: (MaterialIcons as any)[name],
           styles: ['solid'] as IconStyle[]
         }));
@@ -106,7 +88,6 @@ const getIconsFromProvider = (provider: IconProvider): IconInfo[] => {
           .map(name => ({
             name: name.replace(/^fa/, ''),
             provider: 'fontawesome' as const,
-            category: 'Other',
             Component: (props: any) => <FontAwesomeIcon icon={fas[name as keyof typeof fas]} {...props} />,
             styles: ['solid'] as IconStyle[]
           })),
@@ -115,7 +96,6 @@ const getIconsFromProvider = (provider: IconProvider): IconInfo[] => {
           .map(name => ({
             name: name.replace(/^fa/, ''),
             provider: 'fontawesome' as const,
-            category: 'Other',
             Component: (props: any) => <FontAwesomeIcon icon={far[name as keyof typeof far]} {...props} />,
             styles: ['regular'] as IconStyle[]
           })),
@@ -124,7 +104,6 @@ const getIconsFromProvider = (provider: IconProvider): IconInfo[] => {
           .map(name => ({
             name: name.replace(/^fa/, ''),
             provider: 'fontawesome' as const,
-            category: 'Social',
             Component: (props: any) => <FontAwesomeIcon icon={fab[name as keyof typeof fab]} {...props} />,
             styles: ['brands'] as IconStyle[]
           }))
@@ -135,7 +114,6 @@ const getIconsFromProvider = (provider: IconProvider): IconInfo[] => {
         .map(name => ({
           name,
           provider: 'simple-icons' as const,
-          category: 'Social',
           Component: (SimpleIcons as any)[name],
           styles: ['solid'] as IconStyle[]
         }));
@@ -168,54 +146,26 @@ export default function IconFinder() {
   const [selectedSize, setSelectedSize] = useState(24);
   const [customSize, setCustomSize] = useState('24');
   const [selectedColor, setSelectedColor] = useState('#000000');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const [copyFormat, setCopyFormat] = useState<CopyFormat>('react');
 
   const filteredIcons = allIcons.filter(icon => {
     const matchesSearch = icon.name.toLowerCase().includes(search.toLowerCase());
     const matchesProvider = icon.provider === selectedProvider;
-    const matchesCategory = selectedCategory === 'All' || icon.category === selectedCategory;
     const matchesStyle = icon.styles.includes(style);
-    return matchesSearch && matchesProvider && matchesCategory && matchesStyle;
+    return matchesSearch && matchesProvider && matchesStyle;
   });
 
-  const getCodeSnippet = (icon: IconInfo, format: CopyFormat) => {
-    const sizeProps = `width="${selectedSize}" height="${selectedSize}"`;
-    const colorProp = `color="${selectedColor}"`;
-    
-    switch (format) {
-      case 'react': {
-        const { importPath } = iconProviders[icon.provider];
-        switch (icon.provider) {
-          case 'heroicons':
-            return `import { ${icon.name}Icon } from '${importPath}/${style === 'outline' ? '24/outline' : '24/solid'}';\n\n<${icon.name}Icon className="w-[${selectedSize}px] h-[${selectedSize}px]" style={{ color: '${selectedColor}' }} />`;
-          case 'material-ui':
-            return `import { ${icon.name} } from '${importPath}';\n\n<${icon.name} sx={{ width: ${selectedSize}, height: ${selectedSize}, color: '${selectedColor}' }} />`;
-          case 'fontawesome': {
-            const faType = style === 'solid' ? 'fas' : style === 'regular' ? 'far' : 'fab';
-            return `import { FontAwesomeIcon } from '${importPath}';\nimport { ${icon.name} } from '@fortawesome/free-${style}-svg-icons';\n\n<FontAwesomeIcon icon={${icon.name}} style={{ width: ${selectedSize}, height: ${selectedSize}, color: '${selectedColor}' }} />`;
-          }
-          case 'simple-icons':
-            return `import { ${icon.name} } from '${importPath}';\n\n<${icon.name} size={${selectedSize}} color="${selectedColor}" />`;
-          default:
-            return '';
-        }
-      }
-      case 'html':
-        return `<i class="${getIconClass(icon)}" style="font-size: ${selectedSize}px; color: ${selectedColor};"></i>`;
-      case 'svg':
-        return `<svg ${sizeProps} ${colorProp} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">...</svg>`;
-      default:
-        return '';
-    }
-  };
-
-  const getIconClass = (icon: IconInfo) => {
+  const getCodeSnippet = (icon: IconInfo) => {
     switch (icon.provider) {
-      case 'fontawesome':
-        return `fa${style === 'solid' ? 's' : style === 'regular' ? 'r' : 'b'} fa-${icon.name.toLowerCase()}`;
+      case 'heroicons':
+        return `import { ${icon.name}Icon } from '@heroicons/react/${style === 'outline' ? '24/outline' : '24/solid'}';\n\n<${icon.name}Icon className="w-[${selectedSize}px] h-[${selectedSize}px]" style={{ color: '${selectedColor}' }} />`;
       case 'material-ui':
-        return `material-icons${style === 'outline' ? '-outlined' : ''}`;
+        return `import { ${icon.name} } from '@mui/icons-material';\n\n<${icon.name} sx={{ width: ${selectedSize}, height: ${selectedSize}, color: '${selectedColor}' }} />`;
+      case 'fontawesome': {
+        const faType = style === 'solid' ? 'fas' : style === 'regular' ? 'far' : 'fab';
+        return `import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';\nimport { ${icon.name} } from '@fortawesome/free-${style}-svg-icons';\n\n<FontAwesomeIcon icon={${icon.name}} style={{ width: ${selectedSize}, height: ${selectedSize}, color: '${selectedColor}' }} />`;
+      }
+      case 'simple-icons':
+        return `import { ${icon.name} } from 'simple-icons/icons';\n\n<${icon.name} size={${selectedSize}} color="${selectedColor}" />`;
       default:
         return '';
     }
@@ -223,7 +173,7 @@ export default function IconFinder() {
 
   const copyToClipboard = async (icon: IconInfo) => {
     try {
-      const code = getCodeSnippet(icon, copyFormat);
+      const code = getCodeSnippet(icon);
       await navigator.clipboard.writeText(code);
       setCopied(icon.name);
       setTimeout(() => setCopied(null), 2000);
@@ -233,16 +183,16 @@ export default function IconFinder() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Icon Finder</h1>
-          <p className="text-gray-600">Find and copy icons from multiple providers</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Icon Finder</h1>
+          <p className="text-sm sm:text-base text-gray-600">Find and copy icons from multiple providers</p>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4">
-        <div className="relative flex-1 min-w-[200px]">
+      <div className="flex flex-col gap-4">
+        <div className="relative w-full">
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
             type="text"
@@ -253,57 +203,38 @@ export default function IconFinder() {
           />
         </div>
 
-        <select
-          value={selectedProvider}
-          onChange={(e) => {
-            setSelectedProvider(e.target.value as IconProvider);
-            setStyle(iconProviders[e.target.value as IconProvider].styles[0]);
-          }}
-          className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          {Object.entries(iconProviders).map(([key, provider]) => (
-            <option key={key} value={key}>{provider.label}</option>
-          ))}
-        </select>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <select
+            value={selectedProvider}
+            onChange={(e) => {
+              setSelectedProvider(e.target.value as IconProvider);
+              setStyle(iconProviders[e.target.value as IconProvider].styles[0]);
+            }}
+            className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            {Object.entries(iconProviders).map(([key, provider]) => (
+              <option key={key} value={key}>{provider.label}</option>
+            ))}
+          </select>
 
-        <select
-          value={style}
-          onChange={(e) => setStyle(e.target.value as IconStyle)}
-          className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          {iconProviders[selectedProvider].styles.map(styleOption => (
-            <option key={styleOption} value={styleOption}>
-              {styleOption.charAt(0).toUpperCase() + styleOption.slice(1)}
-            </option>
-          ))}
-        </select>
-
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="All">All Categories</option>
-          {Object.keys(categories).map(category => (
-            <option key={category} value={category}>{category}</option>
-          ))}
-        </select>
-
-        <select
-          value={copyFormat}
-          onChange={(e) => setCopyFormat(e.target.value as CopyFormat)}
-          className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="react">React</option>
-          <option value="html">HTML</option>
-          <option value="svg">SVG</option>
-        </select>
+          <select
+            value={style}
+            onChange={(e) => setStyle(e.target.value as IconStyle)}
+            className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+          >
+            {iconProviders[selectedProvider].styles.map(styleOption => (
+              <option key={styleOption} value={styleOption}>
+                {styleOption.charAt(0).toUpperCase() + styleOption.slice(1)}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-4 items-center">
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600">Size:</label>
-          <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="text-sm text-gray-600 whitespace-nowrap">Size:</label>
+          <div className="flex flex-wrap gap-2">
             {presetSizes.map(size => (
               <button
                 key={size.label}
@@ -321,17 +252,19 @@ export default function IconFinder() {
               </button>
             ))}
           </div>
-          <input
-            type="number"
-            value={customSize}
-            onChange={(e) => {
-              setCustomSize(e.target.value);
-              setSelectedSize(parseInt(e.target.value) || 24);
-            }}
-            className="w-16 px-2 py-1 text-sm bg-gray-50 border border-gray-200 rounded"
-            placeholder="Custom"
-          />
-          <span className="text-sm text-gray-600">px</span>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              value={customSize}
+              onChange={(e) => {
+                setCustomSize(e.target.value);
+                setSelectedSize(parseInt(e.target.value) || 24);
+              }}
+              className="w-16 px-2 py-1 text-sm bg-gray-50 border border-gray-200 rounded"
+              placeholder="Custom"
+            />
+            <span className="text-sm text-gray-600">px</span>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -345,30 +278,34 @@ export default function IconFinder() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3 sm:gap-4">
         {filteredIcons.map((icon) => (
           <button
             key={`${icon.provider}-${icon.name}`}
             onClick={() => copyToClipboard(icon)}
-            className="p-4 flex flex-col items-center justify-center gap-2 bg-white border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-sm transition-all"
+            className="group p-2 sm:p-4 flex flex-col items-center justify-center gap-1 sm:gap-2 bg-white border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-sm transition-all"
           >
-            <icon.Component
-              className="transition-all"
-              style={{ 
-                width: `${selectedSize}px`,
-                height: `${selectedSize}px`,
-                color: selectedColor
-              }}
-            />
-            <div className="text-xs text-center">
+            <div className="relative w-full aspect-square flex items-center justify-center">
+              <icon.Component
+                className="transition-all"
+                style={{ 
+                  width: `${selectedSize}px`,
+                  height: `${selectedSize}px`,
+                  color: selectedColor,
+                  maxWidth: '100%',
+                  maxHeight: '100%'
+                }}
+              />
+            </div>
+            <div className="text-[10px] sm:text-xs text-center w-full truncate">
               {copied === icon.name ? (
                 <span className="text-green-600">Copied!</span>
               ) : (
-                <span className="text-gray-600">{icon.name}</span>
+                <span className="text-gray-600 group-hover:text-gray-900">{icon.name}</span>
               )}
             </div>
-            <div className="text-xs text-gray-400">
-              {icon.category} • {iconProviders[icon.provider].name}
+            <div className="text-[10px] sm:text-xs text-gray-400 w-full truncate text-center">
+              {iconProviders[icon.provider].name}
             </div>
           </button>
         ))}
