@@ -8,13 +8,14 @@ import {
   WrenchIcon,
   MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
+import { CodeSquare, CurlyBracesIcon } from 'lucide-react';
 
 const tools = [
   {
     name: 'JSON Formatter',
     description: 'Format, validate, and beautify your JSON data with syntax highlighting',
     path: '/tools/json',
-    icon: CodeBracketIcon,
+    icon: CurlyBracesIcon,
     bgClass: 'bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-800 dark:to-blue-700'
   },
   {
@@ -53,8 +54,9 @@ export default function Home() {
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-2xl tracking-tight font-bold text-gray-900 dark:text-white">
-              MyDebugTools - <i>All in one Developer Debugging Toolkit</i>
+            <h1 className="text-2xl tracking-tight font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <CodeBracketIcon color='blue' className="h-10 w-10" />
+              MyDebugTools - <span className="italic">All in one Developer Debugging Toolkit</span>
             </h1>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

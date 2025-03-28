@@ -4,15 +4,16 @@ import {
   KeyIcon,
   CommandLineIcon,
   WrenchIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  CodeBracketSquareIcon
 } from '@heroicons/react/24/outline';
-
+import { CurlyBracesIcon } from 'lucide-react'; 
 const tools = [
   {
     name: 'JSON Formatter',
     description: 'Format and validate JSON',
     path: '/tools/json',
-    icon: CodeBracketIcon
+    icon: CurlyBracesIcon
   },
   {
     name: 'JWT Decoder',
