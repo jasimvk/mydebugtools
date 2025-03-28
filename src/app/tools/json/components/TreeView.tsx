@@ -33,7 +33,6 @@ export default function TreeView({ data }: TreeViewProps) {
         data={data}
         theme={theme}
         invertTheme={false}
-        shouldExpandNode={() => true}
       />
     </div>
   );
