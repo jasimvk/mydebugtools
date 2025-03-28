@@ -1,7 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { ArrowPathIcon, DocumentDuplicateIcon, ArrowDownTrayIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { useState, useEffect } from 'react';
+import { ArrowPathIcon, DocumentDuplicateIcon, ArrowDownTrayIcon, CheckIcon, ViewColumnsIcon, CodeBracketIcon, TableCellsIcon } from '@heroicons/react/24/outline';
+import Editor from '@monaco-editor/react';
+import TreeView from './components/TreeView';
+import { jsonrepair } from 'jsonrepair';
+
+type ViewMode = 'code' | 'tree' | 'table';
 
 export default function JSONFormatter() {
   const [input, setInput] = useState('');
@@ -10,10 +15,23 @@ export default function JSONFormatter() {
   const [indentSize, setIndentSize] = useState(2);
   const [copied, setCopied] = useState(false);
   const [mode, setMode] = useState<'beautify' | 'minify'>('beautify');
+  const [viewMode, setViewMode] = useState<ViewMode>('code');
+  const [parsedData, setParsedData] = useState<any>(null);
 
   const formatJSON = () => {
     try {
-      const parsedJSON = JSON.parse(input);
+      let jsonToFormat = input;
+      
+      // Try to repair JSON if it's invalid
+      try {
+        JSON.parse(input);
+      } catch {
+        jsonToFormat = jsonrepair(input);
+      }
+
+      const parsedJSON = JSON.parse(jsonToFormat);
+      setParsedData(parsedJSON);
+      
       if (mode === 'beautify') {
         setOutput(JSON.stringify(parsedJSON, null, indentSize));
       } else {
@@ -23,6 +41,7 @@ export default function JSONFormatter() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid JSON');
       setOutput('');
+      setParsedData(null);
     }
   };
 
@@ -90,11 +109,19 @@ export default function JSONFormatter() {
                 </label>
               </div>
             </div>
-            <textarea
+            <Editor
+              height="500px"
+              defaultLanguage="json"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Paste your JSON here..."
-              className="w-full h-[500px] p-4 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(value) => setInput(value || '')}
+              theme="vs-dark"
+              options={{
+                minimap: { enabled: false },
+                fontSize: 14,
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+              }}
             />
           </div>
 
@@ -128,6 +155,38 @@ export default function JSONFormatter() {
                 </button>
               </div>
               <div className="flex items-center space-x-2">
+                <div className="flex border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setViewMode('code')}
+                    className={`p-2 ${
+                      viewMode === 'code'
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400'
+                    }`}
+                  >
+                    <CodeBracketIcon className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('tree')}
+                    className={`p-2 ${
+                      viewMode === 'tree'
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400'
+                    }`}
+                  >
+                    <ViewColumnsIcon className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('table')}
+                    className={`p-2 ${
+                      viewMode === 'table'
+                        ? 'bg-blue-500 text-white'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400'
+                    }`}
+                  >
+                    <TableCellsIcon className="h-5 w-5" />
+                  </button>
+                </div>
                 <button
                   onClick={handleCopy}
                   className="p-2 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400"
@@ -153,12 +212,34 @@ export default function JSONFormatter() {
                 {error}
               </div>
             ) : (
-              <textarea
-                value={output}
-                readOnly
-                placeholder="Formatted JSON will appear here..."
-                className="w-full h-[500px] p-4 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white font-mono text-sm"
-              />
+              <div className="h-[500px]">
+                {viewMode === 'code' && (
+                  <Editor
+                    height="500px"
+                    defaultLanguage="json"
+                    value={output}
+                    theme="vs-dark"
+                    options={{
+                      readOnly: true,
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      lineNumbers: 'on',
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                    }}
+                  />
+                )}
+                {viewMode === 'tree' && parsedData && (
+                  <TreeView data={parsedData} />
+                )}
+                {viewMode === 'table' && parsedData && (
+                  <div className="p-4 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg overflow-auto h-[500px]">
+                    <pre className="text-sm font-mono text-gray-900 dark:text-white">
+                      {JSON.stringify(parsedData, null, 2)}
+                    </pre>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>

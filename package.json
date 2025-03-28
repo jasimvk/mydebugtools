@@ -10,9 +10,14 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.1.1",
+    "@monaco-editor/react": "^4.7.0",
+    "ajv": "^8.17.1",
+    "jsonrepair": "^3.12.0",
     "next": "^15.2.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-json-tree": "^0.20.0",
+    "react-table": "^7.8.0"
   },
   "devDependencies": {
     "@types/node": "^20",
