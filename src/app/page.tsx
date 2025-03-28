@@ -49,12 +49,12 @@ const tools = [
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-800">
-      <main className="flex-grow">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-800">
+      <main className="flex-1">
         <div className="container mx-auto px-4 py-8">
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-2xl tracking-tight font-bold text-gray-900 dark:text-white">
-              MyDebugTools - All in one Developer Debugging Toolkit
+              MyDebugTools - <i>All in one Developer Debugging Toolkit</i>
             </h1>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -80,18 +80,30 @@ export default function Home() {
           </div>
         </div>
       </main>
-      <footer className="relative py-6 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-700 dark:to-gray-600 transform -skew-y-2"></div>
-        <div className="relative container mx-auto px-4">
-          <div className="flex items-center justify-center">
-            <a
-              href="https://x.com/jasimvk"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-gray-500 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 transition-colors font-medium"
-            >
-              Built by @jasimvk
-            </a>
+      <footer className="mt-auto border-t border-gray-200 dark:border-gray-700">
+        <div className="w-full bg-gradient-to-b from-transparent via-gray-100/50 dark:via-gray-800/50 to-gray-100 dark:to-gray-700">
+          <div className="container mx-auto px-4 py-6">
+            <div className="flex flex-col items-center justify-center space-y-4">
+              
+              <div className="flex items-center space-x-1">
+                <a
+                  href="https://x.com/jasimvk"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 transition-colors duration-200"
+                >
+                  Built by @jasimvk
+                </a>
+                <a
+                  href="https://github.com/jasimvk/mydebugtools"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-blue-500 dark:hover:text-blue-400 transition-colors duration-200"
+                >
+                  
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </footer>
