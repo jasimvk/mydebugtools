@@ -20,7 +20,7 @@ const tools = [
   },
   {
     name: 'JWT Decoder',
-    description: 'Decode and verify JSON Web Tokens instantly',
+    description: 'Decode and verify JWT tokens instantly',
     path: '/tools/jwt',
     icon: KeyIcon,
     bgClass: 'bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800'
@@ -50,42 +50,53 @@ const tools = [
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-white dark:bg-gray-900">
-      <div className="container mx-auto px-4 py-12">
-        <div className="flex justify-between items-center mb-12">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            MyDebugTools
-          </h1>
-          <Link
-            href="/about"
-            className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
-          >
-            <InformationCircleIcon className="h-5 w-5" />
-            <span>About</span>
-          </Link>
+    <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900">
+      <main className="flex-grow">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-2xl tracking-tight font-bold text-gray-900 dark:text-white">
+              MyDebugTools - All in one Developer Debugging Toolkit
+            </h1>
+            
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {tools.map((tool) => (
+              <Link
+                key={tool.name}
+                href={tool.path}
+                className="group block overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm transition-all hover:shadow-lg"
+              >
+                <div className={`aspect-video w-full ${tool.bgClass} p-4 flex items-center justify-center`}>
+                  <tool.icon className="h-10 w-10 text-gray-700 dark:text-gray-200" />
+                </div>
+                <div className="p-3">
+                  <h2 className="text-base font-medium text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                    {tool.name}
+                  </h2>
+                  <p className="mt-1 text-xs text-gray-600 dark:text-gray-300 font-normal leading-relaxed">
+                    {tool.description}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {tools.map((tool) => (
-            <Link
-              key={tool.name}
-              href={tool.path}
-              className="group block overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm transition-all hover:shadow-lg"
+      </main>
+      <footer className="relative py-6 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900 transform -skew-y-2"></div>
+        <div className="relative container mx-auto px-4">
+          <div className="flex items-center justify-center">
+            <a
+              href="https://x.com/jasimvk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium"
             >
-              <div className={`aspect-video w-full ${tool.bgClass} p-8 flex items-center justify-center`}>
-                <tool.icon className="h-16 w-16 text-gray-700 dark:text-gray-200" />
-              </div>
-              <div className="p-6">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                  {tool.name}
-                </h2>
-                <p className="mt-2 text-gray-600 dark:text-gray-300">
-                  {tool.description}
-                </p>
-              </div>
-            </Link>
-          ))}
+              Built by @jasimvk
+            </a>
+          </div>
         </div>
-      </div>
-    </main>
+      </footer>
+    </div>
   );
 }
