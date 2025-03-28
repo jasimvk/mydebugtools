@@ -24,13 +24,13 @@ const benefits = [
 
 export default function WhyUse() {
   return (
-    <div className="bg-gray-50 py-24">
+    <div className="bg-gray-50 dark:bg-gray-800 py-24">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white sm:text-4xl">
             Why Use MyDebugTools?
           </h2>
-          <p className="mt-4 text-lg text-gray-600">
+          <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
             Built by developers, for developers.
           </p>
         </div>
@@ -40,11 +40,11 @@ export default function WhyUse() {
               key={benefit.name}
               className="text-center p-6"
             >
-              <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                <benefit.icon className="h-6 w-6 text-blue-600" aria-hidden="true" />
+              <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+                <benefit.icon className="h-6 w-6 text-blue-600 dark:text-blue-400" aria-hidden="true" />
               </div>
-              <h3 className="mt-4 text-xl font-semibold text-gray-900">{benefit.name}</h3>
-              <p className="mt-2 text-gray-600">{benefit.description}</p>
+              <h3 className="mt-4 text-xl font-semibold text-gray-900 dark:text-white">{benefit.name}</h3>
+              <p className="mt-2 text-gray-600 dark:text-gray-300">{benefit.description}</p>
             </div>
           ))}
         </div>
