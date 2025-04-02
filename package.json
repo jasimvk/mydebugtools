@@ -13,8 +13,14 @@
     "build:extension": "npm run clean && npm run copy && npm run zip"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^6.5.1",
+    "@fortawesome/free-regular-svg-icons": "^6.5.1",
+    "@fortawesome/free-solid-svg-icons": "^6.5.1",
+    "@fortawesome/react-fontawesome": "^0.2.0",
     "@heroicons/react": "^2.1.1",
     "@monaco-editor/react": "^4.7.0",
+    "@mui/icons-material": "^5.15.11",
+    "@mui/material": "^5.15.11",
     "ajv": "^8.17.1",
     "csv-stringify": "^6.5.2",
     "file-saver": "^2.0.5",
