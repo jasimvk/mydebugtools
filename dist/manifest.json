@@ -2,25 +2,27 @@
   "manifest_version": 3,
   "name": "MyDebugTools",
   "version": "1.0.0",
-  "description": "A comprehensive debugging toolkit for developers featuring JSON formatting, JWT decoding, Base64 conversion, API testing, and more.",
+  "description": "A comprehensive suite of debugging and development tools for web developers",
   "permissions": [
     "activeTab",
     "contextMenus",
     "storage"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "https://mydebugtools.com/*"
   ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
   },
   "icons": {
     "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
@@ -29,7 +31,7 @@
     "type": "module"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
+    "extension_pages": "script-src 'self' https://cdnjs.cloudflare.com; object-src 'self'"
   },
   "minimum_chrome_version": "88",
   "author": "MyDebugTools",
@@ -50,5 +52,6 @@
     "id": "myDebugToolsMenu",
     "title": "MyDebugTools",
     "contexts": ["selection"]
-  }
+  },
+  "privacy_policy_url": "https://mydebugtools.com/privacy-policy"
 } 
