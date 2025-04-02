@@ -1,16 +1,30 @@
 {
   "name": "mydebugtools",
   "version": "1.0.0",
-  "description": "A comprehensive debugging toolkit for developers",
+  "description": "A comprehensive suite of debugging and development tools for web developers",
   "scripts": {
-    "build": "npm run clean && npm run copy && npm run zip",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
     "clean": "rm -rf dist",
     "copy": "mkdir -p dist && cp -r chrome-extension/* dist/",
     "zip": "cd dist && zip -r ../mydebugtools.zip . -x \"*.DS_Store\" -x \"*.git*\"",
-    "watch": "nodemon --watch chrome-extension --ext js,css,html,json --exec 'npm run build'"
+    "build:extension": "npm run clean && npm run copy && npm run zip"
+  },
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "autoprefixer": "^10.0.0",
+    "postcss": "^8.0.0",
+    "tailwindcss": "^3.0.0",
+    "typescript": "^5.0.0"
   },
   "author": "",
   "license": "MIT"
