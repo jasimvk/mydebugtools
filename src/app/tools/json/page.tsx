@@ -131,6 +131,18 @@ const sampleJSON = {
   }
 };
 
+// Add type declarations for File System Access API
+declare global {
+  interface Window {
+    showSaveFilePicker(options: {
+      types: Array<{
+        description: string;
+        accept: Record<string, string[]>;
+      }>;
+    }): Promise<FileSystemFileHandle>;
+  }
+}
+
 export default function JSONFormatter() {
   const [input, setInput] = useState('');
   const [compareInput, setCompareInput] = useState('');
@@ -966,21 +978,32 @@ export default function JSONFormatter() {
   const saveToFile = async () => {
     try {
       if (!fileHandle) {
-        // @ts-ignore - FileSystem Access API
-        fileHandle = await window.showSaveFilePicker({
+        // If no file handle exists, create a new one
+        const handle = await window.showSaveFilePicker({
           types: [{
             description: 'JSON File',
-            accept: { 'application/json': ['.json'] }
+            accept: {
+              'application/json': ['.json']
+            }
           }]
         });
+        setFileHandle(handle);
+        fileHandle = handle;
+      }
+
+      if (!fileHandle) {
+        throw new Error('No file handle available');
       }
 
       const writable = await fileHandle.createWritable();
       await writable.write(output);
       await writable.close();
       setUnsavedChanges(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save file');
+    } catch (error) {
+      console.error('Error saving file:', error);
+      // Fallback to download
+      const blob = new Blob([output], { type: 'application/json' });
+      saveAs(blob, 'formatted.json');
     }
   };
 
@@ -1273,31 +1296,31 @@ export default function JSONFormatter() {
                   </div>
                 ) : (
                   <>
-                    {viewMode === 'code' && (
-                      <Editor
-                        height="500px"
-                        defaultLanguage="json"
-                        value={output}
-                        theme="vs-dark"
-                        options={{
-                          readOnly: true,
-                          minimap: { enabled: false },
-                          fontSize: 14,
-                          lineNumbers: 'on',
-                          scrollBeyondLastLine: false,
-                          automaticLayout: true,
-                        }}
-                      />
-                    )}
-                    {viewMode === 'tree' && parsedData && (
-                      <TreeView data={parsedData} />
-                    )}
-                    {viewMode === 'table' && parsedData && (
-                      <div className="p-4 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg overflow-auto h-[500px]">
-                        <pre className="text-sm font-mono text-gray-900 dark:text-white">
-                          {JSON.stringify(parsedData, null, 2)}
-                        </pre>
-                      </div>
+                {viewMode === 'code' && (
+                  <Editor
+                    height="500px"
+                    defaultLanguage="json"
+                    value={output}
+                    theme="vs-dark"
+                    options={{
+                      readOnly: true,
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      lineNumbers: 'on',
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                    }}
+                  />
+                )}
+                {viewMode === 'tree' && parsedData && (
+                  <TreeView data={parsedData} />
+                )}
+                {viewMode === 'table' && parsedData && (
+                  <div className="p-4 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg overflow-auto h-[500px]">
+                    <pre className="text-sm font-mono text-gray-900 dark:text-white">
+                      {JSON.stringify(parsedData, null, 2)}
+                    </pre>
+                  </div>
                     )}
                   </>
                 )}
