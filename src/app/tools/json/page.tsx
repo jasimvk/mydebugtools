@@ -44,6 +44,8 @@ import { stringify } from 'csv-stringify/sync';
 
 type ViewMode = 'formatted' | 'minified' | 'compare';
 
+type TabType = 'format' | 'validate' | 'transform' | 'compare' | 'search';
+
 type TransformOperation = {
   type: 'sort' | 'filter' | 'map' | 'group' | 'aggregate';
   field?: string;
@@ -161,6 +163,7 @@ export default function JSONFormatter() {
   const [copied, setCopied] = useState(false);
   const [mode, setMode] = useState<'beautify' | 'minify'>('beautify');
   const [viewMode, setViewMode] = useState<ViewMode>('formatted');
+  const [activeTab, setActiveTab] = useState<TabType>('format');
   const [parsedData, setParsedData] = useState<any>(null);
   const [compareParsedData, setCompareParsedData] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -168,6 +171,7 @@ export default function JSONFormatter() {
   const [shareUrl, setShareUrl] = useState('');
   const [showShareModal, setShowShareModal] = useState(false);
   const [showJsonPathModal, setShowJsonPathModal] = useState(false);
+  const [showSchemaModal, setShowSchemaModal] = useState(false);
   const [jsonPathQuery, setJsonPathQuery] = useState('');
   const [jsonPathResult, setJsonPathResult] = useState<any>(null);
   const [schema, setSchema] = useState('');
@@ -1100,530 +1104,292 @@ export default function JSONFormatter() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col h-[calc(100vh-4rem)]">
-          {/* Header Section */}
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">JSON Formatter</h1>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Format, validate, and transform your JSON data
-                </p>
-              </div>
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={loadSampleJson}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  <LightBulbIcon className="h-5 w-5 mr-2" />
-                  Load Sample
-                </button>
-                <button
-                  onClick={() => setShowHelpModal(true)}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  <QuestionMarkCircleIcon className="h-5 w-5 mr-2" />
-                  Help
-                </button>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-white dark:bg-gray-900">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Header */}
+        <div className="mb-4">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">JSON Formatter</h1>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Format, validate, and transform your JSON data
+          </p>
+        </div>
 
-          {/* Toolbar */}
-          {showToolbar && (
-            <div className="px-6 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={handleToggleToolbar}
-                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    <MinusIcon className="h-5 w-5" />
-                  </button>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={formatJSON}
-                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                    >
-                      <ArrowPathIcon className="h-4 w-4 mr-1" />
-                      Format
-                    </button>
-                    <button
-                      onClick={handleCopy}
-                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                    >
-                      <ClipboardIcon className="h-4 w-4 mr-1" />
-                      Copy
-                    </button>
-                    <button
-                      onClick={saveToFile}
-                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                    >
-                      <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
-                      Save
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
-                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                  >
-                    <MagnifyingGlassIcon className="h-4 w-4 mr-1" />
-                    Advanced Search
-                  </button>
-                  <button
-                    onClick={handleToggleStatusBar}
-                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                  >
-                    <MinusIcon className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Main Content */}
-          <div className="flex-1 overflow-hidden flex flex-col">
-            <div className="flex-1 overflow-auto p-6">
-              {/* Input Section */}
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Input JSON
-                  </label>
-                  <div className="flex items-center space-x-2">
+        {/* Toolbar */}
+        <div className="mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="px-4 py-2 flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="relative group">
+                <button className="flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white">
+                  <DocumentIcon className="h-4 w-4 mr-1.5" />
+                  File
+                </button>
+                <div className="absolute left-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 hidden group-hover:block">
+                  <div className="py-1">
                     <button
                       onClick={handlePaste}
-                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
-                      <ClipboardIcon className="h-4 w-4 mr-1" />
+                      <ClipboardIcon className="h-4 w-4 inline-block mr-2" />
                       Paste
                     </button>
                     <button
                       onClick={handleClear}
-                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
-                      <TrashIcon className="h-4 w-4 mr-1" />
+                      <TrashIcon className="h-4 w-4 inline-block mr-2" />
                       Clear
+                    </button>
+                    <button
+                      onClick={handleDownload}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <ArrowDownTrayIcon className="h-4 w-4 inline-block mr-2" />
+                      Download
+                    </button>
+                    <button
+                      onClick={generateShareUrl}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <ShareIcon className="h-4 w-4 inline-block mr-2" />
+                      Share
                     </button>
                   </div>
                 </div>
-                <div className="relative h-[300px]">
-                  <Editor
-                    height="100%"
-                    defaultLanguage="json"
-                    value={input}
-                    onChange={handleInputChange}
-                    theme={isDarkMode ? 'vs-dark' : 'light'}
-                    options={{
-                      minimap: { enabled: false },
-                      fontSize: 14,
-                      lineNumbers: 'on',
-                      folding: true,
-                      wordWrap: 'on',
-                      automaticLayout: true,
-                      scrollBeyondLastLine: false,
-                      renderWhitespace: 'selection',
-                      tabSize: 2,
-                      formatOnPaste: true,
-                      formatOnType: true,
-                    }}
-                  />
-                  {error && (
-                    <div className="absolute bottom-0 left-0 right-0 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800 p-2">
-                      <div className="flex items-center text-red-700 dark:text-red-300 text-sm">
-                        <ExclamationCircleIcon className="h-5 w-5 mr-2" />
-                        {error}
-                      </div>
-                    </div>
-                  )}
+              </div>
+              <div className="relative group">
+                <button className="flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white">
+                  <AdjustmentsHorizontalIcon className="h-4 w-4 mr-1.5" />
+                  Tools
+                </button>
+                <div className="absolute left-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 hidden group-hover:block">
+                  <div className="py-1">
+                    <button
+                      onClick={() => setShowJsonPathModal(true)}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <CommandLineIcon className="h-4 w-4 inline-block mr-2" />
+                      JSON Path
+                    </button>
+                    <button
+                      onClick={() => setShowSchemaModal(true)}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <DocumentCheckIcon className="h-4 w-4 inline-block mr-2" />
+                      Schema Validation
+                    </button>
+                    <button
+                      onClick={() => setShowTransformModal(true)}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <ArrowsUpDownIcon className="h-4 w-4 inline-block mr-2" />
+                      Transform
+                    </button>
+                  </div>
                 </div>
               </div>
+              <div className="relative group">
+                <button className="flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white">
+                  <ViewColumnsIcon className="h-4 w-4 mr-1.5" />
+                  View
+                </button>
+                <div className="absolute left-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 hidden group-hover:block">
+                  <div className="py-1">
+                    <button
+                      onClick={() => setViewMode('formatted')}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <CodeBracketIcon className="h-4 w-4 inline-block mr-2" />
+                      Formatted
+                    </button>
+                    <button
+                      onClick={() => setViewMode('minified')}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <CodeBracketIcon className="h-4 w-4 inline-block mr-2" />
+                      Minified
+                    </button>
+                    <button
+                      onClick={() => setViewMode('compare')}
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <ArrowsRightLeftIcon className="h-4 w-4 inline-block mr-2" />
+                      Compare
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setShowHelpModal(true)}
+                className="flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white"
+              >
+                <QuestionMarkCircleIcon className="h-4 w-4 mr-1.5" />
+                Help
+              </button>
+              <button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white"
+              >
+                {isDarkMode ? (
+                  <>
+                    <SunIcon className="h-4 w-4 mr-1.5" />
+                    Light Mode
+                  </>
+                ) : (
+                  <>
+                    <MoonIcon className="h-4 w-4 mr-1.5" />
+                    Dark Mode
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
 
-              {/* Advanced Search Panel */}
-              {showAdvancedSearch && (
-                <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={searchOptions.caseSensitive}
-                        onChange={(e) => setSearchOptions({
-                          ...searchOptions,
-                          caseSensitive: e.target.checked
-                        })}
-                        className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                      />
-                      <label className="text-sm text-gray-700 dark:text-gray-300">
-                        Case Sensitive
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={searchOptions.wholeWord}
-                        onChange={(e) => setSearchOptions({
-                          ...searchOptions,
-                          wholeWord: e.target.checked
-                        })}
-                        className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                      />
-                      <label className="text-sm text-gray-700 dark:text-gray-300">
-                        Whole Word
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={searchOptions.regex}
-                        onChange={(e) => setSearchOptions({
-                          ...searchOptions,
-                          regex: e.target.checked
-                        })}
-                        className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                      />
-                      <label className="text-sm text-gray-700 dark:text-gray-300">
-                        Regular Expression
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={searchOptions.searchInKeys}
-                        onChange={(e) => setSearchOptions({
-                          ...searchOptions,
-                          searchInKeys: e.target.checked
-                        })}
-                        className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                      />
-                      <label className="text-sm text-gray-700 dark:text-gray-300">
-                        Search in Keys
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={searchOptions.searchInValues}
-                        onChange={(e) => setSearchOptions({
-                          ...searchOptions,
-                          searchInValues: e.target.checked
-                        })}
-                        className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                      />
-                      <label className="text-sm text-gray-700 dark:text-gray-300">
-                        Search in Values
-                      </label>
-                    </div>
-                    <div className="flex items-center justify-end">
-                      <button
-                        onClick={handleAdvancedSearch}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                      >
-                        Search
-                      </button>
-                    </div>
+        {/* Search Bar */}
+        <div className="mb-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="px-4 py-2">
+            <div className="flex items-center space-x-2">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search in JSON... (Ctrl/⌘ + F)"
+                  className="block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <button
+                onClick={handleAdvancedSearch}
+                className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md"
+              >
+                <MagnifyingGlassIcon className="h-4 w-4 mr-1.5" />
+                Search
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Panel - Input */}
+          <div className="lg:col-span-6 space-y-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-medium text-gray-900 dark:text-white">Input JSON</h2>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={loadSampleJson}
+                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white"
+                    >
+                      <DocumentTextIcon className="h-4 w-4 mr-1.5" />
+                      Sample
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div className="h-[500px]">
+                <Editor
+                  height="100%"
+                  defaultLanguage="json"
+                  value={input}
+                  onChange={handleInputChange}
+                  theme={isDarkMode ? 'vs-dark' : 'light'}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    lineNumbers: 'on',
+                    folding: true,
+                    wordWrap: 'on',
+                    automaticLayout: true,
+                    scrollBeyondLastLine: false,
+                    renderWhitespace: 'selection',
+                    tabSize: 2,
+                    formatOnPaste: true,
+                    formatOnType: true,
+                  }}
+                />
+              </div>
+              {error && (
+                <div className="px-4 py-2 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800">
+                  <div className="flex items-center text-red-700 dark:text-red-300 text-sm">
+                    <ExclamationCircleIcon className="h-4 w-4 mr-1.5" />
+                    {error}
                   </div>
                 </div>
               )}
-
-              {/* Controls Section */}
-              <div className="mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* View Mode */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      View Mode
-                    </label>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => setViewMode('formatted')}
-                        className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
-                          viewMode === 'formatted'
-                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        <DocumentTextIcon className="h-4 w-4 mr-1" />
-                        Formatted
-                      </button>
-                      <button
-                        onClick={() => setViewMode('minified')}
-                        className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
-                          viewMode === 'minified'
-                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        <DocumentIcon className="h-4 w-4 mr-1" />
-                        Minified
-                      </button>
-                      <button
-                        onClick={() => setViewMode('compare')}
-                        className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
-                          viewMode === 'compare'
-                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        <ArrowsRightLeftIcon className="h-4 w-4 mr-1" />
-                        Compare
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Format Options */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Format Options
-                    </label>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => setIndentSize(2)}
-                        className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
-                          indentSize === 2
-                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        2 Spaces
-                      </button>
-                      <button
-                        onClick={() => setIndentSize(4)}
-                        className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
-                          indentSize === 4
-                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        4 Spaces
-                      </button>
-                      <button
-                        onClick={() => setIndentSize(0)}
-                        className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
-                          indentSize === 0
-                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        No Indent
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Actions
-                    </label>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={formatJSON}
-                        className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                      >
-                        <ArrowPathIcon className="h-4 w-4 mr-1" />
-                        Format
-                      </button>
-                      <button
-                        onClick={handleCopy}
-                        className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                      >
-                        <ClipboardIcon className="h-4 w-4 mr-1" />
-                        Copy
-                      </button>
-                      <button
-                        onClick={saveToFile}
-                        className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                      >
-                        <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
-                        Save
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Theme Toggle */}
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Theme
-                    </label>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => setIsDarkMode(false)}
-                        className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
-                          !isDarkMode
-                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        <SunIcon className="h-4 w-4 mr-1" />
-                        Light
-                      </button>
-                      <button
-                        onClick={() => setIsDarkMode(true)}
-                        className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
-                          isDarkMode
-                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        <MoonIcon className="h-4 w-4 mr-1" />
-                        Dark
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Output Section */}
-              <div className="space-y-4">
-                {viewMode === 'compare' ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Original JSON
-                      </label>
-                      <div className="h-[300px]">
-                        <Editor
-                          height="100%"
-                          defaultLanguage="json"
-                          value={compareInput}
-                          onChange={handleCompareInputChange}
-                          theme={isDarkMode ? 'vs-dark' : 'light'}
-                          options={{
-                            minimap: { enabled: false },
-                            fontSize: 14,
-                            lineNumbers: 'on',
-                            folding: true,
-                            wordWrap: 'on',
-                            automaticLayout: true,
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Compare JSON
-                      </label>
-                      <div className="h-[300px]">
-                        <Editor
-                          height="100%"
-                          defaultLanguage="json"
-                          value={compareOutput}
-                          onChange={handleCompareOutputChange}
-                          theme={isDarkMode ? 'vs-dark' : 'light'}
-                          options={{
-                            minimap: { enabled: false },
-                            fontSize: 14,
-                            lineNumbers: 'on',
-                            folding: true,
-                            wordWrap: 'on',
-                            automaticLayout: true,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Output
-                    </label>
-                    <div className="h-[300px]">
-                      <Editor
-                        height="100%"
-                        defaultLanguage="json"
-                        value={output}
-                        theme={isDarkMode ? 'vs-dark' : 'light'}
-                        options={{
-                          readOnly: true,
-                          minimap: { enabled: false },
-                          fontSize: 14,
-                          lineNumbers: 'on',
-                          folding: true,
-                          wordWrap: 'on',
-                          automaticLayout: true,
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Search Section */}
-              <div className="mt-6">
-                <div className="flex items-center space-x-2">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search in JSON..."
-                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                      />
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleSearch}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    Search
-                  </button>
-                </div>
-                {searchResults.length > 0 && (
-                  <div className="mt-4">
-                    <div className="bg-white dark:bg-gray-700 shadow overflow-hidden sm:rounded-md">
-                      <ul className="divide-y divide-gray-200 dark:divide-gray-600">
-                        {searchResults.map((result, index) => (
-                          <li key={index} className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-600">
-                            <div className="flex items-center justify-between">
-                              <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                {result.path}
-                              </div>
-                              <div className="text-sm text-gray-500 dark:text-gray-400">
-                                {result.value}
-                              </div>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
 
-          {/* Status Bar */}
-          {showStatusBar && (
-            <div className="px-6 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {statusMessage || 'Ready'}
-                  </span>
-                  {parsedData && (
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
-                      Size: {documentStats.size} bytes | Nodes: {documentStats.nodes} | Depth: {documentStats.depth}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center space-x-4">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {isOfflineMode ? 'Offline' : 'Online'}
-                  </span>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    {unsavedChanges ? 'Unsaved changes' : 'All changes saved'}
-                  </span>
+          {/* Right Panel - Output */}
+          <div className="lg:col-span-6 space-y-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-medium text-gray-900 dark:text-white">Output</h2>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={handleCopy}
+                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white"
+                    >
+                      <ClipboardIcon className="h-4 w-4 mr-1.5" />
+                      Copy
+                    </button>
+                    <button
+                      onClick={saveToFile}
+                      className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white"
+                    >
+                      <ArrowDownTrayIcon className="h-4 w-4 mr-1.5" />
+                      Save
+                    </button>
+                  </div>
                 </div>
               </div>
+              <div className="h-[500px]">
+                <Editor
+                  height="100%"
+                  defaultLanguage="json"
+                  value={output}
+                  theme={isDarkMode ? 'vs-dark' : 'light'}
+                  options={{
+                    readOnly: true,
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    lineNumbers: 'on',
+                    folding: true,
+                    wordWrap: 'on',
+                    automaticLayout: true,
+                  }}
+                />
+              </div>
             </div>
-          )}
+          </div>
+        </div>
+
+        {/* Status Bar */}
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="px-4 py-2 flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {statusMessage || 'Ready'}
+              </span>
+              {parsedData && (
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  Size: {documentStats.size} bytes | Nodes: {documentStats.nodes} | Depth: {documentStats.depth}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {isOfflineMode ? 'Offline' : 'Online'}
+              </span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {unsavedChanges ? 'Unsaved changes' : 'All changes saved'}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
