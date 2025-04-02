@@ -14,10 +14,16 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.1.1",
+    "@monaco-editor/react": "^4.7.0",
+    "ajv": "^8.17.1",
+    "csv-stringify": "^6.5.2",
+    "file-saver": "^2.0.5",
+    "js-yaml": "^4.1.0",
     "lucide-react": "^0.344.0",
     "next": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

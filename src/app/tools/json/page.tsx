@@ -33,7 +33,7 @@ import Ajv from 'ajv';
 import yaml from 'js-yaml';
 import { Parser } from 'xml2js';
 import { saveAs } from 'file-saver';
-import { csvStringify } from 'csv-stringify/sync';
+import { stringify } from 'csv-stringify/sync';
 
 type ViewMode = 'code' | 'tree' | 'table' | 'compare' | 'transform';
 
@@ -839,7 +839,7 @@ export default function JSONFormatter() {
           if (!Array.isArray(data)) {
             throw new Error('Data must be an array to export as CSV');
           }
-          content = csvStringify(data, {
+          content = stringify(data, {
             header: true,
             cast: {
               object: (value) => JSON.stringify(value),
