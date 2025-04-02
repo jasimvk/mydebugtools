@@ -15,7 +15,6 @@ import {
   CommandLineIcon,
   DocumentCheckIcon,
   LightBulbIcon,
-  PlusIcon,
   MinusIcon,
   AdjustmentsHorizontalIcon,
   EyeIcon,
@@ -24,7 +23,15 @@ import {
   ArrowsUpDownIcon,
   WrenchIcon,
   CloudArrowUpIcon,
-  CloudArrowDownIcon
+  CloudArrowDownIcon,
+  QuestionMarkCircleIcon,
+  ClipboardIcon,
+  TrashIcon,
+  SunIcon,
+  MoonIcon,
+  DocumentTextIcon,
+  DocumentIcon,
+  ExclamationCircleIcon
 } from '@heroicons/react/24/outline';
 import Editor from '@monaco-editor/react';
 import TreeView from './components/TreeView';
@@ -35,7 +42,7 @@ import { Parser } from 'xml2js';
 import { saveAs } from 'file-saver';
 import { stringify } from 'csv-stringify/sync';
 
-type ViewMode = 'code' | 'tree' | 'table' | 'compare' | 'transform';
+type ViewMode = 'formatted' | 'minified' | 'compare';
 
 type TransformOperation = {
   type: 'sort' | 'filter' | 'map' | 'group' | 'aggregate';
@@ -153,7 +160,7 @@ export default function JSONFormatter() {
   const [indentSize, setIndentSize] = useState(2);
   const [copied, setCopied] = useState(false);
   const [mode, setMode] = useState<'beautify' | 'minify'>('beautify');
-  const [viewMode, setViewMode] = useState<ViewMode>('code');
+  const [viewMode, setViewMode] = useState<ViewMode>('formatted');
   const [parsedData, setParsedData] = useState<any>(null);
   const [compareParsedData, setCompareParsedData] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -203,6 +210,7 @@ export default function JSONFormatter() {
   }>({ size: 0, nodes: 0, depth: 0 });
   const [loadProgress, setLoadProgress] = useState(0);
   const [showLoadingModal, setShowLoadingModal] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const formatJSON = () => {
     try {
@@ -552,10 +560,6 @@ export default function JSONFormatter() {
       <div className="mt-4 space-y-2">
         <div className="flex items-center justify-between mb-4">
           <div className="flex space-x-4 text-sm">
-            <div className="flex items-center">
-              <PlusIcon className="h-4 w-4 text-green-500 mr-1" />
-              <span>Added: {diffStats.added}</span>
-            </div>
             <div className="flex items-center">
               <MinusIcon className="h-4 w-4 text-red-500 mr-1" />
               <span>Removed: {diffStats.removed}</span>
@@ -1007,443 +1011,502 @@ export default function JSONFormatter() {
     }
   };
 
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setInput(text);
+    } catch (err) {
+      console.error('Failed to read clipboard:', err);
+    }
+  };
+
+  const handleClear = () => {
+    setInput('');
+    setOutput('');
+    setError('');
+    setParsedData(null);
+    setSearchResults([]);
+  };
+
+  const handleInputChange = (value: string | undefined) => {
+    setInput(value || '');
+    setError('');
+  };
+
+  const handleCompareInputChange = (value: string | undefined) => {
+    setCompareInput(value || '');
+  };
+
+  const handleCompareOutputChange = (value: string | undefined) => {
+    setCompareOutput(value || '');
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-800 py-8">
-      <div className="container mx-auto px-4">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">JSON Formatter</h1>
-          <p className="text-gray-600 dark:text-gray-300">Format, validate, and beautify your JSON data</p>
-          <button
-            onClick={loadSampleJson}
-            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 flex items-center space-x-2"
-          >
-            <LightBulbIcon className="h-4 w-4" />
-            <span>Load Sample JSON</span>
-          </button>
-        </div>
-
-        {/* Toolbar */}
-        <div className="mb-4 flex items-center space-x-4">
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search in JSON... (Ctrl+F)"
-              className="w-full px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200"
-            />
-            <button
-              onClick={handleSearch}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-blue-500"
-            >
-              <MagnifyingGlassIcon className="h-5 w-5" />
-            </button>
-          </div>
-          <button
-            onClick={() => setShowJsonPathModal(true)}
-            className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center space-x-2"
-          >
-            <CommandLineIcon className="h-4 w-4" />
-            <span>JSON Path</span>
-          </button>
-          <button
-            onClick={generateShareUrl}
-            className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center space-x-2"
-          >
-            <ShareIcon className="h-4 w-4" />
-            <span>Share</span>
-          </button>
-          <button
-            onClick={() => setShowHelpModal(true)}
-            className="p-2 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400"
-          >
-            ?
-          </button>
-        </div>
-
-        {/* Schema Validation */}
-        <div className="mb-4">
-          <div className="flex items-center space-x-4 mb-2">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">JSON Schema Validation</h3>
-            <button
-              onClick={validateSchema}
-              className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 flex items-center space-x-2"
-            >
-              <DocumentCheckIcon className="h-4 w-4" />
-              <span>Validate</span>
-            </button>
-          </div>
-          <div className="h-32">
-            <Editor
-              height="100%"
-              defaultLanguage="json"
-              value={schema}
-              onChange={(value) => setSchema(value || '')}
-              theme="vs-dark"
-              options={{
-                minimap: { enabled: false },
-                fontSize: 12,
-                lineNumbers: 'off',
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-              }}
-            />
-          </div>
-          {schemaValidation.errors && (
-            <div className="mt-2 p-2 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded text-sm text-red-700 dark:text-red-300">
-              {schemaValidation.errors.map((err: any, i: number) => (
-                <div key={i}>{err.message}</div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Search Results */}
-        {searchResults.length > 0 && (
-          <div className="mb-4 p-4 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
-              Search Results ({searchResults.length})
-            </h3>
-            <div className="space-y-2 max-h-40 overflow-auto">
-              {searchResults.map((result, index) => (
-                <div key={index} className="text-sm">
-                  <span className="text-blue-500">{result.path}:</span>
-                  <span className="text-gray-700 dark:text-gray-300 ml-2">
-                    {JSON.stringify(result.value)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Input Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between mb-2">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+          {/* Header Section */}
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">JSON Formatter</h1>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Format, validate, and transform your JSON data
+                </p>
+              </div>
               <div className="flex items-center space-x-4">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={handleUpload}
-                    className="hidden"
-                    id="file-upload"
-                  />
-                  <label
-                    htmlFor="file-upload"
-                    className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer"
-                  >
-                    Upload JSON
-                  </label>
+                <button
+                  onClick={loadSampleJson}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  <LightBulbIcon className="h-5 w-5 mr-2" />
+                  Load Sample
+                </button>
+                <button
+                  onClick={() => setShowHelpModal(true)}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  <QuestionMarkCircleIcon className="h-5 w-5 mr-2" />
+                  Help
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div className="p-6">
+            {/* Input Section */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Input JSON
                 </label>
-              </div>
-            </div>
-            <Editor
-              height="500px"
-              defaultLanguage="json"
-              value={input}
-              onChange={(value) => setInput(value || '')}
-              theme="vs-dark"
-              options={{
-                minimap: { enabled: false },
-                fontSize: 14,
-                lineNumbers: 'on',
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-              }}
-            />
-          </div>
-
-          {/* Output Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-4">
-                <select
-                  value={indentSize}
-                  onChange={(e) => setIndentSize(Number(e.target.value))}
-                  className="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-200"
-                >
-                  <option value={2}>2 Spaces</option>
-                  <option value={4}>4 Spaces</option>
-                  <option value={6}>6 Spaces</option>
-                </select>
-                <select
-                  value={mode}
-                  onChange={(e) => setMode(e.target.value as 'beautify' | 'minify')}
-                  className="px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-200"
-                >
-                  <option value="beautify">Beautify</option>
-                  <option value="minify">Minify</option>
-                </select>
-                <button
-                  onClick={formatJSON}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 flex items-center space-x-2"
-                >
-                  <ArrowPathIcon className="h-4 w-4" />
-                  <span>Format</span>
-                </button>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="flex border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                <div className="flex items-center space-x-2">
                   <button
-                    onClick={() => setViewMode('code')}
-                    className={`p-2 ${
-                      viewMode === 'code'
-                        ? 'bg-blue-500 text-white'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400'
-                    }`}
+                    onClick={handlePaste}
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                   >
-                    <CodeBracketIcon className="h-5 w-5" />
+                    <ClipboardIcon className="h-4 w-4 mr-1" />
+                    Paste
                   </button>
                   <button
-                    onClick={() => setViewMode('tree')}
-                    className={`p-2 ${
-                      viewMode === 'tree'
-                        ? 'bg-blue-500 text-white'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400'
-                    }`}
+                    onClick={handleClear}
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                   >
-                    <ViewColumnsIcon className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('table')}
-                    className={`p-2 ${
-                      viewMode === 'table'
-                        ? 'bg-blue-500 text-white'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400'
-                    }`}
-                  >
-                    <TableCellsIcon className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('compare')}
-                    className={`p-2 ${
-                      viewMode === 'compare'
-                        ? 'bg-blue-500 text-white'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400'
-                    }`}
-                  >
-                    <ArrowsRightLeftIcon className="h-5 w-5" />
+                    <TrashIcon className="h-4 w-4 mr-1" />
+                    Clear
                   </button>
                 </div>
-                <button
-                  onClick={handleCopy}
-                  className="p-2 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400"
-                  disabled={!output}
-                >
-                  {copied ? (
-                    <CheckIcon className="h-5 w-5 text-green-500" />
-                  ) : (
-                    <DocumentDuplicateIcon className="h-5 w-5" />
-                  )}
-                </button>
-                <button
-                  onClick={handleDownload}
-                  className="p-2 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400"
-                  disabled={!output}
-                >
-                  <ArrowDownTrayIcon className="h-5 w-5" />
-                </button>
+              </div>
+              <div className="relative">
+                <Editor
+                  height="300px"
+                  defaultLanguage="json"
+                  value={input}
+                  onChange={handleInputChange}
+                  theme={isDarkMode ? 'vs-dark' : 'light'}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 14,
+                    lineNumbers: 'on',
+                    folding: true,
+                    wordWrap: 'on',
+                    automaticLayout: true,
+                    scrollBeyondLastLine: false,
+                    renderWhitespace: 'selection',
+                    tabSize: 2,
+                    formatOnPaste: true,
+                    formatOnType: true,
+                  }}
+                />
+                {error && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800 p-2">
+                    <div className="flex items-center text-red-700 dark:text-red-300 text-sm">
+                      <ExclamationCircleIcon className="h-5 w-5 mr-2" />
+                      {error}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
-            {error ? (
-              <div className="p-4 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300">
-                {error}
-              </div>
-            ) : (
-              <div className={viewMode === 'compare' ? 'grid grid-cols-2 gap-4' : 'h-[500px]'}>
-                {viewMode === 'compare' ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="h-[400px]">
-                        <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Original JSON</div>
-                        <Editor
-                          height="100%"
-                          defaultLanguage="json"
-                          value={input}
-                          onChange={(value) => setInput(value || '')}
-                          theme="vs-dark"
-                          options={{
-                            minimap: { enabled: false },
-                            fontSize: 14,
-                            lineNumbers: 'on',
-                            scrollBeyondLastLine: false,
-                            automaticLayout: true,
-                          }}
-                        />
-                      </div>
-                      <div className="h-[400px]">
-                        <div className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Compare JSON</div>
-                        <Editor
-                          height="100%"
-                          defaultLanguage="json"
-                          value={compareInput}
-                          onChange={(value) => setCompareInput(value || '')}
-                          theme="vs-dark"
-                          options={{
-                            minimap: { enabled: false },
-                            fontSize: 14,
-                            lineNumbers: 'on',
-                            scrollBeyondLastLine: false,
-                            automaticLayout: true,
-                          }}
-                        />
-                      </div>
-                    </div>
-                    {diffResults.length > 0 && <DiffView diffs={diffResults} />}
+            {/* Controls Section */}
+            <div className="mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* View Mode */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    View Mode
+                  </label>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => setViewMode('formatted')}
+                      className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
+                        viewMode === 'formatted'
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <DocumentTextIcon className="h-4 w-4 mr-1" />
+                      Formatted
+                    </button>
+                    <button
+                      onClick={() => setViewMode('minified')}
+                      className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
+                        viewMode === 'minified'
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <DocumentIcon className="h-4 w-4 mr-1" />
+                      Minified
+                    </button>
+                    <button
+                      onClick={() => setViewMode('compare')}
+                      className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
+                        viewMode === 'compare'
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <ArrowsRightLeftIcon className="h-4 w-4 mr-1" />
+                      Compare
+                    </button>
                   </div>
-                ) : (
-                  <>
-                {viewMode === 'code' && (
+                </div>
+
+                {/* Format Options */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Format Options
+                  </label>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => setIndentSize(2)}
+                      className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
+                        indentSize === 2
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      2 Spaces
+                    </button>
+                    <button
+                      onClick={() => setIndentSize(4)}
+                      className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
+                        indentSize === 4
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      4 Spaces
+                    </button>
+                    <button
+                      onClick={() => setIndentSize(0)}
+                      className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
+                        indentSize === 0
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      No Indent
+                    </button>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Actions
+                  </label>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={formatJSON}
+                      className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      <ArrowPathIcon className="h-4 w-4 mr-1" />
+                      Format
+                    </button>
+                    <button
+                      onClick={handleCopy}
+                      className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                    >
+                      <ClipboardIcon className="h-4 w-4 mr-1" />
+                      Copy
+                    </button>
+                    <button
+                      onClick={saveToFile}
+                      className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                    >
+                      <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                      Save
+                    </button>
+                  </div>
+                </div>
+
+                {/* Theme Toggle */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Theme
+                  </label>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => setIsDarkMode(false)}
+                      className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
+                        !isDarkMode
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <SunIcon className="h-4 w-4 mr-1" />
+                      Light
+                    </button>
+                    <button
+                      onClick={() => setIsDarkMode(true)}
+                      className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
+                        isDarkMode
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <MoonIcon className="h-4 w-4 mr-1" />
+                      Dark
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Output Section */}
+            <div className="space-y-4">
+              {viewMode === 'compare' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Original JSON
+                    </label>
+                    <Editor
+                      height="300px"
+                      defaultLanguage="json"
+                      value={compareInput}
+                      onChange={handleCompareInputChange}
+                      theme={isDarkMode ? 'vs-dark' : 'light'}
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 14,
+                        lineNumbers: 'on',
+                        folding: true,
+                        wordWrap: 'on',
+                        automaticLayout: true,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Compare JSON
+                    </label>
+                    <Editor
+                      height="300px"
+                      defaultLanguage="json"
+                      value={compareOutput}
+                      onChange={handleCompareOutputChange}
+                      theme={isDarkMode ? 'vs-dark' : 'light'}
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 14,
+                        lineNumbers: 'on',
+                        folding: true,
+                        wordWrap: 'on',
+                        automaticLayout: true,
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Output
+                  </label>
                   <Editor
-                    height="500px"
+                    height="300px"
                     defaultLanguage="json"
                     value={output}
-                    theme="vs-dark"
+                    theme={isDarkMode ? 'vs-dark' : 'light'}
                     options={{
                       readOnly: true,
                       minimap: { enabled: false },
                       fontSize: 14,
                       lineNumbers: 'on',
-                      scrollBeyondLastLine: false,
+                      folding: true,
+                      wordWrap: 'on',
                       automaticLayout: true,
                     }}
                   />
-                )}
-                {viewMode === 'tree' && parsedData && (
-                  <TreeView data={parsedData} />
-                )}
-                {viewMode === 'table' && parsedData && (
-                  <div className="p-4 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg overflow-auto h-[500px]">
-                    <pre className="text-sm font-mono text-gray-900 dark:text-white">
-                      {JSON.stringify(parsedData, null, 2)}
-                    </pre>
+                </div>
+              )}
+            </div>
+
+            {/* Search Section */}
+            <div className="mt-6">
+              <div className="flex items-center space-x-2">
+                <div className="flex-1">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search in JSON..."
+                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    />
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                    </div>
                   </div>
-                    )}
-                  </>
-                )}
+                </div>
+                <button
+                  onClick={handleSearch}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                >
+                  Search
+                </button>
               </div>
-            )}
+              {searchResults.length > 0 && (
+                <div className="mt-4">
+                  <div className="bg-white dark:bg-gray-700 shadow overflow-hidden sm:rounded-md">
+                    <ul className="divide-y divide-gray-200 dark:divide-gray-600">
+                      {searchResults.map((result, index) => (
+                        <li key={index} className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-600">
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {result.path}
+                            </div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {result.value}
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Share Modal */}
-        {showShareModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Share JSON</h3>
+      {/* Modals */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Share JSON</h3>
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={shareUrl}
+                readOnly
+                className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-200"
+              />
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(shareUrl);
+                  setShowShareModal(false);
+                }}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600"
+              >
+                Copy
+              </button>
+            </div>
+            <button
+              onClick={() => setShowShareModal(false)}
+              className="mt-4 px-4 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showJsonPathModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">JSON Path Query</h3>
+            <div className="space-y-4">
               <div className="flex items-center space-x-2">
                 <input
                   type="text"
-                  value={shareUrl}
-                  readOnly
+                  value={jsonPathQuery}
+                  onChange={(e) => setJsonPathQuery(e.target.value)}
+                  placeholder="Enter JSON path (e.g., store.departments[0].name)"
                   className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-200"
                 />
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(shareUrl);
-                    setShowShareModal(false);
-                  }}
+                  onClick={handleJsonPathQuery}
                   className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600"
                 >
-                  Copy
+                  Query
                 </button>
               </div>
-              <button
-                onClick={() => setShowShareModal(false)}
-                className="mt-4 px-4 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              >
-                Close
-              </button>
+              {jsonPathResult !== null && (
+                <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                  <pre className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">
+                    {JSON.stringify(jsonPathResult, null, 2)}
+                  </pre>
+                </div>
+              )}
             </div>
+            <button
+              onClick={() => setShowJsonPathModal(false)}
+              className="mt-4 px-4 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            >
+              Close
+            </button>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* JSON Path Modal */}
-        {showJsonPathModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">JSON Path Query</h3>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="text"
-                    value={jsonPathQuery}
-                    onChange={(e) => setJsonPathQuery(e.target.value)}
-                    placeholder="Enter JSON path (e.g., store.departments[0].name)"
-                    className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-200"
-                  />
-                  <button
-                    onClick={handleJsonPathQuery}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600"
-                  >
-                    Query
-                  </button>
-                </div>
-                {jsonPathResult !== null && (
-                  <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <pre className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">
-                      {JSON.stringify(jsonPathResult, null, 2)}
-                    </pre>
-                  </div>
-                )}
+      {showHelpModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Keyboard Shortcuts</h3>
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-300">Format JSON</span>
+                <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">Ctrl/⌘ + B</kbd>
               </div>
-              <button
-                onClick={() => setShowJsonPathModal(false)}
-                className="mt-4 px-4 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              >
-                Close
-              </button>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-300">Search</span>
+                <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">Ctrl/⌘ + F</kbd>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-300">Show Help</span>
+                <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">Ctrl/⌘ + /</kbd>
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* Help Modal */}
-        {showHelpModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Keyboard Shortcuts</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-300">Format JSON</span>
-                  <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">Ctrl/⌘ + B</kbd>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-300">Search</span>
-                  <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">Ctrl/⌘ + F</kbd>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-300">Show Help</span>
-                  <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">Ctrl/⌘ + /</kbd>
-                </div>
-              </div>
-              <div className="mt-6">
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Features</h4>
-                <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                  <li>JSON formatting with customizable indentation</li>
-                  <li>JSON Schema validation</li>
-                  <li>JSON Path queries</li>
-                  <li>Search within JSON</li>
-                  <li>Compare two JSON documents</li>
-                  <li>Tree and table views</li>
-                  <li>Share formatted JSON via URL</li>
-                  <li>Dark mode support</li>
-                </ul>
-              </div>
-              <button
-                onClick={() => setShowHelpModal(false)}
-                className="mt-4 px-4 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              >
-                Close
-              </button>
+            <div className="mt-6">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Features</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-300">
+                <li>JSON formatting with customizable indentation</li>
+                <li>JSON Schema validation</li>
+                <li>JSON Path queries</li>
+                <li>Search within JSON</li>
+                <li>Compare two JSON documents</li>
+                <li>Tree and table views</li>
+                <li>Share formatted JSON via URL</li>
+                <li>Dark mode support</li>
+              </ul>
             </div>
+            <button
+              onClick={() => setShowHelpModal(false)}
+              className="mt-4 px-4 py-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            >
+              Close
+            </button>
           </div>
-        )}
+        </div>
+      )}
 
-        {showCompareOptions && <CompareOptionsModal />}
-      </div>
+      {showCompareOptions && <CompareOptionsModal />}
     </div>
   );
 } 
