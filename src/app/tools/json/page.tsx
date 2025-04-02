@@ -182,7 +182,7 @@ export default function JSONFormatter() {
   });
   const [showRepairModal, setShowRepairModal] = useState(false);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
-  const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
+  let [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null);
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [documentStats, setDocumentStats] = useState<{
     size: number;
