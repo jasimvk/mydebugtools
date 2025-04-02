@@ -1102,9 +1102,9 @@ export default function JSONFormatter() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col h-[calc(100vh-4rem)]">
           {/* Header Section */}
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">JSON Formatter</h1>
@@ -1133,7 +1133,7 @@ export default function JSONFormatter() {
 
           {/* Toolbar */}
           {showToolbar && (
-            <div className="px-6 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+            <div className="px-6 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <button
@@ -1186,414 +1186,422 @@ export default function JSONFormatter() {
           )}
 
           {/* Main Content */}
-          <div className="p-6">
-            {/* Input Section */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Input JSON
-                </label>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={handlePaste}
-                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                  >
-                    <ClipboardIcon className="h-4 w-4 mr-1" />
-                    Paste
-                  </button>
-                  <button
-                    onClick={handleClear}
-                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                  >
-                    <TrashIcon className="h-4 w-4 mr-1" />
-                    Clear
-                  </button>
-                </div>
-              </div>
-              <div className="relative">
-                <Editor
-                  height="300px"
-                  defaultLanguage="json"
-                  value={input}
-                  onChange={handleInputChange}
-                  theme={isDarkMode ? 'vs-dark' : 'light'}
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 14,
-                    lineNumbers: 'on',
-                    folding: true,
-                    wordWrap: 'on',
-                    automaticLayout: true,
-                    scrollBeyondLastLine: false,
-                    renderWhitespace: 'selection',
-                    tabSize: 2,
-                    formatOnPaste: true,
-                    formatOnType: true,
-                  }}
-                />
-                {error && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800 p-2">
-                    <div className="flex items-center text-red-700 dark:text-red-300 text-sm">
-                      <ExclamationCircleIcon className="h-5 w-5 mr-2" />
-                      {error}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Advanced Search Panel */}
-            {showAdvancedSearch && (
-              <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={searchOptions.caseSensitive}
-                      onChange={(e) => setSearchOptions({
-                        ...searchOptions,
-                        caseSensitive: e.target.checked
-                      })}
-                      className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                    />
-                    <label className="text-sm text-gray-700 dark:text-gray-300">
-                      Case Sensitive
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={searchOptions.wholeWord}
-                      onChange={(e) => setSearchOptions({
-                        ...searchOptions,
-                        wholeWord: e.target.checked
-                      })}
-                      className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                    />
-                    <label className="text-sm text-gray-700 dark:text-gray-300">
-                      Whole Word
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={searchOptions.regex}
-                      onChange={(e) => setSearchOptions({
-                        ...searchOptions,
-                        regex: e.target.checked
-                      })}
-                      className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                    />
-                    <label className="text-sm text-gray-700 dark:text-gray-300">
-                      Regular Expression
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={searchOptions.searchInKeys}
-                      onChange={(e) => setSearchOptions({
-                        ...searchOptions,
-                        searchInKeys: e.target.checked
-                      })}
-                      className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                    />
-                    <label className="text-sm text-gray-700 dark:text-gray-300">
-                      Search in Keys
-                    </label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={searchOptions.searchInValues}
-                      onChange={(e) => setSearchOptions({
-                        ...searchOptions,
-                        searchInValues: e.target.checked
-                      })}
-                      className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
-                    />
-                    <label className="text-sm text-gray-700 dark:text-gray-300">
-                      Search in Values
-                    </label>
-                  </div>
-                  <div className="flex items-center justify-end">
-                    <button
-                      onClick={handleAdvancedSearch}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                    >
-                      Search
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Controls Section */}
-            <div className="mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* View Mode */}
-                <div className="space-y-2">
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="flex-1 overflow-auto p-6">
+              {/* Input Section */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    View Mode
+                    Input JSON
                   </label>
-                  <div className="flex space-x-2">
+                  <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => setViewMode('formatted')}
-                      className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
-                        viewMode === 'formatted'
-                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      <DocumentTextIcon className="h-4 w-4 mr-1" />
-                      Formatted
-                    </button>
-                    <button
-                      onClick={() => setViewMode('minified')}
-                      className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
-                        viewMode === 'minified'
-                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      <DocumentIcon className="h-4 w-4 mr-1" />
-                      Minified
-                    </button>
-                    <button
-                      onClick={() => setViewMode('compare')}
-                      className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
-                        viewMode === 'compare'
-                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      <ArrowsRightLeftIcon className="h-4 w-4 mr-1" />
-                      Compare
-                    </button>
-                  </div>
-                </div>
-
-                {/* Format Options */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Format Options
-                  </label>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => setIndentSize(2)}
-                      className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
-                        indentSize === 2
-                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      2 Spaces
-                    </button>
-                    <button
-                      onClick={() => setIndentSize(4)}
-                      className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
-                        indentSize === 4
-                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      4 Spaces
-                    </button>
-                    <button
-                      onClick={() => setIndentSize(0)}
-                      className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
-                        indentSize === 0
-                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      No Indent
-                    </button>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Actions
-                  </label>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={formatJSON}
-                      className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                    >
-                      <ArrowPathIcon className="h-4 w-4 mr-1" />
-                      Format
-                    </button>
-                    <button
-                      onClick={handleCopy}
-                      className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                      onClick={handlePaste}
+                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                     >
                       <ClipboardIcon className="h-4 w-4 mr-1" />
-                      Copy
+                      Paste
                     </button>
                     <button
-                      onClick={saveToFile}
-                      className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                      onClick={handleClear}
+                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                     >
-                      <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
-                      Save
+                      <TrashIcon className="h-4 w-4 mr-1" />
+                      Clear
                     </button>
                   </div>
                 </div>
-
-                {/* Theme Toggle */}
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Theme
-                  </label>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => setIsDarkMode(false)}
-                      className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
-                        !isDarkMode
-                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      <SunIcon className="h-4 w-4 mr-1" />
-                      Light
-                    </button>
-                    <button
-                      onClick={() => setIsDarkMode(true)}
-                      className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
-                        isDarkMode
-                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
-                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      <MoonIcon className="h-4 w-4 mr-1" />
-                      Dark
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Output Section */}
-            <div className="space-y-4">
-              {viewMode === 'compare' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Original JSON
-                    </label>
-                    <Editor
-                      height="300px"
-                      defaultLanguage="json"
-                      value={compareInput}
-                      onChange={handleCompareInputChange}
-                      theme={isDarkMode ? 'vs-dark' : 'light'}
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 14,
-                        lineNumbers: 'on',
-                        folding: true,
-                        wordWrap: 'on',
-                        automaticLayout: true,
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Compare JSON
-                    </label>
-                    <Editor
-                      height="300px"
-                      defaultLanguage="json"
-                      value={compareOutput}
-                      onChange={handleCompareOutputChange}
-                      theme={isDarkMode ? 'vs-dark' : 'light'}
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 14,
-                        lineNumbers: 'on',
-                        folding: true,
-                        wordWrap: 'on',
-                        automaticLayout: true,
-                      }}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Output
-                  </label>
+                <div className="relative h-[300px]">
                   <Editor
-                    height="300px"
+                    height="100%"
                     defaultLanguage="json"
-                    value={output}
+                    value={input}
+                    onChange={handleInputChange}
                     theme={isDarkMode ? 'vs-dark' : 'light'}
                     options={{
-                      readOnly: true,
                       minimap: { enabled: false },
                       fontSize: 14,
                       lineNumbers: 'on',
                       folding: true,
                       wordWrap: 'on',
                       automaticLayout: true,
+                      scrollBeyondLastLine: false,
+                      renderWhitespace: 'selection',
+                      tabSize: 2,
+                      formatOnPaste: true,
+                      formatOnType: true,
                     }}
                   />
+                  {error && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-red-50 dark:bg-red-900/20 border-t border-red-200 dark:border-red-800 p-2">
+                      <div className="flex items-center text-red-700 dark:text-red-300 text-sm">
+                        <ExclamationCircleIcon className="h-5 w-5 mr-2" />
+                        {error}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
 
-            {/* Search Section */}
-            <div className="mt-6">
-              <div className="flex items-center space-x-2">
-                <div className="flex-1">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search in JSON..."
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    />
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+              {/* Advanced Search Panel */}
+              {showAdvancedSearch && (
+                <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={searchOptions.caseSensitive}
+                        onChange={(e) => setSearchOptions({
+                          ...searchOptions,
+                          caseSensitive: e.target.checked
+                        })}
+                        className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                      />
+                      <label className="text-sm text-gray-700 dark:text-gray-300">
+                        Case Sensitive
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={searchOptions.wholeWord}
+                        onChange={(e) => setSearchOptions({
+                          ...searchOptions,
+                          wholeWord: e.target.checked
+                        })}
+                        className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                      />
+                      <label className="text-sm text-gray-700 dark:text-gray-300">
+                        Whole Word
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={searchOptions.regex}
+                        onChange={(e) => setSearchOptions({
+                          ...searchOptions,
+                          regex: e.target.checked
+                        })}
+                        className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                      />
+                      <label className="text-sm text-gray-700 dark:text-gray-300">
+                        Regular Expression
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={searchOptions.searchInKeys}
+                        onChange={(e) => setSearchOptions({
+                          ...searchOptions,
+                          searchInKeys: e.target.checked
+                        })}
+                        className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                      />
+                      <label className="text-sm text-gray-700 dark:text-gray-300">
+                        Search in Keys
+                      </label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={searchOptions.searchInValues}
+                        onChange={(e) => setSearchOptions({
+                          ...searchOptions,
+                          searchInValues: e.target.checked
+                        })}
+                        className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                      />
+                      <label className="text-sm text-gray-700 dark:text-gray-300">
+                        Search in Values
+                      </label>
+                    </div>
+                    <div className="flex items-center justify-end">
+                      <button
+                        onClick={handleAdvancedSearch}
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                      >
+                        Search
+                      </button>
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={handleSearch}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Search
-                </button>
-              </div>
-              {searchResults.length > 0 && (
-                <div className="mt-4">
-                  <div className="bg-white dark:bg-gray-700 shadow overflow-hidden sm:rounded-md">
-                    <ul className="divide-y divide-gray-200 dark:divide-gray-600">
-                      {searchResults.map((result, index) => (
-                        <li key={index} className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-600">
-                          <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {result.path}
-                            </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {result.value}
-                            </div>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+              )}
+
+              {/* Controls Section */}
+              <div className="mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* View Mode */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      View Mode
+                    </label>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => setViewMode('formatted')}
+                        className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
+                          viewMode === 'formatted'
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <DocumentTextIcon className="h-4 w-4 mr-1" />
+                        Formatted
+                      </button>
+                      <button
+                        onClick={() => setViewMode('minified')}
+                        className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
+                          viewMode === 'minified'
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <DocumentIcon className="h-4 w-4 mr-1" />
+                        Minified
+                      </button>
+                      <button
+                        onClick={() => setViewMode('compare')}
+                        className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
+                          viewMode === 'compare'
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <ArrowsRightLeftIcon className="h-4 w-4 mr-1" />
+                        Compare
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Format Options */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Format Options
+                    </label>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => setIndentSize(2)}
+                        className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
+                          indentSize === 2
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        2 Spaces
+                      </button>
+                      <button
+                        onClick={() => setIndentSize(4)}
+                        className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
+                          indentSize === 4
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        4 Spaces
+                      </button>
+                      <button
+                        onClick={() => setIndentSize(0)}
+                        className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
+                          indentSize === 0
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        No Indent
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Actions
+                    </label>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={formatJSON}
+                        className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      >
+                        <ArrowPathIcon className="h-4 w-4 mr-1" />
+                        Format
+                      </button>
+                      <button
+                        onClick={handleCopy}
+                        className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                      >
+                        <ClipboardIcon className="h-4 w-4 mr-1" />
+                        Copy
+                      </button>
+                      <button
+                        onClick={saveToFile}
+                        className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                      >
+                        <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                        Save
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Theme Toggle */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Theme
+                    </label>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => setIsDarkMode(false)}
+                        className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
+                          !isDarkMode
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <SunIcon className="h-4 w-4 mr-1" />
+                        Light
+                      </button>
+                      <button
+                        onClick={() => setIsDarkMode(true)}
+                        className={`flex-1 inline-flex items-center justify-center px-3 py-2 border text-sm font-medium rounded-md ${
+                          isDarkMode
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300'
+                            : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <MoonIcon className="h-4 w-4 mr-1" />
+                        Dark
+                      </button>
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
+
+              {/* Output Section */}
+              <div className="space-y-4">
+                {viewMode === 'compare' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Original JSON
+                      </label>
+                      <div className="h-[300px]">
+                        <Editor
+                          height="100%"
+                          defaultLanguage="json"
+                          value={compareInput}
+                          onChange={handleCompareInputChange}
+                          theme={isDarkMode ? 'vs-dark' : 'light'}
+                          options={{
+                            minimap: { enabled: false },
+                            fontSize: 14,
+                            lineNumbers: 'on',
+                            folding: true,
+                            wordWrap: 'on',
+                            automaticLayout: true,
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Compare JSON
+                      </label>
+                      <div className="h-[300px]">
+                        <Editor
+                          height="100%"
+                          defaultLanguage="json"
+                          value={compareOutput}
+                          onChange={handleCompareOutputChange}
+                          theme={isDarkMode ? 'vs-dark' : 'light'}
+                          options={{
+                            minimap: { enabled: false },
+                            fontSize: 14,
+                            lineNumbers: 'on',
+                            folding: true,
+                            wordWrap: 'on',
+                            automaticLayout: true,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Output
+                    </label>
+                    <div className="h-[300px]">
+                      <Editor
+                        height="100%"
+                        defaultLanguage="json"
+                        value={output}
+                        theme={isDarkMode ? 'vs-dark' : 'light'}
+                        options={{
+                          readOnly: true,
+                          minimap: { enabled: false },
+                          fontSize: 14,
+                          lineNumbers: 'on',
+                          folding: true,
+                          wordWrap: 'on',
+                          automaticLayout: true,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Search Section */}
+              <div className="mt-6">
+                <div className="flex items-center space-x-2">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search in JSON..."
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                      />
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleSearch}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    Search
+                  </button>
+                </div>
+                {searchResults.length > 0 && (
+                  <div className="mt-4">
+                    <div className="bg-white dark:bg-gray-700 shadow overflow-hidden sm:rounded-md">
+                      <ul className="divide-y divide-gray-200 dark:divide-gray-600">
+                        {searchResults.map((result, index) => (
+                          <li key={index} className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-600">
+                            <div className="flex items-center justify-between">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                {result.path}
+                              </div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                {result.value}
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Status Bar */}
           {showStatusBar && (
-            <div className="px-6 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+            <div className="px-6 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <span className="text-sm text-gray-500 dark:text-gray-400">
