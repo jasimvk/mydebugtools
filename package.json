@@ -13,6 +13,8 @@
     "build:extension": "npm run clean && npm run copy && npm run zip"
   },
   "dependencies": {
+    "@heroicons/react": "^2.1.1",
+    "lucide-react": "^0.344.0",
     "next": "latest",
     "react": "latest",
     "react-dom": "latest"
