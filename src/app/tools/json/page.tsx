@@ -212,6 +212,19 @@ export default function JSONFormatter() {
   const [showLoadingModal, setShowLoadingModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
+  // Add new state variables
+  const [showToolbar, setShowToolbar] = useState(true);
+  const [showStatusBar, setShowStatusBar] = useState(true);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [searchOptions, setSearchOptions] = useState({
+    caseSensitive: false,
+    wholeWord: false,
+    regex: false,
+    searchInKeys: true,
+    searchInValues: true
+  });
+
   const formatJSON = () => {
     try {
       let jsonToFormat = input;
@@ -1041,6 +1054,51 @@ export default function JSONFormatter() {
     setCompareOutput(value || '');
   };
 
+  // Add new functions
+  const handleAdvancedSearch = () => {
+    if (!parsedData || !searchQuery) {
+      setSearchResults([]);
+      return;
+    }
+
+    let results: { path: string; value: any }[] = [];
+    const searchRegex = searchOptions.regex 
+      ? new RegExp(searchQuery, searchOptions.caseSensitive ? '' : 'i')
+      : new RegExp(searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), searchOptions.caseSensitive ? '' : 'i');
+
+    const searchInObject = (obj: any, path = '') => {
+      if (typeof obj === 'object' && obj !== null) {
+        Object.entries(obj).forEach(([key, value]) => {
+          const currentPath = path ? `${path}.${key}` : key;
+          
+          if (searchOptions.searchInKeys && searchRegex.test(key)) {
+            results.push({ path: currentPath, value });
+          }
+          
+          if (searchOptions.searchInValues) {
+            if (typeof value === 'string' && searchRegex.test(value)) {
+              results.push({ path: currentPath, value });
+            } else if (typeof value === 'object' && value !== null) {
+              searchInObject(value, currentPath);
+            }
+          }
+        });
+      }
+    };
+
+    searchInObject(parsedData);
+    setSearchResults(results);
+    setStatusMessage(`Found ${results.length} matches`);
+  };
+
+  const handleToggleToolbar = () => {
+    setShowToolbar(!showToolbar);
+  };
+
+  const handleToggleStatusBar = () => {
+    setShowStatusBar(!showStatusBar);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -1072,6 +1130,60 @@ export default function JSONFormatter() {
               </div>
             </div>
           </div>
+
+          {/* Toolbar */}
+          {showToolbar && (
+            <div className="px-6 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={handleToggleToolbar}
+                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    <MinusIcon className="h-5 w-5" />
+                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={formatJSON}
+                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                    >
+                      <ArrowPathIcon className="h-4 w-4 mr-1" />
+                      Format
+                    </button>
+                    <button
+                      onClick={handleCopy}
+                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                    >
+                      <ClipboardIcon className="h-4 w-4 mr-1" />
+                      Copy
+                    </button>
+                    <button
+                      onClick={saveToFile}
+                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                    >
+                      <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                      Save
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                  >
+                    <MagnifyingGlassIcon className="h-4 w-4 mr-1" />
+                    Advanced Search
+                  </button>
+                  <button
+                    onClick={handleToggleStatusBar}
+                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    <MinusIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Main Content */}
           <div className="p-6">
@@ -1129,6 +1241,92 @@ export default function JSONFormatter() {
                 )}
               </div>
             </div>
+
+            {/* Advanced Search Panel */}
+            {showAdvancedSearch && (
+              <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={searchOptions.caseSensitive}
+                      onChange={(e) => setSearchOptions({
+                        ...searchOptions,
+                        caseSensitive: e.target.checked
+                      })}
+                      className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                    />
+                    <label className="text-sm text-gray-700 dark:text-gray-300">
+                      Case Sensitive
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={searchOptions.wholeWord}
+                      onChange={(e) => setSearchOptions({
+                        ...searchOptions,
+                        wholeWord: e.target.checked
+                      })}
+                      className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                    />
+                    <label className="text-sm text-gray-700 dark:text-gray-300">
+                      Whole Word
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={searchOptions.regex}
+                      onChange={(e) => setSearchOptions({
+                        ...searchOptions,
+                        regex: e.target.checked
+                      })}
+                      className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                    />
+                    <label className="text-sm text-gray-700 dark:text-gray-300">
+                      Regular Expression
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={searchOptions.searchInKeys}
+                      onChange={(e) => setSearchOptions({
+                        ...searchOptions,
+                        searchInKeys: e.target.checked
+                      })}
+                      className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                    />
+                    <label className="text-sm text-gray-700 dark:text-gray-300">
+                      Search in Keys
+                    </label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={searchOptions.searchInValues}
+                      onChange={(e) => setSearchOptions({
+                        ...searchOptions,
+                        searchInValues: e.target.checked
+                      })}
+                      className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                    />
+                    <label className="text-sm text-gray-700 dark:text-gray-300">
+                      Search in Values
+                    </label>
+                  </div>
+                  <div className="flex items-center justify-end">
+                    <button
+                      onClick={handleAdvancedSearch}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                    >
+                      Search
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Controls Section */}
             <div className="mb-6">
@@ -1392,6 +1590,32 @@ export default function JSONFormatter() {
               )}
             </div>
           </div>
+
+          {/* Status Bar */}
+          {showStatusBar && (
+            <div className="px-6 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {statusMessage || 'Ready'}
+                  </span>
+                  {parsedData && (
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      Size: {documentStats.size} bytes | Nodes: {documentStats.nodes} | Depth: {documentStats.depth}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {isOfflineMode ? 'Offline' : 'Online'}
+                  </span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {unsavedChanges ? 'Unsaved changes' : 'All changes saved'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
