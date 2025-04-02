@@ -52,5 +52,6 @@
     "id": "myDebugToolsMenu",
     "title": "MyDebugTools",
     "contexts": ["selection"]
-  }
+  },
+  "privacy_policy_url": "https://mydebugtools.com/privacy-policy"
 } 
