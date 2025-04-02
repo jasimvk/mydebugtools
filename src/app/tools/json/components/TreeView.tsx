@@ -1,39 +1,36 @@
 'use client';
 
-import { JSONTree } from 'react-json-tree';
+import React from 'react';
+import Editor from '@monaco-editor/react';
 
 interface TreeViewProps {
   data: any;
+  theme?: 'light' | 'dark';
 }
 
-const theme = {
-  scheme: 'monokai',
-  base00: '#272822',
-  base01: '#383830',
-  base02: '#49483e',
-  base03: '#75715e',
-  base04: '#a59f85',
-  base05: '#f8f8f2',
-  base06: '#f5f4f1',
-  base07: '#f9f8f5',
-  base08: '#f92672',
-  base09: '#fd971f',
-  base0A: '#f4bf75',
-  base0B: '#a6e22e',
-  base0C: '#a1efe4',
-  base0D: '#66d9ef',
-  base0E: '#ae81ff',
-  base0F: '#cc6633',
-};
+const TreeView: React.FC<TreeViewProps> = ({ data, theme = 'light' }) => {
+  const jsonString = JSON.stringify(data, null, 2);
 
-export default function TreeView({ data }: TreeViewProps) {
   return (
-    <div className="p-4 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg overflow-auto h-[500px]">
-      <JSONTree
-        data={data}
-        theme={theme}
-        invertTheme={false}
+    <div className="h-full w-full">
+      <Editor
+        height="100%"
+        defaultLanguage="json"
+        value={jsonString}
+        theme={theme === 'dark' ? 'vs-dark' : 'light'}
+        options={{
+          readOnly: true,
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          fontSize: 14,
+          lineNumbers: 'on',
+          folding: true,
+          wordWrap: 'on',
+          automaticLayout: true,
+        }}
       />
     </div>
   );
-} 
+};
+
+export default TreeView; 
