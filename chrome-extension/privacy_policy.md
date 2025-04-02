@@ -12,7 +12,7 @@ MyDebugTools is a developer-focused Chrome extension that provides various debug
 - **Usage**: Only used when explicitly requested by the user through the extension's interface.
 - **Data Handling**: No data is collected or stored from the active tab.
 
-### contextMenus 
+### contextMenus
 - **Purpose**: Enables right-click menu integration for quick access to debugging tools.
 - **Usage**: Provides context menu options for selected text to quickly format, decode, or analyze content.
 - **Data Handling**: Only processes the selected text when explicitly requested by the user.
