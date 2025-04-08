@@ -8,7 +8,9 @@ import {
   ArrowPathIcon,
   PhotoIcon,
   WrenchIcon,
-  ExclamationCircleIcon
+  ExclamationCircleIcon,
+  DocumentIcon,
+  ArrowUpTrayIcon
 } from '@heroicons/react/24/outline';
 
 export default function Base64Tools() {
@@ -16,9 +18,12 @@ export default function Base64Tools() {
   const [output, setOutput] = useState('');
   const [error, setError] = useState('');
   const [isImage, setIsImage] = useState(false);
+  const [isPdf, setIsPdf] = useState(false);
   const [autoUpdate, setAutoUpdate] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [formattingStatus, setFormattingStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [conversionMode, setConversionMode] = useState<'text' | 'file'>('text');
+  const [fileType, setFileType] = useState<'image' | 'pdf'>('image');
 
   const cleanBase64 = (input: string): string => {
     try {
@@ -109,6 +114,54 @@ export default function Base64Tools() {
     }
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsLoading(true);
+      setError('');
+
+      // Validate file type
+      if (fileType === 'image' && !file.type.startsWith('image/')) {
+        throw new Error('Please upload an image file');
+      }
+      if (fileType === 'pdf' && file.type !== 'application/pdf') {
+        throw new Error('Please upload a PDF file');
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        // Remove the data URL prefix (e.g., "data:image/png;base64,")
+        const base64String = result.split(',')[1];
+        setInput(base64String);
+        setFormattingStatus('success');
+        
+        if (fileType === 'image') {
+          setOutput(result);
+          setIsImage(true);
+          setIsPdf(false);
+        } else {
+          setOutput(result);
+          setIsImage(false);
+          setIsPdf(true);
+        }
+        setIsLoading(false);
+      };
+
+      reader.onerror = () => {
+        setError('Failed to read file');
+        setIsLoading(false);
+      };
+
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to process file');
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (autoUpdate && input.trim()) {
       convertBase64ToImage();
@@ -123,12 +176,12 @@ export default function Base64Tools() {
     }
   };
 
-  const downloadImage = () => {
-    if (!isImage || !output) return;
+  const downloadFile = () => {
+    if ((!isImage && !isPdf) || !output) return;
     
     const link = document.createElement('a');
     link.href = output;
-    link.download = 'converted-image.png';
+    link.download = `converted-file.${isPdf ? 'pdf' : 'png'}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -138,8 +191,8 @@ export default function Base64Tools() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Base64 to PNG Converter</h1>
-          <p className="text-gray-600">Convert Base64 strings to PNG images instantly</p>
+          <h1 className="text-2xl font-bold text-gray-900">Base64 Converter</h1>
+          <p className="text-gray-600">Convert between Base64 and files (images/PDFs)</p>
         </div>
         <div className="flex items-center gap-2">
           <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -161,7 +214,7 @@ export default function Base64Tools() {
                 Copy
               </button>
               <button
-                onClick={downloadImage}
+                onClick={downloadFile}
                 className="flex items-center gap-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
               >
                 <ArrowDownTrayIcon className="h-5 w-5" />
@@ -172,42 +225,114 @@ export default function Base64Tools() {
         </div>
       </div>
 
+      <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setConversionMode('text')}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              conversionMode === 'text'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Text to Base64
+          </button>
+          <button
+            onClick={() => setConversionMode('file')}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              conversionMode === 'file'
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            File to Base64
+          </button>
+        </div>
+        {conversionMode === 'file' && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setFileType('image')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                fileType === 'image'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <PhotoIcon className="h-5 w-5 inline-block mr-1" />
+              Image
+            </button>
+            <button
+              onClick={() => setFileType('pdf')}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                fileType === 'pdf'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <DocumentIcon className="h-5 w-5 inline-block mr-1" />
+              PDF
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 gap-6">
         {/* Input */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="block text-sm font-medium text-gray-700">
-              Base64 String
+              {conversionMode === 'text' ? 'Base64 String' : 'File Upload'}
             </label>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">PNG</span>
-              <button
-                onClick={formatBase64}
-                className={`flex items-center gap-2 text-sm px-3 py-1 rounded-lg transition-colors ${
-                  formattingStatus === 'success' 
-                    ? 'bg-green-100 text-green-700' 
-                    : formattingStatus === 'error'
-                    ? 'bg-red-100 text-red-700'
-                    : 'text-gray-700 hover:text-gray-900'
-                }`}
-                title="Format Base64 string"
-              >
-                <WrenchIcon className="h-4 w-4" />
-                Format
-              </button>
-            </div>
+            {conversionMode === 'text' && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">{isPdf ? 'PDF' : 'PNG'}</span>
+                <button
+                  onClick={formatBase64}
+                  className={`flex items-center gap-2 text-sm px-3 py-1 rounded-lg transition-colors ${
+                    formattingStatus === 'success' 
+                      ? 'bg-green-100 text-green-700' 
+                      : formattingStatus === 'error'
+                      ? 'bg-red-100 text-red-700'
+                      : 'text-gray-700 hover:text-gray-900'
+                  }`}
+                  title="Format Base64 string"
+                >
+                  <WrenchIcon className="h-4 w-4" />
+                  Format
+                </button>
+              </div>
+            )}
           </div>
           <div className="relative">
-            <textarea
-              value={input}
-              onChange={(e) => {
-                setInput(e.target.value);
-                setFormattingStatus('idle');
-              }}
-              placeholder="Enter Base64 string or paste PNG data URL..."
-              className="w-full h-[300px] p-4 font-mono text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-            {!autoUpdate && (
+            {conversionMode === 'text' ? (
+              <textarea
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  setFormattingStatus('idle');
+                }}
+                placeholder="Enter Base64 string or paste data URL..."
+                className="w-full h-[300px] p-4 font-mono text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            ) : (
+              <div className="w-full h-[300px] p-4 bg-gray-50 border border-gray-200 rounded-lg flex items-center justify-center">
+                <label className="flex flex-col items-center gap-4 cursor-pointer">
+                  <div className="p-4 rounded-full bg-gray-100">
+                    <ArrowUpTrayIcon className="h-8 w-8 text-gray-600" />
+                  </div>
+                  <span className="text-sm text-gray-600">
+                    Click to upload {fileType === 'image' ? 'an image' : 'a PDF'}
+                  </span>
+                  <input
+                    type="file"
+                    accept={fileType === 'image' ? 'image/*' : 'application/pdf'}
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            )}
+            {conversionMode === 'text' && !autoUpdate && (
               <button
                 onClick={convertBase64ToImage}
                 className="absolute bottom-4 right-4 flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -236,7 +361,7 @@ export default function Base64Tools() {
         {/* Output */}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">
-            PNG Preview
+            {isPdf ? 'PDF Preview' : 'Image Preview'}
           </label>
           <div className="w-full h-[300px] p-4 bg-gray-50 border border-gray-200 rounded-lg overflow-auto flex items-center justify-center">
             {isLoading ? (
@@ -249,13 +374,18 @@ export default function Base64Tools() {
             ) : isImage ? (
               <img 
                 src={output} 
-                alt="Converted PNG" 
+                alt="Converted Image" 
                 className="max-w-full max-h-full object-contain"
               />
+            ) : isPdf ? (
+              <div className="flex flex-col items-center gap-2 text-gray-600">
+                <DocumentIcon className="h-12 w-12" />
+                <span>PDF converted successfully</span>
+              </div>
             ) : (
               <div className="text-gray-400 flex items-center gap-2">
                 <PhotoIcon className="h-5 w-5" />
-                PNG will appear here
+                Preview will appear here
               </div>
             )}
           </div>
