@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { 
   WrenchIcon, 
   ArrowPathIcon, 
@@ -94,6 +94,17 @@ interface ResponseMetrics {
   headers: Record<string, string>;
 }
 
+interface CachedResponse {
+  data: any;
+  timestamp: number;
+  headers: Record<string, string>;
+  status: number;
+}
+
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const RATE_LIMIT = 10; // requests per minute
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+
 export default function APITester() {
   const [url, setUrl] = useState('');
   const [method, setMethod] = useState<HttpMethod>('GET');
@@ -161,6 +172,9 @@ export default function APITester() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+  const [requestCache, setRequestCache] = useState<Record<string, CachedResponse>>({});
+  const [requestTimestamps, setRequestTimestamps] = useState<number[]>([]);
+  const [rateLimitExceeded, setRateLimitExceeded] = useState(false);
 
   useEffect(() => {
     setIsEditorMounted(true);
@@ -256,15 +270,43 @@ export default function APITester() {
     setBody(preset.body);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
       setResponse(null);
-      const startTime = Date.now();
 
       if (!url.trim()) {
         throw new Error('Please enter a URL');
+      }
+
+      // Check rate limit
+      const now = Date.now();
+      const recentRequests = requestTimestamps.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW);
+      
+      if (recentRequests.length >= RATE_LIMIT) {
+        setRateLimitExceeded(true);
+        throw new Error(`Rate limit exceeded. Please wait ${Math.ceil((RATE_LIMIT_WINDOW - (now - recentRequests[0])) / 1000)} seconds.`);
+      }
+
+      // Check cache
+      const cacheKey = `${method}:${url}:${JSON.stringify(headers)}:${body}`;
+      const cachedResponse = requestCache[cacheKey];
+      
+      if (cachedResponse && now - cachedResponse.timestamp < CACHE_DURATION) {
+        setResponse({
+          status: cachedResponse.status,
+          headers: cachedResponse.headers,
+          data: cachedResponse.data,
+        });
+        setResponseMetrics({
+          size: new Blob([JSON.stringify(cachedResponse.data)]).size,
+          time: 0,
+          status: cachedResponse.status,
+          headers: cachedResponse.headers
+        });
+        setLoading(false);
+        return;
       }
 
       // Replace environment variables in URL and headers
@@ -312,6 +354,7 @@ export default function APITester() {
         }
       });
 
+      const startTime = Date.now();
       const response = await fetch(processedUrl, {
         method,
         headers: requestHeaders,
@@ -322,19 +365,35 @@ export default function APITester() {
       const endTime = Date.now();
       const duration = endTime - startTime;
 
+      // Update rate limit timestamps
+      setRequestTimestamps(prev => [...prev, now].filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW));
+
+      // Cache the response
+      const responseData = {
+        status: response.status,
+        headers: Object.fromEntries(response.headers.entries()),
+        data,
+      };
+
+      setRequestCache(prev => ({
+        ...prev,
+        [cacheKey]: {
+          data,
+          timestamp: now,
+          headers: responseData.headers,
+          status: response.status
+        }
+      }));
+
       setResponseTime(duration);
       setResponseMetrics({
         size: new Blob([JSON.stringify(data)]).size,
         time: duration,
         status: response.status,
-        headers: Object.fromEntries(response.headers.entries())
+        headers: responseData.headers
       });
 
-      setResponse({
-        status: response.status,
-        headers: Object.fromEntries(response.headers.entries()),
-        data,
-      });
+      setResponse(responseData);
 
       // Add to history
       const historyItem: RequestHistory = {
@@ -343,7 +402,7 @@ export default function APITester() {
         url: processedUrl,
         headers,
         body,
-        timestamp: Date.now(),
+        timestamp: now,
         status: response.status,
         duration
       };
@@ -353,7 +412,7 @@ export default function APITester() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [url, method, headers, body, environments, activeEnvironment, contentType, authConfig, requestCache, requestTimestamps]);
 
   const copyToClipboard = async (text: string) => {
     try {
