@@ -5,11 +5,10 @@ import Editor from '@monaco-editor/react';
 
 interface TreeViewProps {
   data: any;
-  theme?: 'light' | 'dark';
 }
 
-const TreeView: React.FC<TreeViewProps> = ({ data, theme = 'light' }) => {
-  const jsonString = JSON.stringify(data, null, 2);
+const TreeView: React.FC<TreeViewProps> = ({ data }) => {
+  const jsonString = React.useMemo(() => JSON.stringify(data, null, 2), [data]);
 
   return (
     <div className="h-full w-full">
@@ -17,7 +16,7 @@ const TreeView: React.FC<TreeViewProps> = ({ data, theme = 'light' }) => {
         height="100%"
         defaultLanguage="json"
         value={jsonString}
-        theme={theme === 'dark' ? 'vs-dark' : 'light'}
+        theme="light"
         options={{
           readOnly: true,
           minimap: { enabled: false },
@@ -27,6 +26,18 @@ const TreeView: React.FC<TreeViewProps> = ({ data, theme = 'light' }) => {
           folding: true,
           wordWrap: 'on',
           automaticLayout: true,
+          renderValidationDecorations: 'off',
+          scrollbar: {
+            vertical: 'visible',
+            horizontal: 'visible',
+            useShadows: false,
+            verticalScrollbarSize: 10,
+            horizontalScrollbarSize: 10,
+          },
+        }}
+        onMount={(editor) => {
+          // Ensure the editor is properly initialized
+          editor.layout();
         }}
       />
     </div>
