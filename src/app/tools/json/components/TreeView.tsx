@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
-import Editor from '@monaco-editor/react';
+import nextDynamic from 'next/dynamic';
+
+const MonacoEditor = nextDynamic(() => import('@monaco-editor/react'), { ssr: false });
 
 interface TreeViewProps {
   data: any;
@@ -12,7 +14,7 @@ const TreeView: React.FC<TreeViewProps> = ({ data }) => {
 
   return (
     <div className="h-full w-full">
-      <Editor
+      <MonacoEditor
         height="100%"
         defaultLanguage="json"
         value={jsonString}
