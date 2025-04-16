@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = "force-dynamic";
+
 import { useState, useEffect, useCallback } from 'react';
 import { 
   WrenchIcon, 
@@ -33,10 +35,10 @@ import {
   FunnelIcon,
   ArrowsUpDownIcon
 } from '@heroicons/react/24/outline';
-import dynamic from 'next/dynamic';
+import nextDynamic from 'next/dynamic';
 
 // Dynamically import Monaco editor with no SSR
-const Editor = dynamic(
+const Editor = nextDynamic(
   () => import('@monaco-editor/react'),
   { ssr: false }
 );
