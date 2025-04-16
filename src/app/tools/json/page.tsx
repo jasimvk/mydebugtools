@@ -40,13 +40,25 @@ import {
   FolderIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
-import Ajv from 'ajv';
-import yaml from 'js-yaml';
-import { stringify } from 'csv-stringify/sync';
-import jsonpath from 'jsonpath';
-import { Validator } from 'jsonschema';
-import { useDebounce } from 'use-debounce';
 import { type EditorProps } from '@monaco-editor/react';
+
+// Move these imports to be dynamically loaded
+const loadDependencies = async () => {
+  const [
+    { default: Ajv },
+    { default: yaml },
+    { stringify },
+    { default: jsonpath },
+    { Validator }
+  ] = await Promise.all([
+    import('ajv'),
+    import('js-yaml'),
+    import('csv-stringify/sync'),
+    import('jsonpath'),
+    import('jsonschema')
+  ]);
+  return { Ajv, yaml, stringify, jsonpath, Validator };
+};
 
 interface SimpleEditorProps {
   value: string;
@@ -522,8 +534,8 @@ const JSONEditor: React.FC<{
         onError(null);
         return;
       }
-      JSON.parse(json);
-      onError(null);
+        JSON.parse(json);
+        onError(null);
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Invalid JSON');
     }
@@ -535,24 +547,24 @@ const JSONEditor: React.FC<{
 
   return (
     <MonacoEditorWrapper
-      height={height}
-      defaultLanguage="json"
-      value={value}
-      onChange={(value) => {
-        onChange(value || '');
-        validateJSON(value || '');
-      }}
-      options={{
-        minimap: { enabled: false },
-        fontSize: 14,
-        lineNumbers: 'on',
+        height={height}
+        defaultLanguage="json"
+        value={value}
+        onChange={(value) => {
+          onChange(value || '');
+          validateJSON(value || '');
+        }}
+        options={{
+          minimap: { enabled: false },
+          fontSize: 14,
+          lineNumbers: 'on',
         readOnly,
-        scrollBeyondLastLine: false,
+          scrollBeyondLastLine: false,
         automaticLayout: true,
-        tabSize: 2,
+          tabSize: 2,
         wordWrap: 'on',
-        formatOnPaste: true,
-        formatOnType: true,
+          formatOnPaste: true,
+          formatOnType: true,
       }}
     />
   );
@@ -815,61 +827,642 @@ const CompareEditor: React.FC<{
   }, []);
 
   if (!mounted) {
-    return (
+      return (
       <div className="grid grid-cols-2 gap-4">
         <SimpleEditor value={leftValue} onChange={onLeftChange} readOnly={readOnly} height={height} />
         <SimpleEditor value={rightValue} onChange={onRightChange} readOnly={readOnly} height={height} />
-      </div>
-    );
-  }
+        </div>
+      );
+      }
 
-  return (
+      return (
     <div className="grid grid-cols-2 gap-4">
       <MonacoEditorWrapper
         height={height}
-        defaultLanguage="json"
+              defaultLanguage="json"
         value={leftValue}
         onChange={(value: string | undefined) => onLeftChange(value || '')}
-        options={{
+              options={{
           readOnly,
-          minimap: { enabled: false },
-          fontSize: 14,
-          lineNumbers: 'on',
-          scrollBeyondLastLine: false,
+                minimap: { enabled: false },
+                fontSize: 14,
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
           automaticLayout: true,
-          tabSize: 2,
+                tabSize: 2,
           wordWrap: 'on',
-          formatOnPaste: true,
+                formatOnPaste: true,
           formatOnType: true,
         }}
       />
       <MonacoEditorWrapper
         height={height}
-        defaultLanguage="json"
+              defaultLanguage="json"
         value={rightValue}
         onChange={(value: string | undefined) => onRightChange(value || '')}
-        options={{
+              options={{
           readOnly,
-          minimap: { enabled: false },
-          fontSize: 14,
-          lineNumbers: 'on',
-          scrollBeyondLastLine: false,
-          automaticLayout: true,
+                minimap: { enabled: false },
+                fontSize: 14,
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
           tabSize: 2,
           wordWrap: 'on',
           formatOnPaste: true,
           formatOnType: true,
         }}
       />
-    </div>
+          </div>
   );
 };
 
 export default function JSONFormatter() {
-  // TEMPORARY: Comment out all logic to isolate build error
+  const [input, setInput] = useState('');
+  const [output, setOutput] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabType>('format');
+  const [schema, setSchema] = useState('');
+  const [validationResult, setValidationResult] = useState<{ valid: boolean; errors: string[] }>({ valid: true, errors: [] });
+  const [jsonPath, setJsonPath] = useState('');
+  const [jsonPathResult, setJsonPathResult] = useState<any>(null);
+  const [transformOperation, setTransformOperation] = useState<TransformOperation>({ type: 'sort' });
+  const [compareInput, setCompareInput] = useState('');
+  const [compareResult, setCompareResult] = useState<CompareResult | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchOptions, setSearchOptions] = useState<SearchOptions>({
+    caseSensitive: false,
+    wholeWord: false,
+    regex: false,
+    searchInKeys: true,
+    searchInValues: true,
+    advanced: false
+  });
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [exportFormat, setExportFormat] = useState<ExportFormat>(null);
+
+  function handleFormat() {
+    try {
+      const parsed = JSON.parse(input);
+      setOutput(JSON.stringify(parsed, null, 2));
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Invalid JSON');
+      setOutput('');
+    }
+  }
+
+  async function handleValidate() {
+    try {
+      const data = JSON.parse(input);
+      const schemaObj = JSON.parse(schema);
+      const { Ajv } = await loadDependencies();
+      const ajv = new Ajv();
+      const validate = ajv.compile(schemaObj);
+      const valid = validate(data);
+      
+      setValidationResult({
+        valid,
+        errors: valid ? [] : (validate.errors || []).map(err => `${err.instancePath} ${err.message}`)
+      });
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Invalid JSON or Schema');
+      setValidationResult({ valid: false, errors: [] });
+    }
+  }
+
+  async function handleJsonPath() {
+    try {
+      const data = JSON.parse(input);
+      const { jsonpath } = await loadDependencies();
+      const result = jsonpath.query(data, jsonPath);
+      setJsonPathResult(result);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Invalid JSONPath expression');
+      setJsonPathResult(null);
+    }
+  }
+
+  async function handleTransform() {
+    try {
+      const data = JSON.parse(input);
+      const { jsonpath } = await loadDependencies();
+      let result = data;
+
+      switch (transformOperation.type) {
+        case 'sort':
+          if (Array.isArray(data)) {
+            result = [...data].sort((a, b) => {
+              if (transformOperation.field) {
+                return a[transformOperation.field] > b[transformOperation.field] ? 1 : -1;
+              }
+              return a > b ? 1 : -1;
+            });
+            if (transformOperation.order === 'desc') {
+              result.reverse();
+            }
+          }
+          break;
+        case 'filter':
+          if (Array.isArray(data)) {
+            result = data.filter(item => {
+              if (!transformOperation.field || !transformOperation.value) return true;
+              const value = item[transformOperation.field];
+              switch (transformOperation.operator) {
+                case 'equals': return value === transformOperation.value;
+                case 'contains': return String(value).includes(String(transformOperation.value));
+                case 'greaterThan': return value > transformOperation.value;
+                case 'lessThan': return value < transformOperation.value;
+                case 'regex': return new RegExp(transformOperation.value).test(String(value));
+                default: return true;
+              }
+            });
+          }
+          break;
+        case 'map':
+          if (Array.isArray(data)) {
+            result = data.map(item => {
+              if (!transformOperation.field || !transformOperation.operation) return item;
+              const value = item[transformOperation.field];
+              switch (transformOperation.operation) {
+                case 'uppercase': return { ...item, [transformOperation.field]: String(value).toUpperCase() };
+                case 'lowercase': return { ...item, [transformOperation.field]: String(value).toLowerCase() };
+                case 'trim': return { ...item, [transformOperation.field]: String(value).trim() };
+                case 'parseInt': return { ...item, [transformOperation.field]: parseInt(String(value)) };
+                case 'parseFloat': return { ...item, [transformOperation.field]: parseFloat(String(value)) };
+                case 'toDate': return { ...item, [transformOperation.field]: new Date(value).toISOString() };
+                default: return item;
+              }
+            });
+          }
+          break;
+      }
+
+      setOutput(JSON.stringify(result, null, 2));
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Transform operation failed');
+      setOutput('');
+    }
+  }
+
+  function handleCompare() {
+    try {
+      const data1 = JSON.parse(input);
+      const data2 = JSON.parse(compareInput);
+      
+      const result: CompareResult = {
+        added: [],
+        removed: [],
+        modified: []
+      };
+
+      function compareObjects(obj1: any, obj2: any, path: string = '') {
+        const keys1 = Object.keys(obj1);
+        const keys2 = Object.keys(obj2);
+
+        keys1.forEach(key => {
+          const currentPath = path ? `${path}.${key}` : key;
+          if (!(key in obj2)) {
+            result.removed.push(obj1[key]);
+          } else if (typeof obj1[key] === 'object' && obj1[key] !== null &&
+                     typeof obj2[key] === 'object' && obj2[key] !== null) {
+            compareObjects(obj1[key], obj2[key], currentPath);
+          } else if (JSON.stringify(obj1[key]) !== JSON.stringify(obj2[key])) {
+            result.modified.push({
+              path: currentPath,
+              oldValue: obj1[key],
+              newValue: obj2[key]
+            });
+          }
+        });
+
+        keys2.forEach(key => {
+          if (!(key in obj1)) {
+            result.added.push(obj2[key]);
+          }
+        });
+      }
+
+      compareObjects(data1, data2);
+      setCompareResult(result);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Comparison failed');
+      setCompareResult(null);
+    }
+  }
+
+  async function handleSearch() {
+    try {
+      const data = JSON.parse(input);
+      const { jsonpath } = await loadDependencies();
+      const results: SearchResult[] = [];
+      
+      function searchInObject(obj: any, path: string = '') {
+        if (typeof obj !== 'object' || obj === null) return;
+
+        Object.entries(obj).forEach(([key, value]) => {
+          const currentPath = path ? `${path}.${key}` : key;
+          
+          if (searchOptions.searchInKeys) {
+            const keyMatch = searchOptions.regex
+              ? new RegExp(searchQuery, searchOptions.caseSensitive ? '' : 'i').test(key)
+              : searchOptions.wholeWord
+                ? key === searchQuery
+                : key.toLowerCase().includes(searchQuery.toLowerCase());
+            
+            if (keyMatch) {
+              results.push({ path: currentPath, value: key, type: 'key' });
+            }
+          }
+
+          if (searchOptions.searchInValues) {
+            const valueStr = String(value);
+            const valueMatch = searchOptions.regex
+              ? new RegExp(searchQuery, searchOptions.caseSensitive ? '' : 'i').test(valueStr)
+              : searchOptions.wholeWord
+                ? valueStr === searchQuery
+                : valueStr.toLowerCase().includes(searchQuery.toLowerCase());
+            
+            if (valueMatch) {
+              results.push({ path: currentPath, value, type: 'value' });
+            }
+          }
+
+          if (typeof value === 'object' && value !== null) {
+            searchInObject(value, currentPath);
+          }
+        });
+      }
+
+      searchInObject(data);
+      setSearchResults(results);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Search failed');
+      setSearchResults([]);
+    }
+  }
+
+  async function handleExport() {
+    try {
+      const data = JSON.parse(input);
+      const { stringify } = await loadDependencies();
+      let result = '';
+
+      switch (exportFormat) {
+        case 'yaml':
+          const { yaml } = await loadDependencies();
+          result = yaml.dump(data);
+          break;
+        case 'xml':
+          const { jsonpath } = await loadDependencies();
+          result = convertToXML(data);
+          break;
+        case 'csv':
+          result = convertToCSV(data);
+          break;
+        default:
+          result = JSON.stringify(data, null, 2);
+      }
+
+      setOutput(result);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Export failed');
+      setOutput('');
+    }
+  }
+
   return (
-    <div className="flex items-center justify-center min-h-screen text-2xl text-gray-500">
-      JSON Tools temporarily disabled for build troubleshooting.
+    <div className="flex flex-col items-center justify-center min-h-screen text-2xl text-gray-500 gap-4">
+      <h1 className="text-3xl font-bold text-gray-800 mb-4">JSON Tools</h1>
+      <div className="flex gap-4 mb-6">
+        <button onClick={() => setActiveTab('format')} className={`px-4 py-2 rounded ${activeTab === 'format' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>Format</button>
+        <button onClick={() => setActiveTab('validate')} className={`px-4 py-2 rounded ${activeTab === 'validate' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>Validate</button>
+        <button onClick={() => setActiveTab('transform')} className={`px-4 py-2 rounded ${activeTab === 'transform' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>Transform</button>
+        <button onClick={() => setActiveTab('compare')} className={`px-4 py-2 rounded ${activeTab === 'compare' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>Compare</button>
+        <button onClick={() => setActiveTab('search')} className={`px-4 py-2 rounded ${activeTab === 'search' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>Search</button>
+      </div>
+
+      <div className="w-full max-w-4xl">
+        <div className="mb-4">
+          <label className="block mb-2 text-lg">Input JSON</label>
+          <textarea
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            className="w-full h-64 font-mono text-sm border rounded p-2"
+            placeholder="Paste your JSON here..."
+          />
+        </div>
+
+        {activeTab === 'format' && (
+          <>
+            <button
+              onClick={handleFormat}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded mb-4"
+            >
+              Format JSON
+            </button>
+            <div className="mb-4">
+              <label className="block mb-2 text-lg">Formatted Output</label>
+              <textarea
+                value={output}
+                readOnly
+                className="w-full h-64 font-mono text-sm border rounded p-2 bg-gray-50"
+              />
+            </div>
+          </>
+        )}
+
+        {activeTab === 'validate' && (
+          <>
+            <div className="mb-4">
+              <label className="block mb-2 text-lg">JSON Schema</label>
+              <textarea
+                value={schema}
+                onChange={e => setSchema(e.target.value)}
+                className="w-full h-64 font-mono text-sm border rounded p-2"
+                placeholder="Paste your JSON Schema here..."
+              />
+            </div>
+            <button
+              onClick={handleValidate}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded mb-4"
+            >
+              Validate JSON
+            </button>
+            <div className={`text-lg ${validationResult.valid ? 'text-green-500' : 'text-red-500'}`}>
+              {validationResult.valid ? 'Valid JSON' : 'Invalid JSON'}
+            </div>
+            {validationResult.errors.length > 0 && (
+              <div className="text-red-500">
+                <ul className="list-disc pl-5">
+                  {validationResult.errors.map((err, i) => (
+                    <li key={i}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'transform' && (
+          <>
+            <div className="mb-4">
+              <label className="block mb-2 text-lg">Transform Operation</label>
+              <select
+                value={transformOperation.type}
+                onChange={e => setTransformOperation({ ...transformOperation, type: e.target.value as TransformOperation['type'] })}
+                className="w-full p-2 border rounded mb-2"
+              >
+                <option value="sort">Sort</option>
+                <option value="filter">Filter</option>
+                <option value="map">Map</option>
+              </select>
+              {transformOperation.type === 'sort' && (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Field to sort by (optional)"
+                    value={transformOperation.field || ''}
+                    onChange={e => setTransformOperation({ ...transformOperation, field: e.target.value })}
+                    className="w-full p-2 border rounded mb-2"
+                  />
+                  <select
+                    value={transformOperation.order || 'asc'}
+                    onChange={e => setTransformOperation({ ...transformOperation, order: e.target.value as 'asc' | 'desc' })}
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="asc">Ascending</option>
+                    <option value="desc">Descending</option>
+                  </select>
+                </>
+              )}
+              {transformOperation.type === 'filter' && (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Field to filter by"
+                    value={transformOperation.field || ''}
+                    onChange={e => setTransformOperation({ ...transformOperation, field: e.target.value })}
+                    className="w-full p-2 border rounded mb-2"
+                  />
+                  <select
+                    value={transformOperation.operator || 'equals'}
+                    onChange={e => setTransformOperation({ ...transformOperation, operator: e.target.value as TransformOperation['operator'] })}
+                    className="w-full p-2 border rounded mb-2"
+                  >
+                    <option value="equals">Equals</option>
+                    <option value="contains">Contains</option>
+                    <option value="greaterThan">Greater Than</option>
+                    <option value="lessThan">Less Than</option>
+                    <option value="regex">Regex</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Value to compare against"
+                    value={transformOperation.value || ''}
+                    onChange={e => setTransformOperation({ ...transformOperation, value: e.target.value })}
+                    className="w-full p-2 border rounded"
+                  />
+                </>
+              )}
+              {transformOperation.type === 'map' && (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Field to transform"
+                    value={transformOperation.field || ''}
+                    onChange={e => setTransformOperation({ ...transformOperation, field: e.target.value })}
+                    className="w-full p-2 border rounded mb-2"
+                  />
+                  <select
+                    value={transformOperation.operation || 'uppercase'}
+                    onChange={e => setTransformOperation({ ...transformOperation, operation: e.target.value as TransformOperation['operation'] })}
+                    className="w-full p-2 border rounded"
+                  >
+                    <option value="uppercase">Uppercase</option>
+                    <option value="lowercase">Lowercase</option>
+                    <option value="trim">Trim</option>
+                    <option value="parseInt">Parse Integer</option>
+                    <option value="parseFloat">Parse Float</option>
+                    <option value="toDate">To Date</option>
+                  </select>
+                </>
+              )}
+            </div>
+            <button
+              onClick={handleTransform}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded mb-4"
+            >
+              Transform JSON
+            </button>
+            <div className="mb-4">
+              <label className="block mb-2 text-lg">Transformed Output</label>
+              <textarea
+                value={output}
+                readOnly
+                className="w-full h-64 font-mono text-sm border rounded p-2 bg-gray-50"
+              />
+            </div>
+          </>
+        )}
+
+        {activeTab === 'compare' && (
+          <>
+            <div className="mb-4">
+              <label className="block mb-2 text-lg">Compare With</label>
+              <textarea
+                value={compareInput}
+                onChange={e => setCompareInput(e.target.value)}
+                className="w-full h-64 font-mono text-sm border rounded p-2"
+                placeholder="Paste JSON to compare with..."
+              />
+            </div>
+            <button
+              onClick={handleCompare}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded mb-4"
+            >
+              Compare JSON
+            </button>
+            {compareResult && (
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold mb-2">Comparison Results</h3>
+                {compareResult.added.length > 0 && (
+                  <div className="mb-2">
+                    <h4 className="text-green-500">Added:</h4>
+                    <pre className="text-sm bg-gray-50 p-2 rounded">{JSON.stringify(compareResult.added, null, 2)}</pre>
+                  </div>
+                )}
+                {compareResult.removed.length > 0 && (
+                  <div className="mb-2">
+                    <h4 className="text-red-500">Removed:</h4>
+                    <pre className="text-sm bg-gray-50 p-2 rounded">{JSON.stringify(compareResult.removed, null, 2)}</pre>
+                  </div>
+                )}
+                {compareResult.modified.length > 0 && (
+                  <div className="mb-2">
+                    <h4 className="text-yellow-500">Modified:</h4>
+                    <pre className="text-sm bg-gray-50 p-2 rounded">{JSON.stringify(compareResult.modified, null, 2)}</pre>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === 'search' && (
+          <>
+            <div className="mb-4">
+              <label className="block mb-2 text-lg">Search Query</label>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full p-2 border rounded mb-2"
+                placeholder="Enter search query..."
+              />
+              <div className="flex flex-wrap gap-4 mb-2">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={searchOptions.caseSensitive}
+                    onChange={e => setSearchOptions({ ...searchOptions, caseSensitive: e.target.checked })}
+                    className="mr-2"
+                  />
+                  Case Sensitive
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={searchOptions.wholeWord}
+                    onChange={e => setSearchOptions({ ...searchOptions, wholeWord: e.target.checked })}
+                    className="mr-2"
+                  />
+                  Whole Word
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={searchOptions.regex}
+                    onChange={e => setSearchOptions({ ...searchOptions, regex: e.target.checked })}
+                    className="mr-2"
+                  />
+                  Regex
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={searchOptions.searchInKeys}
+                    onChange={e => setSearchOptions({ ...searchOptions, searchInKeys: e.target.checked })}
+                    className="mr-2"
+                  />
+                  Search in Keys
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={searchOptions.searchInValues}
+                    onChange={e => setSearchOptions({ ...searchOptions, searchInValues: e.target.checked })}
+                    className="mr-2"
+                  />
+                  Search in Values
+                </label>
+              </div>
+            </div>
+            <button
+              onClick={handleSearch}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded mb-4"
+            >
+              Search JSON
+            </button>
+            {searchResults.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold mb-2">Search Results</h3>
+                <div className="space-y-2">
+                  {searchResults.map((result, index) => (
+                    <div key={index} className="p-2 bg-gray-50 rounded">
+                      <div className="text-sm font-semibold">Path: {result.path}</div>
+                      <div className="text-sm">Type: {result.type}</div>
+                      <div className="text-sm">Value: {JSON.stringify(result.value)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        <div className="mb-4">
+          <label className="block mb-2 text-lg">Export Format</label>
+          <select
+            value={exportFormat || ''}
+            onChange={e => setExportFormat(e.target.value as ExportFormat)}
+            className="w-full p-2 border rounded mb-2"
+          >
+            <option value="">JSON</option>
+            <option value="yaml">YAML</option>
+            <option value="xml">XML</option>
+            <option value="csv">CSV</option>
+          </select>
+          <button
+            onClick={handleExport}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+          >
+            Export
+          </button>
+        </div>
+
+        {error && (
+          <div className="text-red-500 text-lg mt-4">
+            Error: {error}
+          </div>
+        )}
+      </div>
     </div>
   );
 } 

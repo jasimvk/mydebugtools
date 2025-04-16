@@ -38,7 +38,7 @@ export default function useAnalytics() {
 
   useEffect(() => {
     if (pathname) {
-      const url = pathname + searchParams.toString()
+      const url = pathname + (searchParams?.toString() || '')
       pageview(url)
     }
   }, [pathname, searchParams])
