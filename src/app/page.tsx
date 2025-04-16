@@ -77,7 +77,7 @@ export default function Home() {
           <span className="text-2xl font-extrabold text-white tracking-tight">MyDebugTools</span>
         </div>
         <div className="flex gap-4 items-center">
-          <a href="https://github.com/yourusername/mydebugtools" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-gray-300 hover:text-white text-sm font-medium">
+          <a href="https://github.com/jasimvk/mydebugtools" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-gray-300 hover:text-white text-sm font-medium">
             <Github className="h-5 w-5" />
             GitHub
           </a>
@@ -120,7 +120,7 @@ export default function Home() {
             Try Now
           </a>
           <a
-            href="https://github.com/yourusername/mydebugtools"
+            href="https://github.com/jasimvk/mydebugtools"
             className="bg-gray-700 hover:bg-gray-600 text-white px-8 py-3 rounded-lg font-semibold flex items-center gap-2 text-lg shadow-lg transition-all duration-200 hover:scale-105"
             target="_blank" rel="noopener noreferrer"
           >
