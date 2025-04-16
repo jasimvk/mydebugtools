@@ -1,7 +1,9 @@
 'use client';
 
+export const dynamic = "force-dynamic";
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import dynamic from 'next/dynamic';
+import nextDynamic from 'next/dynamic';
 import { 
   ArrowPathIcon, 
   DocumentDuplicateIcon, 
@@ -67,7 +69,7 @@ const SimpleEditor: React.FC<SimpleEditorProps> = ({ value, onChange, readOnly =
 );
 
 // Client-side only Monaco editor component with proper loading state
-const MonacoEditorWrapper = dynamic(
+const MonacoEditorWrapper = nextDynamic(
   () => import('@monaco-editor/react').then((mod) => {
     const Editor = mod.default;
     return function MonacoEditorComponent(props: EditorProps) {
