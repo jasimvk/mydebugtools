@@ -46,11 +46,38 @@ import { stringify } from 'csv-stringify/sync';
 import jsonpath from 'jsonpath';
 import { Validator } from 'jsonschema';
 import { useDebounce } from 'use-debounce';
+import { type EditorProps } from '@monaco-editor/react';
 
-// Dynamically import Monaco editor with no SSR
-const Editor = dynamic(
-  () => import('@monaco-editor/react'),
-  { ssr: false }
+interface SimpleEditorProps {
+  value: string;
+  onChange: (value: string) => void;
+  readOnly?: boolean;
+  height?: string;
+}
+
+// Simple textarea component for server-side rendering
+const SimpleEditor: React.FC<SimpleEditorProps> = ({ value, onChange, readOnly = false, height = '500px' }) => (
+  <textarea
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    readOnly={readOnly}
+    className="w-full font-mono text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 p-4"
+    style={{ height }}
+  />
+);
+
+// Client-side only Monaco editor component with proper loading state
+const MonacoEditorWrapper = dynamic(
+  () => import('@monaco-editor/react').then((mod) => {
+    const Editor = mod.default;
+    return function MonacoEditorComponent(props: EditorProps) {
+      return <Editor {...props} />;
+    };
+  }),
+  {
+    ssr: false,
+    loading: () => <SimpleEditor value="" onChange={() => {}} />,
+  }
 );
 
 type ViewMode = 'formatted' | 'minified' | 'compare';
@@ -465,88 +492,51 @@ const JSONEditor: React.FC<{
   readOnly?: boolean;
   height?: string;
 }> = ({ value, onChange, onError, readOnly = false, height = '500px' }) => {
-  const [isValid, setIsValid] = useState<boolean>(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const validateJSON = (json: string) => {
     try {
-      if (json.trim()) {
-        JSON.parse(json);
-        setIsValid(true);
-        setErrorMessage(null);
+      if (!json.trim()) {
         onError(null);
-      } else {
-        setIsValid(true);
-        setErrorMessage(null);
-        onError(null);
+        return;
       }
-    } catch (error) {
-      setIsValid(false);
-      const message = error instanceof Error ? error.message : 'Invalid JSON';
-      setErrorMessage(message);
-      onError(message);
+      JSON.parse(json);
+      onError(null);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Invalid JSON');
     }
   };
 
-  useEffect(() => {
-    validateJSON(value);
-  }, [value]);
+  if (!mounted) {
+    return <SimpleEditor value={value} onChange={onChange} readOnly={readOnly} height={height} />;
+  }
 
   return (
-    <div className="relative">
-      <Editor
-        height={height}
-        defaultLanguage="json"
-        value={value}
-        onChange={(value) => {
-          onChange(value || '');
-          validateJSON(value || '');
-        }}
-        theme="light"
-        options={{
-          readOnly,
-          minimap: { enabled: false },
-          fontSize: 14,
-          lineNumbers: 'on',
-          folding: true,
-          wordWrap: 'on',
-          automaticLayout: true,
-          scrollBeyondLastLine: false,
-          renderWhitespace: 'selection',
-          tabSize: 2,
-          formatOnPaste: true,
-          formatOnType: true,
-          suggestOnTriggerCharacters: true,
-          quickSuggestions: {
-            other: true,
-            comments: true,
-            strings: true
-          },
-          parameterHints: {
-            enabled: true
-          },
-          hover: {
-            enabled: true,
-            delay: 300
-          },
-          bracketPairColorization: {
-            enabled: true
-          },
-          guides: {
-            bracketPairs: true,
-            indentation: true
-          }
-        }}
-      />
-      {!isValid && errorMessage && (
-        <div className="absolute bottom-0 left-0 right-0 p-2 bg-red-50 border-t border-red-200">
-          <div className="flex items-center text-red-700 text-sm">
-            <ExclamationCircleIcon className="h-4 w-4 mr-1.5" />
-            {errorMessage}
-          </div>
-        </div>
-      )}
-    </div>
+    <MonacoEditorWrapper
+      height={height}
+      defaultLanguage="json"
+      value={value}
+      onChange={(value) => {
+        onChange(value || '');
+        validateJSON(value || '');
+      }}
+      options={{
+        minimap: { enabled: false },
+        fontSize: 14,
+        lineNumbers: 'on',
+        readOnly,
+        scrollBeyondLastLine: false,
+        automaticLayout: true,
+        tabSize: 2,
+        wordWrap: 'on',
+        formatOnPaste: true,
+        formatOnType: true,
+      }}
+    />
   );
 };
 
@@ -791,6 +781,71 @@ interface ValidationResult {
   isValid: boolean | undefined;
   message: string | null;
 }
+
+const CompareEditor: React.FC<{
+  leftValue: string;
+  rightValue: string;
+  onLeftChange: (value: string) => void;
+  onRightChange: (value: string) => void;
+  readOnly?: boolean;
+  height?: string;
+}> = ({ leftValue, rightValue, onLeftChange, onRightChange, readOnly = false, height = '500px' }) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <div className="grid grid-cols-2 gap-4">
+        <SimpleEditor value={leftValue} onChange={onLeftChange} readOnly={readOnly} height={height} />
+        <SimpleEditor value={rightValue} onChange={onRightChange} readOnly={readOnly} height={height} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-4">
+      <MonacoEditorWrapper
+        height={height}
+        defaultLanguage="json"
+        value={leftValue}
+        onChange={(value: string | undefined) => onLeftChange(value || '')}
+        options={{
+          readOnly,
+          minimap: { enabled: false },
+          fontSize: 14,
+          lineNumbers: 'on',
+          scrollBeyondLastLine: false,
+          automaticLayout: true,
+          tabSize: 2,
+          wordWrap: 'on',
+          formatOnPaste: true,
+          formatOnType: true,
+        }}
+      />
+      <MonacoEditorWrapper
+        height={height}
+        defaultLanguage="json"
+        value={rightValue}
+        onChange={(value: string | undefined) => onRightChange(value || '')}
+        options={{
+          readOnly,
+          minimap: { enabled: false },
+          fontSize: 14,
+          lineNumbers: 'on',
+          scrollBeyondLastLine: false,
+          automaticLayout: true,
+          tabSize: 2,
+          wordWrap: 'on',
+          formatOnPaste: true,
+          formatOnType: true,
+        }}
+      />
+    </div>
+  );
+};
 
 export default function JSONFormatter() {
   const [input, setInput] = useState('');
@@ -1477,7 +1532,7 @@ export default function JSONFormatter() {
             </div>
           </div>
           {isEditorMounted && (
-            <Editor
+            <MonacoEditorWrapper
               height="400px"
               defaultLanguage="json"
               value={input}
@@ -1532,7 +1587,7 @@ export default function JSONFormatter() {
             </div>
           </div>
           {isEditorMounted && (
-            <Editor
+            <MonacoEditorWrapper
               height="400px"
               defaultLanguage="json"
               value={output}
@@ -1559,7 +1614,7 @@ export default function JSONFormatter() {
         <div className="space-y-4">
           <h3 className="text-lg font-medium text-gray-900">Schema Validation</h3>
           <div className="space-y-2">
-            <Editor
+            <MonacoEditorWrapper
               height="200px"
               defaultLanguage="json"
               value={schema}
@@ -1667,7 +1722,7 @@ export default function JSONFormatter() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <h3 className="text-lg font-medium mb-2">Original JSON</h3>
-              <Editor
+              <MonacoEditorWrapper
                 height="300px"
                 defaultLanguage="json"
                 value={input}
@@ -1688,7 +1743,7 @@ export default function JSONFormatter() {
             </div>
             <div>
               <h3 className="text-lg font-medium mb-2">Compare With</h3>
-              <Editor
+              <MonacoEditorWrapper
                 height="300px"
                 defaultLanguage="json"
                 value={compareInput}
