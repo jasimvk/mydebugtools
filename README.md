@@ -2,6 +2,9 @@
 
 A powerful collection of development tools including JSON Formatter, JWT Decoder, Base64 Tools, API Tester, and Icon Finder - all in one place.
 
+[![GitHub stars](https://img.shields.io/github/stars/jasimvk/mydebugtools?style=social)](https://github.com/jasimvk/mydebugtools/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/jasimvk/mydebugtools)](https://github.com/jasimvk/mydebugtools/issues)
+
 ## Features
 
 - **JSON Tools**
@@ -22,6 +25,12 @@ A powerful collection of development tools including JSON Formatter, JWT Decoder
   - Collaboration Features
   - And more! Check our [Roadmap](https://mydebugtools.com/roadmap)
 
+## Screenshots
+
+| Homepage | Tools Page |
+|----------|------------|
+| ![Homepage screenshot](public/screenshots/homepage.png) | ![Tools page screenshot](public/screenshots/tools.png) |
+
 ## Getting Started
 
 ### Prerequisites
@@ -29,43 +38,47 @@ A powerful collection of development tools including JSON Formatter, JWT Decoder
 - Node.js 18.x or later
 - npm 9.x or later
 
-### Installation
+### Installation & Usage
 
-1. Clone the repository:
-```bash
-git clone https://github.com/jasimvk/mydebugtools.git
-cd mydebugtools
-```
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/jasimvk/mydebugtools.git
+   cd mydebugtools
+   ```
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+3. **Set up environment variables:**
+   Create a `.env.local` file in the root directory and add your environment variables:
+   ```env
+   NEXT_PUBLIC_GA_MEASUREMENT_ID=your-ga-id
+   ```
+4. **Start the development server:**
+   ```bash
+   npm run dev
+   ```
+5. **Open [http://localhost:3000](http://localhost:3000) in your browser.**
 
-2. Install dependencies:
-```bash
-npm install
-```
+## How to Contribute
 
-3. Create a `.env.local` file in the root directory and add your environment variables:
-```env
-NEXT_PUBLIC_GA_MEASUREMENT_ID=your-ga-id
-```
+We welcome contributions of all kinds! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- How to report bugs and request features
+- Coding style and pull request process
+- License and code of conduct
 
-4. Start the development server:
-```bash
-npm run dev
-```
-
-5. Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## Contributing
-
-We welcome contributions! Please follow these steps:
-
+Quick steps:
 1. Fork the repository
 2. Create a new branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Commit your changes (`git commit -m 'Add some amazing feature'`)
-5. Push to the branch (`git push origin feature/amazing-feature`)
-6. Open a Pull Request
+4. Commit and push (`git commit -m 'Add some amazing feature'`)
+5. Open a Pull Request
 
-Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+## Community & Support
+
+- **Found a bug or have a feature request?** [Open an issue](https://github.com/jasimvk/mydebugtools/issues)
+- **Want to contribute?** [See our guidelines](CONTRIBUTING.md)
+- **General questions?** Use GitHub Discussions or open an issue
 
 ## Development
 
