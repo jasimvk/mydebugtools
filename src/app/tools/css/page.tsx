@@ -13,8 +13,8 @@ import {
   CheckIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
-import { beautify } from 'js-beautify';
-import { validate } from 'w3c-css-validator';
+import beautify from 'js-beautify';
+import w3cValidator from 'w3c-css-validator';
 
 // Keyboard shortcuts
 const keyboardShortcuts = [
@@ -97,17 +97,14 @@ export default function CSSToolsPage() {
         preserve_newlines: true,
         keep_array_indentation: false,
         break_chained_methods: false,
-        indent_scripts: 'normal',
         brace_style: 'collapse',
         space_before_conditional: true,
         unescape_strings: false,
         jslint_happy: false,
         end_with_newline: true,
         wrap_line_length: 0,
-        indent_inner_html: false,
         comma_first: false,
-        e4x: false,
-        indent_empty_lines: false
+        e4x: false
       });
       setCSS(beautified);
       showNotification('CSS beautified', 'success');
@@ -145,8 +142,12 @@ export default function CSSToolsPage() {
   // Validate CSS
   const validateCSS = async () => {
     try {
-      const results = await validate({ text: css });
-      setValidationResults(results);
+      const results = await w3cValidator.validateText(css);
+      setValidationResults({
+        valid: results.valid,
+        errors: results.errors || [],
+        warnings: results.warnings || []
+      });
       if (results.valid) {
         showNotification('CSS is valid', 'success');
       } else {
