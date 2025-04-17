@@ -1138,331 +1138,551 @@ export default function JSONFormatter() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen text-2xl text-gray-500 gap-4">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4">
       <h1 className="text-3xl font-bold text-gray-800 mb-4">JSON Tools</h1>
-      <div className="flex gap-4 mb-6">
-        <button onClick={() => setActiveTab('format')} className={`px-4 py-2 rounded ${activeTab === 'format' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>Format</button>
-        <button onClick={() => setActiveTab('validate')} className={`px-4 py-2 rounded ${activeTab === 'validate' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>Validate</button>
-        <button onClick={() => setActiveTab('transform')} className={`px-4 py-2 rounded ${activeTab === 'transform' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>Transform</button>
-        <button onClick={() => setActiveTab('compare')} className={`px-4 py-2 rounded ${activeTab === 'compare' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>Compare</button>
-        <button onClick={() => setActiveTab('search')} className={`px-4 py-2 rounded ${activeTab === 'search' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'}`}>Search</button>
-      </div>
-
-      <div className="w-full max-w-4xl">
-        <div className="mb-4">
-          <label className="block mb-2 text-lg">Input JSON</label>
-          <textarea
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            className="w-full h-64 font-mono text-sm border rounded p-2"
-            placeholder="Paste your JSON here..."
-          />
+      
+      {/* Main container with improved layout */}
+      <div className="w-full max-w-7xl bg-white rounded-lg shadow-md overflow-hidden">
+        {/* Tabs with improved styling */}
+        <div className="flex flex-wrap border-b border-gray-200">
+          <button 
+            onClick={() => setActiveTab('format')} 
+            className={`px-4 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'format' 
+                ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-500' 
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center">
+              <CodeBracketIcon className="h-5 w-5 mr-2" />
+              Format
+            </div>
+          </button>
+          <button 
+            onClick={() => setActiveTab('validate')} 
+            className={`px-4 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'validate' 
+                ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-500' 
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center">
+              <DocumentCheckIcon className="h-5 w-5 mr-2" />
+              Validate
+            </div>
+          </button>
+          <button 
+            onClick={() => setActiveTab('transform')} 
+            className={`px-4 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'transform' 
+                ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-500' 
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center">
+              <ArrowsUpDownIcon className="h-5 w-5 mr-2" />
+              Transform
+            </div>
+          </button>
+          <button 
+            onClick={() => setActiveTab('compare')} 
+            className={`px-4 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'compare' 
+                ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-500' 
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center">
+              <ArrowsRightLeftIcon className="h-5 w-5 mr-2" />
+              Compare
+            </div>
+          </button>
+          <button 
+            onClick={() => setActiveTab('search')} 
+            className={`px-4 py-3 text-sm font-medium transition-colors ${
+              activeTab === 'search' 
+                ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-500' 
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center">
+              <MagnifyingGlassIcon className="h-5 w-5 mr-2" />
+              Search
+            </div>
+          </button>
         </div>
-
-        {activeTab === 'format' && (
-          <>
-            <button
-              onClick={handleFormat}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded mb-4"
-            >
-              Format JSON
-            </button>
-            <div className="mb-4">
-              <label className="block mb-2 text-lg">Formatted Output</label>
-              <textarea
-                value={output}
-                readOnly
-                className="w-full h-64 font-mono text-sm border rounded p-2 bg-gray-50"
-              />
-            </div>
-          </>
-        )}
-
-        {activeTab === 'validate' && (
-          <>
-            <div className="mb-4">
-              <label className="block mb-2 text-lg">JSON Schema</label>
-              <textarea
-                value={schema}
-                onChange={e => setSchema(e.target.value)}
-                className="w-full h-64 font-mono text-sm border rounded p-2"
-                placeholder="Paste your JSON Schema here..."
-              />
-            </div>
-            <button
-              onClick={handleValidate}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded mb-4"
-            >
-              Validate JSON
-            </button>
-            <div className={`text-lg ${validationResult.valid ? 'text-green-500' : 'text-red-500'}`}>
-              {validationResult.valid ? 'Valid JSON' : 'Invalid JSON'}
-            </div>
-            {validationResult.errors.length > 0 && (
-              <div className="text-red-500">
-                <ul className="list-disc pl-5">
-                  {validationResult.errors.map((err, i) => (
-                    <li key={i}>{err}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </>
-        )}
-
-        {activeTab === 'transform' && (
-          <>
-            <div className="mb-4">
-              <label className="block mb-2 text-lg">Transform Operation</label>
-              <select
-                value={transformOperation.type}
-                onChange={e => setTransformOperation({ ...transformOperation, type: e.target.value as TransformOperation['type'] })}
-                className="w-full p-2 border rounded mb-2"
-              >
-                <option value="sort">Sort</option>
-                <option value="filter">Filter</option>
-                <option value="map">Map</option>
-              </select>
-              {transformOperation.type === 'sort' && (
-                <>
-                  <input
-                    type="text"
-                    placeholder="Field to sort by (optional)"
-                    value={transformOperation.field || ''}
-                    onChange={e => setTransformOperation({ ...transformOperation, field: e.target.value })}
-                    className="w-full p-2 border rounded mb-2"
-                  />
-                  <select
-                    value={transformOperation.order || 'asc'}
-                    onChange={e => setTransformOperation({ ...transformOperation, order: e.target.value as 'asc' | 'desc' })}
-                    className="w-full p-2 border rounded"
-                  >
-                    <option value="asc">Ascending</option>
-                    <option value="desc">Descending</option>
-                  </select>
-                </>
-              )}
-              {transformOperation.type === 'filter' && (
-                <>
-                  <input
-                    type="text"
-                    placeholder="Field to filter by"
-                    value={transformOperation.field || ''}
-                    onChange={e => setTransformOperation({ ...transformOperation, field: e.target.value })}
-                    className="w-full p-2 border rounded mb-2"
-                  />
-                  <select
-                    value={transformOperation.operator || 'equals'}
-                    onChange={e => setTransformOperation({ ...transformOperation, operator: e.target.value as TransformOperation['operator'] })}
-                    className="w-full p-2 border rounded mb-2"
-                  >
-                    <option value="equals">Equals</option>
-                    <option value="contains">Contains</option>
-                    <option value="greaterThan">Greater Than</option>
-                    <option value="lessThan">Less Than</option>
-                    <option value="regex">Regex</option>
-                  </select>
-                  <input
-                    type="text"
-                    placeholder="Value to compare against"
-                    value={transformOperation.value || ''}
-                    onChange={e => setTransformOperation({ ...transformOperation, value: e.target.value })}
-                    className="w-full p-2 border rounded"
-                  />
-                </>
-              )}
-              {transformOperation.type === 'map' && (
-                <>
-                  <input
-                    type="text"
-                    placeholder="Field to transform"
-                    value={transformOperation.field || ''}
-                    onChange={e => setTransformOperation({ ...transformOperation, field: e.target.value })}
-                    className="w-full p-2 border rounded mb-2"
-                  />
-                  <select
-                    value={transformOperation.operation || 'uppercase'}
-                    onChange={e => setTransformOperation({ ...transformOperation, operation: e.target.value as TransformOperation['operation'] })}
-                    className="w-full p-2 border rounded"
-                  >
-                    <option value="uppercase">Uppercase</option>
-                    <option value="lowercase">Lowercase</option>
-                    <option value="trim">Trim</option>
-                    <option value="parseInt">Parse Integer</option>
-                    <option value="parseFloat">Parse Float</option>
-                    <option value="toDate">To Date</option>
-                  </select>
-                </>
-              )}
-            </div>
-            <button
-              onClick={handleTransform}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded mb-4"
-            >
-              Transform JSON
-            </button>
-            <div className="mb-4">
-              <label className="block mb-2 text-lg">Transformed Output</label>
-              <textarea
-                value={output}
-                readOnly
-                className="w-full h-64 font-mono text-sm border rounded p-2 bg-gray-50"
-              />
-            </div>
-          </>
-        )}
-
-        {activeTab === 'compare' && (
-          <>
-            <div className="mb-4">
-              <label className="block mb-2 text-lg">Compare With</label>
-              <textarea
-                value={compareInput}
-                onChange={e => setCompareInput(e.target.value)}
-                className="w-full h-64 font-mono text-sm border rounded p-2"
-                placeholder="Paste JSON to compare with..."
-              />
-            </div>
-            <button
-              onClick={handleCompare}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded mb-4"
-            >
-              Compare JSON
-            </button>
-            {compareResult && (
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold mb-2">Comparison Results</h3>
-                {compareResult.added.length > 0 && (
-                  <div className="mb-2">
-                    <h4 className="text-green-500">Added:</h4>
-                    <pre className="text-sm bg-gray-50 p-2 rounded">{JSON.stringify(compareResult.added, null, 2)}</pre>
-                  </div>
-                )}
-                {compareResult.removed.length > 0 && (
-                  <div className="mb-2">
-                    <h4 className="text-red-500">Removed:</h4>
-                    <pre className="text-sm bg-gray-50 p-2 rounded">{JSON.stringify(compareResult.removed, null, 2)}</pre>
-                  </div>
-                )}
-                {compareResult.modified.length > 0 && (
-                  <div className="mb-2">
-                    <h4 className="text-yellow-500">Modified:</h4>
-                    <pre className="text-sm bg-gray-50 p-2 rounded">{JSON.stringify(compareResult.modified, null, 2)}</pre>
-                  </div>
-                )}
-              </div>
-            )}
-          </>
-        )}
-
-        {activeTab === 'search' && (
-          <>
-            <div className="mb-4">
-              <label className="block mb-2 text-lg">Search Query</label>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full p-2 border rounded mb-2"
-                placeholder="Enter search query..."
-              />
-              <div className="flex flex-wrap gap-4 mb-2">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={searchOptions.caseSensitive}
-                    onChange={e => setSearchOptions({ ...searchOptions, caseSensitive: e.target.checked })}
-                    className="mr-2"
-                  />
-                  Case Sensitive
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={searchOptions.wholeWord}
-                    onChange={e => setSearchOptions({ ...searchOptions, wholeWord: e.target.checked })}
-                    className="mr-2"
-                  />
-                  Whole Word
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={searchOptions.regex}
-                    onChange={e => setSearchOptions({ ...searchOptions, regex: e.target.checked })}
-                    className="mr-2"
-                  />
-                  Regex
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={searchOptions.searchInKeys}
-                    onChange={e => setSearchOptions({ ...searchOptions, searchInKeys: e.target.checked })}
-                    className="mr-2"
-                  />
-                  Search in Keys
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={searchOptions.searchInValues}
-                    onChange={e => setSearchOptions({ ...searchOptions, searchInValues: e.target.checked })}
-                    className="mr-2"
-                  />
-                  Search in Values
-                </label>
+        
+        {/* Content area */}
+        <div className="p-4">
+          {/* Input section with improved styling */}
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-lg font-medium text-gray-700">Input JSON</label>
+              <div className="flex space-x-2">
+                <button 
+                  onClick={() => setInput(JSON.stringify(sampleJSON, null, 2))}
+                  className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded flex items-center"
+                  title="Load sample JSON"
+                >
+                  <LightBulbIcon className="h-4 w-4 mr-1" />
+                  Sample
+                </button>
+                <button 
+                  onClick={() => setInput('')}
+                  className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded flex items-center"
+                  title="Clear input"
+                >
+                  <TrashIcon className="h-4 w-4 mr-1" />
+                  Clear
+                </button>
               </div>
             </div>
-            <button
-              onClick={handleSearch}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded mb-4"
-            >
-              Search JSON
-            </button>
-            {searchResults.length > 0 && (
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold mb-2">Search Results</h3>
-                <div className="space-y-2">
-                  {searchResults.map((result, index) => (
-                    <div key={index} className="p-2 bg-gray-50 rounded">
-                      <div className="text-sm font-semibold">Path: {result.path}</div>
-                      <div className="text-sm">Type: {result.type}</div>
-                      <div className="text-sm">Value: {JSON.stringify(result.value)}</div>
+            <div className="relative">
+              <textarea
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                className="w-full h-64 font-mono text-sm border rounded p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Paste your JSON here..."
+              />
+              {input && (
+                <button 
+                  onClick={() => {
+                    try {
+                      const parsed = JSON.parse(input);
+                      setInput(JSON.stringify(parsed, null, 2));
+                      setError(null);
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : 'Invalid JSON');
+                    }
+                  }}
+                  className="absolute top-2 right-2 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded"
+                  title="Format JSON"
+                >
+                  Format
+                </button>
+              )}
+            </div>
+          </div>
+          
+          {/* Output section based on active tab */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Format tab */}
+            {activeTab === 'format' && (
+              <div className="md:col-span-2">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-lg font-medium text-gray-700">Formatted Output</label>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleFormat}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center"
+                    >
+                      <ArrowPathIcon className="h-4 w-4 mr-1" />
+                      Format
+                    </button>
+                    {output && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(output);
+                          // Show notification
+                        }}
+                        className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm flex items-center"
+                        title="Copy to clipboard"
+                      >
+                        <ClipboardIcon className="h-4 w-4 mr-1" />
+                        Copy
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="relative">
+                  <textarea
+                    value={output}
+                    readOnly
+                    className="w-full h-64 font-mono text-sm border rounded p-3 bg-gray-50"
+                  />
+                  {!output && (
+                    <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                      <p>Formatted JSON will appear here</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             )}
-          </>
-        )}
 
-        <div className="mb-4">
-          <label className="block mb-2 text-lg">Export Format</label>
-          <select
-            value={exportFormat || ''}
-            onChange={e => setExportFormat(e.target.value as ExportFormat)}
-            className="w-full p-2 border rounded mb-2"
-          >
-            <option value="">JSON</option>
-            <option value="yaml">YAML</option>
-            <option value="xml">XML</option>
-            <option value="csv">CSV</option>
-          </select>
-          <button
-            onClick={handleExport}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-          >
-            Export
-          </button>
-        </div>
-
-        {error && (
-          <div className="text-red-500 text-lg mt-4">
-            Error: {error}
+            {/* Validate tab */}
+            {activeTab === 'validate' && (
+              <div className="md:col-span-2">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-lg font-medium text-gray-700">Validation</label>
+                  <button
+                    onClick={handleValidate}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center"
+                  >
+                    <DocumentCheckIcon className="h-4 w-4 mr-1" />
+                    Validate
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block mb-2 text-sm font-medium text-gray-700">JSON Schema</label>
+                    <textarea
+                      value={schema}
+                      onChange={e => setSchema(e.target.value)}
+                      className="w-full h-64 font-mono text-sm border rounded p-3"
+                      placeholder="Paste your JSON Schema here..."
+                    />
+                  </div>
+                  <div>
+                    <div className="h-64 border rounded p-4 bg-gray-50 overflow-auto">
+                      {validationResult.valid !== undefined ? (
+                        <div>
+                          <div className={`text-lg font-medium mb-4 ${validationResult.valid ? 'text-green-500' : 'text-red-500'}`}>
+                            {validationResult.valid ? 'Valid JSON' : 'Invalid JSON'}
+                          </div>
+                          {!validationResult.valid && validationResult.errors.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-700 mb-2">Validation Errors:</h4>
+                              <ul className="space-y-1">
+                                {validationResult.errors.map((error, index) => (
+                                  <li key={index} className="text-sm text-red-500">{error}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-400">
+                          <p>Validation results will appear here</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Transform tab */}
+            {activeTab === 'transform' && (
+              <div className="md:col-span-2">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-lg font-medium text-gray-700">Transform</label>
+                  <button
+                    onClick={handleTransform}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center"
+                  >
+                    <ArrowsUpDownIcon className="h-4 w-4 mr-1" />
+                    Transform
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="bg-white border rounded p-4">
+                      <label className="block mb-2 text-sm font-medium text-gray-700">Transform Operation</label>
+                      <select
+                        value={transformOperation.type}
+                        onChange={e => setTransformOperation({ ...transformOperation, type: e.target.value as TransformOperation['type'] })}
+                        className="w-full p-2 border rounded mb-4"
+                      >
+                        <option value="sort">Sort</option>
+                        <option value="filter">Filter</option>
+                        <option value="map">Map</option>
+                      </select>
+                      
+                      {transformOperation.type === 'sort' && (
+                        <div className="space-y-3">
+                          <input
+                            type="text"
+                            placeholder="Field to sort by (optional)"
+                            value={transformOperation.field || ''}
+                            onChange={e => setTransformOperation({ ...transformOperation, field: e.target.value })}
+                            className="w-full p-2 border rounded"
+                          />
+                          <select
+                            value={transformOperation.order || 'asc'}
+                            onChange={e => setTransformOperation({ ...transformOperation, order: e.target.value as 'asc' | 'desc' })}
+                            className="w-full p-2 border rounded"
+                          >
+                            <option value="asc">Ascending</option>
+                            <option value="desc">Descending</option>
+                          </select>
+                        </div>
+                      )}
+                      
+                      {transformOperation.type === 'filter' && (
+                        <div className="space-y-3">
+                          <input
+                            type="text"
+                            placeholder="Field to filter by"
+                            value={transformOperation.field || ''}
+                            onChange={e => setTransformOperation({ ...transformOperation, field: e.target.value })}
+                            className="w-full p-2 border rounded"
+                          />
+                          <select
+                            value={transformOperation.operator || 'equals'}
+                            onChange={e => setTransformOperation({ ...transformOperation, operator: e.target.value as TransformOperation['operator'] })}
+                            className="w-full p-2 border rounded"
+                          >
+                            <option value="equals">Equals</option>
+                            <option value="contains">Contains</option>
+                            <option value="greaterThan">Greater Than</option>
+                            <option value="lessThan">Less Than</option>
+                            <option value="regex">Regex</option>
+                          </select>
+                          <input
+                            type="text"
+                            placeholder="Value to compare against"
+                            value={transformOperation.value || ''}
+                            onChange={e => setTransformOperation({ ...transformOperation, value: e.target.value })}
+                            className="w-full p-2 border rounded"
+                          />
+                        </div>
+                      )}
+                      
+                      {transformOperation.type === 'map' && (
+                        <div className="space-y-3">
+                          <input
+                            type="text"
+                            placeholder="Field to transform"
+                            value={transformOperation.field || ''}
+                            onChange={e => setTransformOperation({ ...transformOperation, field: e.target.value })}
+                            className="w-full p-2 border rounded"
+                          />
+                          <select
+                            value={transformOperation.operation || 'uppercase'}
+                            onChange={e => setTransformOperation({ ...transformOperation, operation: e.target.value as TransformOperation['operation'] })}
+                            className="w-full p-2 border rounded"
+                          >
+                            <option value="uppercase">Uppercase</option>
+                            <option value="lowercase">Lowercase</option>
+                            <option value="trim">Trim</option>
+                            <option value="parseInt">Parse Integer</option>
+                            <option value="parseFloat">Parse Float</option>
+                            <option value="toDate">To Date</option>
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block mb-2 text-sm font-medium text-gray-700">Transformed Output</label>
+                    <div className="relative">
+                      <textarea
+                        value={output}
+                        readOnly
+                        className="w-full h-64 font-mono text-sm border rounded p-3 bg-gray-50"
+                      />
+                      {!output && (
+                        <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                          <p>Transformed JSON will appear here</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Compare tab */}
+            {activeTab === 'compare' && (
+              <div className="md:col-span-2">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-lg font-medium text-gray-700">Compare</label>
+                  <button
+                    onClick={handleCompare}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center"
+                  >
+                    <ArrowsRightLeftIcon className="h-4 w-4 mr-1" />
+                    Compare
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block mb-2 text-sm font-medium text-gray-700">Compare With</label>
+                    <textarea
+                      value={compareInput}
+                      onChange={e => setCompareInput(e.target.value)}
+                      className="w-full h-64 font-mono text-sm border rounded p-3"
+                      placeholder="Paste JSON to compare with..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-2 text-sm font-medium text-gray-700">Comparison Results</label>
+                    <div className="h-64 border rounded p-4 bg-gray-50 overflow-auto">
+                      {compareResult ? (
+                        <div>
+                          {compareResult.added.length > 0 && (
+                            <div className="mb-4">
+                              <h4 className="text-sm font-medium text-green-500 mb-1">Added:</h4>
+                              <pre className="text-xs bg-white p-2 rounded border border-green-100 overflow-auto max-h-32">{JSON.stringify(compareResult.added, null, 2)}</pre>
+                            </div>
+                          )}
+                          {compareResult.removed.length > 0 && (
+                            <div className="mb-4">
+                              <h4 className="text-sm font-medium text-red-500 mb-1">Removed:</h4>
+                              <pre className="text-xs bg-white p-2 rounded border border-red-100 overflow-auto max-h-32">{JSON.stringify(compareResult.removed, null, 2)}</pre>
+                            </div>
+                          )}
+                          {compareResult.modified.length > 0 && (
+                            <div className="mb-4">
+                              <h4 className="text-sm font-medium text-yellow-500 mb-1">Modified:</h4>
+                              <pre className="text-xs bg-white p-2 rounded border border-yellow-100 overflow-auto max-h-32">{JSON.stringify(compareResult.modified, null, 2)}</pre>
+                            </div>
+                          )}
+                          {compareResult.added.length === 0 && compareResult.removed.length === 0 && compareResult.modified.length === 0 && (
+                            <div className="text-green-500 text-center py-4">
+                              <CheckCircleIcon className="h-8 w-8 mx-auto mb-2" />
+                              <p>No differences found</p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-400">
+                          <p>Comparison results will appear here</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Search tab */}
+            {activeTab === 'search' && (
+              <div className="md:col-span-2">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-lg font-medium text-gray-700">Search</label>
+                  <button
+                    onClick={handleSearch}
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm flex items-center"
+                  >
+                    <MagnifyingGlassIcon className="h-4 w-4 mr-1" />
+                    Search
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="bg-white border rounded p-4">
+                      <label className="block mb-2 text-sm font-medium text-gray-700">Search Query</label>
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="w-full p-2 border rounded mb-4"
+                        placeholder="Enter search query..."
+                      />
+                      <div className="space-y-2">
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={searchOptions.caseSensitive}
+                            onChange={e => setSearchOptions({ ...searchOptions, caseSensitive: e.target.checked })}
+                            className="mr-2"
+                          />
+                          <span className="text-sm">Case Sensitive</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={searchOptions.wholeWord}
+                            onChange={e => setSearchOptions({ ...searchOptions, wholeWord: e.target.checked })}
+                            className="mr-2"
+                          />
+                          <span className="text-sm">Whole Word</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={searchOptions.regex}
+                            onChange={e => setSearchOptions({ ...searchOptions, regex: e.target.checked })}
+                            className="mr-2"
+                          />
+                          <span className="text-sm">Regex</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={searchOptions.searchInKeys}
+                            onChange={e => setSearchOptions({ ...searchOptions, searchInKeys: e.target.checked })}
+                            className="mr-2"
+                          />
+                          <span className="text-sm">Search in Keys</span>
+                        </label>
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={searchOptions.searchInValues}
+                            onChange={e => setSearchOptions({ ...searchOptions, searchInValues: e.target.checked })}
+                            className="mr-2"
+                          />
+                          <span className="text-sm">Search in Values</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block mb-2 text-sm font-medium text-gray-700">Search Results</label>
+                    <div className="h-64 border rounded p-4 bg-gray-50 overflow-auto">
+                      {searchResults.length > 0 ? (
+                        <div className="space-y-2">
+                          {searchResults.map((result, index) => (
+                            <div key={index} className="p-2 bg-white rounded border">
+                              <div className="text-xs font-medium text-gray-700">Path: {result.path}</div>
+                              <div className="text-xs text-gray-500">Type: {result.type}</div>
+                              <div className="text-xs mt-1 overflow-auto">
+                                <pre className="bg-gray-50 p-1 rounded">{JSON.stringify(result.value)}</pre>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-gray-400">
+                          <p>Search results will appear here</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+          
+          {/* Export section */}
+          <div className="mt-6 border-t pt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <label className="text-sm font-medium text-gray-700 mr-2">Export Format:</label>
+                <select
+                  value={exportFormat || ''}
+                  onChange={e => setExportFormat(e.target.value as ExportFormat)}
+                  className="p-2 border rounded text-sm"
+                >
+                  <option value="">JSON</option>
+                  <option value="yaml">YAML</option>
+                  <option value="xml">XML</option>
+                  <option value="csv">CSV</option>
+                </select>
+              </div>
+              <button
+                onClick={handleExport}
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm flex items-center"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                Export
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
+      
+      {/* Error message */}
+      {error && (
+        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded text-red-600 text-sm">
+          <div className="flex items-center">
+            <ExclamationCircleIcon className="h-5 w-5 mr-2" />
+            <span>{error}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

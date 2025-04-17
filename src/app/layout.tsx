@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import GoogleAnalytics from "./components/GoogleAnalytics";
-import Navigation from "./components/Navigation";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,12 +21,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable}>
-      <body className={`${inter.className} antialiased bg-white text-gray-900`}>
+      <body className={`${inter.className} antialiased bg-white text-gray-900 min-h-screen flex flex-col`}>
         {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
           <GoogleAnalytics measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
         )}
-        <Navigation />
-        <main>
+        <main className="flex-1">
           {children}
         </main>
       </body>
