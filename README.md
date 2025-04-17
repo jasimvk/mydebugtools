@@ -107,7 +107,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Support
 
 If you find this project helpful, please consider:
-- Starring the repository
+- [Starring the repository](https://github.com/jasimvk/mydebugtools)
 - Reporting bugs
 - Contributing code or documentation
 - Sharing with your network
