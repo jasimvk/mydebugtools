@@ -258,7 +258,7 @@ export default function Home() {
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 w-full max-w-4xl">
           <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
-            <p className="text-3xl font-bold text-blue-400">5+</p>
+            <p className="text-3xl font-bold text-blue-400">11+</p>
             <p className="text-gray-400">Tools</p>
           </div>
           <div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
@@ -532,7 +532,7 @@ export default function Home() {
           </div>
         </div>
         <div className="border-t border-gray-800 pt-8">
-          <p className="mb-2">Built with <Heart className="h-4 w-4 text-red-500 inline" /> by <a href="https://github.com/jasimvk" className="text-blue-400 hover:text-blue-300" target="_blank" rel="noopener noreferrer">Jasim</a></p>
+          <p className="mb-2">Built by <a href="https://github.com/jasimvk" className="text-blue-400 hover:text-blue-300" target="_blank" rel="noopener noreferrer">Jasim</a></p>
           <p>© {new Date().getFullYear()} MyDebugTools • <a href="https://github.com/jasimvk/mydebugtools" className="text-blue-400 hover:text-blue-300" target="_blank" rel="noopener noreferrer">Open Source</a></p>
         </div>
       </footer>
