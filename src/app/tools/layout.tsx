@@ -10,9 +10,10 @@ import {
   ArrowsRightLeftIcon,
   SwatchIcon,
   DocumentTextIcon,
-  DocumentCheckIcon
+  DocumentCheckIcon,
+  ExclamationCircleIcon
 } from '@heroicons/react/24/outline';
-import { CurlyBracesIcon, Terminal } from 'lucide-react';
+import { CurlyBracesIcon, Terminal, Github, Bug } from 'lucide-react';
 import { useState } from 'react';
 
 // Tools ordered by popularity and trending status
@@ -52,12 +53,6 @@ const tools = [
     description: 'Encode and decode Base64 strings with a single click',
     path: '/tools/base64',
     icon: CommandLineIcon
-  },
-  {
-    name: 'HTML Validator',
-    description: 'Validate and format HTML code',
-    path: '/tools/html',
-    icon: DocumentCheckIcon
   },
   {
     name: 'CSS Tools',
@@ -149,10 +144,34 @@ export default function ToolsLayout({
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto relative">
         <div className="container mx-auto p-4 md:p-6">
           {children}
         </div>
+        <footer className="w-full flex justify-center items-center gap-4 py-4 border-t border-gray-200 mt-8">
+          <a
+            href="https://github.com/jasimvk/mydebugtools/issues"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center space-x-2 p-1 text-gray-500 hover:text-black hover:bg-gray-100 rounded-full transition-all duration-200 group"
+            title="🐞 Report an Issue on GitHub"
+            aria-label="Report an Issue on GitHub"
+          >
+            <Bug className="h-5 w-5 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-200" />
+            <span className="text-sm font-medium hidden sm:inline">Report Issue</span>
+          </a>
+          <a
+            href="https://github.com/jasimvk/mydebugtools"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center space-x-2 p-1 text-gray-500 hover:text-black hover:bg-gray-100 rounded-full transition-all duration-200 group"
+            title="🤝 Contribute on GitHub"
+            aria-label="Contribute on GitHub"
+          >
+            <Github className="h-5 w-5 group-hover:-rotate-12 group-hover:scale-110 transition-transform duration-200" />
+            <span className="text-sm font-medium hidden sm:inline">Contribute</span>
+          </a>
+        </footer>
       </main>
     </div>
   );
