@@ -16,7 +16,8 @@ import {
   PhotoIcon,
   CodeBracketIcon as LucideCodeBracketIcon,
   PaintBrushIcon,
-  WrenchScrewdriverIcon
+  WrenchScrewdriverIcon,
+  ExclamationCircleIcon
 } from '@heroicons/react/24/outline';
 import { 
   CurlyBracesIcon, 
@@ -143,24 +144,19 @@ const features = [
 
 const roadmapItems = [
   {
-    title: "Database Query Tool",
+    title: "Chrome Extension",
     status: "in-progress",
+    icon: <Rocket className="h-5 w-5 text-blue-500" />
+  },
+  {
+    title: "Database Query Tool",
+    status: "planned",
     icon: <Terminal className="h-5 w-5 text-blue-500" />
   },
   {
     title: "Performance Monitoring",
     status: "planned",
     icon: <Cpu className="h-5 w-5 text-blue-500" />
-  },
-  {
-    title: "Collaboration Features",
-    status: "planned",
-    icon: <Users className="h-5 w-5 text-blue-500" />
-  },
-  {
-    title: "Internationalization",
-    status: "planned",
-    icon: <Globe className="h-5 w-5 text-blue-500" />
   }
 ];
 
