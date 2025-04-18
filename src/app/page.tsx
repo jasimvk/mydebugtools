@@ -82,13 +82,6 @@ const tools = [
     bgClass: 'bg-indigo-500',
   },
   {
-    name: 'HTML Validator',
-    description: 'Validate and format HTML code',
-    path: '/tools/html',
-    icon: WrenchScrewdriverIcon,
-    bgClass: 'bg-orange-500',
-  },
-  {
     name: 'CSS Tools',
     description: 'Format and optimize CSS code',
     path: '/tools/css',
