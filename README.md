@@ -19,11 +19,30 @@ A powerful collection of development tools including JSON Formatter, JWT Decoder
   - Save and load request configurations
   - Environment variables support
 
-- **More Tools Coming Soon**
-  - Database Query Tool
-  - Performance Monitoring
-  - Collaboration Features
-  - And more! Check our [Roadmap](https://mydebugtools.com/roadmap)
+- **Base64 Tools**
+  - Encode and decode Base64 strings
+  - Convert files (images, PDFs) to Base64 and vice versa
+
+- **Regex Tester**
+  - Test and validate regular expressions with real-time matching
+
+- **Code Diff**
+  - Compare and analyze code differences
+
+- **JWT Decoder**
+  - Decode and verify JWT tokens instantly
+
+- **CSS Tools**
+  - Minify, beautify, and validate your CSS code
+
+- **Color Picker**
+  - Pick, convert, and manage colors in various formats
+
+- **Markdown Preview**
+  - Preview and edit Markdown with live rendering
+
+- **Icon Finder**
+  - Find the perfect icon for your project
 
 ## Screenshots
 
@@ -127,4 +146,8 @@ If you find this project helpful, please consider:
 
 ## Roadmap
 
-Check out our [Roadmap](https://mydebugtools.com/roadmap) to see what's coming next!
+- Database Query Tool
+- Performance Monitoring
+- Collaboration Features
+- **Chrome Extension**
+- And more! Check our [Roadmap](https://mydebugtools.com/roadmap)
