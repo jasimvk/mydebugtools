@@ -25,67 +25,74 @@ interface RoadmapItem {
 const RoadmapPage = () => {
   const roadmapItems: RoadmapItem[] = [
     {
-      title: 'JSON Tool Enhancements',
-      description: 'Advanced JSON validation, transformation, and comparison features',
-      status: 'completed',
-      icon: <CheckCircleIcon className="h-6 w-6 text-green-500" />,
-      date: 'Q1 2024'
-    },
-    {
-      title: 'API Testing Tool',
-      description: 'Comprehensive API testing and debugging capabilities',
+      title: 'Chrome Extension',
+      description: 'Bring MyDebugTools features directly to your browser for quick access and in-page debugging.',
       status: 'in-progress',
-      icon: <ArrowPathIcon className="h-6 w-6 text-blue-500" />,
+      icon: <RocketLaunchIcon className="h-6 w-6 text-blue-500" />, 
       date: 'Q2 2024'
     },
     {
       title: 'Database Query Tool',
-      description: 'SQL and NoSQL database query interface with visualization',
+      description: 'SQL and NoSQL database query interface with visualization.',
       status: 'planned',
-      icon: <BeakerIcon className="h-6 w-6 text-purple-500" />,
+      icon: <BeakerIcon className="h-6 w-6 text-purple-500" />, 
       date: 'Q3 2024'
     },
     {
       title: 'Performance Monitoring',
-      description: 'Real-time performance metrics and optimization suggestions',
+      description: 'Real-time performance metrics and optimization suggestions.',
       status: 'planned',
-      icon: <ChartBarIcon className="h-6 w-6 text-indigo-500" />,
+      icon: <ChartBarIcon className="h-6 w-6 text-indigo-500" />, 
       date: 'Q3 2024'
     },
     {
       title: 'Collaboration Features',
-      description: 'Team workspaces and shared debugging sessions',
+      description: 'Share tool results, collaborate on debugging sessions, and leave comments.',
       status: 'planned',
-      icon: <UserGroupIcon className="h-6 w-6 text-pink-500" />,
+      icon: <UserGroupIcon className="h-6 w-6 text-blue-400" />, 
       date: 'Q4 2024'
     },
     {
-      title: 'Internationalization',
-      description: 'Multi-language support for all tools',
+      title: 'More Tool Integrations',
+      description: 'YAML/CSV/INI converters, JWT/Token playgrounds, more code diff and merge options.',
       status: 'planned',
-      icon: <GlobeAltIcon className="h-6 w-6 text-yellow-500" />,
+      icon: <SparklesIcon className="h-6 w-6 text-yellow-500" />, 
       date: 'Q4 2024'
     },
     {
-      title: 'Security Enhancements',
-      description: 'Advanced security features and vulnerability scanning',
-      status: 'planned',
-      icon: <ShieldCheckIcon className="h-6 w-6 text-red-500" />,
-      date: 'Q1 2025'
+      title: 'UI/UX Polish',
+      description: 'Continuous improvements to design, accessibility, and responsiveness.',
+      status: 'in-progress',
+      icon: <ShieldCheckIcon className="h-6 w-6 text-green-500" />, 
+      date: 'Ongoing'
     },
     {
-      title: 'AI-Powered Debugging',
-      description: 'Machine learning assisted debugging and code analysis',
-      status: 'planned',
-      icon: <SparklesIcon className="h-6 w-6 text-cyan-500" />,
-      date: 'Q2 2025'
+      title: 'Better Error Handling',
+      description: 'More helpful error messages and troubleshooting tips.',
+      status: 'in-progress',
+      icon: <ShieldCheckIcon className="h-6 w-6 text-green-500" />, 
+      date: 'Ongoing'
     },
     {
-      title: 'Mobile App',
-      description: 'Native mobile applications for iOS and Android',
+      title: 'User Preferences',
+      description: 'Theme, layout, and tool defaults saved per user.',
       status: 'planned',
-      icon: <RocketLaunchIcon className="h-6 w-6 text-orange-500" />,
-      date: 'Q3 2025'
+      icon: <GlobeAltIcon className="h-6 w-6 text-blue-500" />, 
+      date: '2025'
+    },
+    {
+      title: 'Mobile Experience',
+      description: 'Enhanced support for mobile and tablet users.',
+      status: 'planned',
+      icon: <GlobeAltIcon className="h-6 w-6 text-blue-500" />, 
+      date: '2025'
+    },
+    {
+      title: 'Community & Open Source',
+      description: 'GitHub Discussions, contribution guidelines, and more ways to get involved.',
+      status: 'in-progress',
+      icon: <SparklesIcon className="h-6 w-6 text-yellow-500" />, 
+      date: 'Ongoing'
     }
   ];
 
