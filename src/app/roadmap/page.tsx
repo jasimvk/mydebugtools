@@ -45,55 +45,7 @@ const RoadmapPage = () => {
       icon: <ChartBarIcon className="h-6 w-6 text-indigo-500" />, 
       date: 'Q3 2024'
     },
-    {
-      title: 'Collaboration Features',
-      description: 'Share tool results, collaborate on debugging sessions, and leave comments.',
-      status: 'planned',
-      icon: <UserGroupIcon className="h-6 w-6 text-blue-400" />, 
-      date: 'Q4 2024'
-    },
-    {
-      title: 'More Tool Integrations',
-      description: 'YAML/CSV/INI converters, JWT/Token playgrounds, more code diff and merge options.',
-      status: 'planned',
-      icon: <SparklesIcon className="h-6 w-6 text-yellow-500" />, 
-      date: 'Q4 2024'
-    },
-    {
-      title: 'UI/UX Polish',
-      description: 'Continuous improvements to design, accessibility, and responsiveness.',
-      status: 'in-progress',
-      icon: <ShieldCheckIcon className="h-6 w-6 text-green-500" />, 
-      date: 'Ongoing'
-    },
-    {
-      title: 'Better Error Handling',
-      description: 'More helpful error messages and troubleshooting tips.',
-      status: 'in-progress',
-      icon: <ShieldCheckIcon className="h-6 w-6 text-green-500" />, 
-      date: 'Ongoing'
-    },
-    {
-      title: 'User Preferences',
-      description: 'Theme, layout, and tool defaults saved per user.',
-      status: 'planned',
-      icon: <GlobeAltIcon className="h-6 w-6 text-blue-500" />, 
-      date: '2025'
-    },
-    {
-      title: 'Mobile Experience',
-      description: 'Enhanced support for mobile and tablet users.',
-      status: 'planned',
-      icon: <GlobeAltIcon className="h-6 w-6 text-blue-500" />, 
-      date: '2025'
-    },
-    {
-      title: 'Community & Open Source',
-      description: 'GitHub Discussions, contribution guidelines, and more ways to get involved.',
-      status: 'in-progress',
-      icon: <SparklesIcon className="h-6 w-6 text-yellow-500" />, 
-      date: 'Ongoing'
-    }
+    
   ];
 
   const getStatusBadge = (status: string) => {
