@@ -54,6 +54,8 @@ const Navigation = () => {
                         ? 'border-blue-500 text-gray-900'
                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                     }`}
+                    title={item.name}
+                    aria-label={item.name}
                   >
                     <Icon className="h-4 w-4 mr-1" />
                     {item.name}
@@ -67,6 +69,8 @@ const Navigation = () => {
               type="button"
               className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
+              title={isMenuOpen ? 'Close main menu' : 'Open main menu'}
+              aria-label={isMenuOpen ? 'Close main menu' : 'Open main menu'}
             >
               <span className="sr-only">Open main menu</span>
               {isMenuOpen ? (
