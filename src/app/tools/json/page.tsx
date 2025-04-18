@@ -1152,6 +1152,8 @@ export default function JSONFormatter() {
                 ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-500' 
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
+            title="Format JSON"
+            aria-label="Format JSON tab"
           >
             <div className="flex items-center">
               <CodeBracketIcon className="h-5 w-5 mr-2" />
@@ -1165,6 +1167,8 @@ export default function JSONFormatter() {
                 ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-500' 
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
+            title="Validate JSON"
+            aria-label="Validate JSON tab"
           >
             <div className="flex items-center">
               <DocumentCheckIcon className="h-5 w-5 mr-2" />
@@ -1178,6 +1182,8 @@ export default function JSONFormatter() {
                 ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-500' 
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
+            title="Transform JSON"
+            aria-label="Transform JSON tab"
           >
             <div className="flex items-center">
               <ArrowsUpDownIcon className="h-5 w-5 mr-2" />
@@ -1191,6 +1197,8 @@ export default function JSONFormatter() {
                 ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-500' 
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
+            title="Compare JSON"
+            aria-label="Compare JSON tab"
           >
             <div className="flex items-center">
               <ArrowsRightLeftIcon className="h-5 w-5 mr-2" />
@@ -1204,6 +1212,8 @@ export default function JSONFormatter() {
                 ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-500' 
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
+            title="Search in JSON"
+            aria-label="Search JSON tab"
           >
             <div className="flex items-center">
               <MagnifyingGlassIcon className="h-5 w-5 mr-2" />
@@ -1223,6 +1233,7 @@ export default function JSONFormatter() {
                   onClick={() => setInput(JSON.stringify(sampleJSON, null, 2))}
                   className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded flex items-center"
                   title="Load sample JSON"
+                  aria-label="Load sample JSON"
                 >
                   <LightBulbIcon className="h-4 w-4 mr-1" />
                   Sample
@@ -1231,6 +1242,7 @@ export default function JSONFormatter() {
                   onClick={() => setInput('')}
                   className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded flex items-center"
                   title="Clear input"
+                  aria-label="Clear input"
                 >
                   <TrashIcon className="h-4 w-4 mr-1" />
                   Clear
@@ -1257,6 +1269,7 @@ export default function JSONFormatter() {
                   }}
                   className="absolute top-2 right-2 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded"
                   title="Format JSON"
+                  aria-label="Format JSON"
                 >
                   Format
                 </button>

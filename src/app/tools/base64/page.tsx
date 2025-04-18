@@ -136,14 +136,13 @@ export default function Base64Tools() {
         // Remove the data URL prefix (e.g., "data:image/png;base64,")
         const base64String = result.split(',')[1];
         setInput(base64String);
+        setOutput(base64String);
         setFormattingStatus('success');
         
         if (fileType === 'image') {
-          setOutput(result);
           setIsImage(true);
           setIsPdf(false);
         } else {
-          setOutput(result);
           setIsImage(false);
           setIsPdf(true);
         }
@@ -373,21 +372,42 @@ export default function Base64Tools() {
               <span className="text-red-500">{error}</span>
             ) : isImage ? (
               <img 
-                src={output} 
+                src={`data:image/png;base64,${output}`}
                 alt="Converted Image" 
                 className="max-w-full max-h-full object-contain"
               />
             ) : isPdf ? (
-              <div className="flex flex-col items-center gap-2 text-gray-600">
-                <DocumentIcon className="h-12 w-12" />
-                <span>PDF converted successfully</span>
-              </div>
+              <iframe
+                src={`data:application/pdf;base64,${output}`}
+                title="PDF Preview"
+                className="w-full h-full rounded"
+              />
             ) : (
               <div className="text-gray-400 flex items-center gap-2">
                 <PhotoIcon className="h-5 w-5" />
                 Preview will appear here
               </div>
             )}
+          </div>
+          {/* Base64 Output */}
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Base64 Output</label>
+            <div className="flex gap-2 items-start">
+              <textarea
+                value={output}
+                readOnly
+                className="w-full h-32 p-2 font-mono text-xs bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Base64 output will appear here..."
+              />
+              <button
+                onClick={() => { navigator.clipboard.writeText(output); }}
+                className="flex-shrink-0 flex items-center gap-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs"
+                title="Copy Base64"
+              >
+                <ClipboardIcon className="h-4 w-4" />
+                Copy
+              </button>
+            </div>
           </div>
         </div>
       </div>
