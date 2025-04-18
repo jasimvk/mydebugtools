@@ -16,8 +16,7 @@ import {
   PhotoIcon,
   CodeBracketIcon as LucideCodeBracketIcon,
   PaintBrushIcon,
-  WrenchScrewdriverIcon,
-  ExclamationCircleIcon
+  WrenchScrewdriverIcon
 } from '@heroicons/react/24/outline';
 import { 
   CurlyBracesIcon, 
@@ -157,6 +156,41 @@ const roadmapItems = [
     title: "Performance Monitoring",
     status: "planned",
     icon: <Cpu className="h-5 w-5 text-blue-500" />
+  },
+  {
+    title: "Collaboration Features",
+    status: "planned",
+    icon: <Users className="h-5 w-5 text-blue-500" />
+  },
+  {
+    title: "More Tool Integrations",
+    status: "planned",
+    icon: <Code2 className="h-5 w-5 text-blue-500" />
+  },
+  {
+    title: "UI/UX Polish",
+    status: "ongoing",
+    icon: <Star className="h-5 w-5 text-blue-500" />
+  },
+  {
+    title: "Better Error Handling",
+    status: "ongoing",
+    icon: <Shield className="h-5 w-5 text-blue-500" />
+  },
+  {
+    title: "User Preferences",
+    status: "planned",
+    icon: <Heart className="h-5 w-5 text-blue-500" />
+  },
+  {
+    title: "Mobile Experience",
+    status: "planned",
+    icon: <Globe className="h-5 w-5 text-blue-500" />
+  },
+  {
+    title: "Community & Open Source",
+    status: "ongoing",
+    icon: <Github className="h-5 w-5 text-blue-500" />
   }
 ];
 
