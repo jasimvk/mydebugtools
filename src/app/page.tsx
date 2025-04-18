@@ -157,41 +157,7 @@ const roadmapItems = [
     status: "planned",
     icon: <Cpu className="h-5 w-5 text-blue-500" />
   },
-  {
-    title: "Collaboration Features",
-    status: "planned",
-    icon: <Users className="h-5 w-5 text-blue-500" />
-  },
-  {
-    title: "More Tool Integrations",
-    status: "planned",
-    icon: <Code2 className="h-5 w-5 text-blue-500" />
-  },
-  {
-    title: "UI/UX Polish",
-    status: "ongoing",
-    icon: <Star className="h-5 w-5 text-blue-500" />
-  },
-  {
-    title: "Better Error Handling",
-    status: "ongoing",
-    icon: <Shield className="h-5 w-5 text-blue-500" />
-  },
-  {
-    title: "User Preferences",
-    status: "planned",
-    icon: <Heart className="h-5 w-5 text-blue-500" />
-  },
-  {
-    title: "Mobile Experience",
-    status: "planned",
-    icon: <Globe className="h-5 w-5 text-blue-500" />
-  },
-  {
-    title: "Community & Open Source",
-    status: "ongoing",
-    icon: <Github className="h-5 w-5 text-blue-500" />
-  }
+   
 ];
 
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
@@ -562,7 +528,7 @@ export default function Home() {
           </div>
         </div>
         <div className="border-t border-gray-800 pt-8">
-          <p className="mb-2">Built by <a href="https://github.com/jasimvk" className="text-blue-400 hover:text-blue-300" target="_blank" rel="noopener noreferrer">Jasim</a></p>
+          <p className="mb-2">Built by <a href="https://x.com/jasimvk" className="text-blue-400 hover:text-blue-300" target="_blank" rel="noopener noreferrer">Jasim</a></p>
           <p>© {new Date().getFullYear()} MyDebugTools • <a href="https://github.com/jasimvk/mydebugtools" className="text-blue-400 hover:text-blue-300" target="_blank" rel="noopener noreferrer">Open Source</a></p>
         </div>
       </footer>
