@@ -44,12 +44,6 @@ A powerful collection of development tools including JSON Formatter, JWT Decoder
 - **Icon Finder**
   - Find the perfect icon for your project
 
-## Screenshots
-
-| Homepage | Tools Page |
-|----------|------------|
-| ![Homepage screenshot](public/screenshots/homepage.png) | ![Tools page screenshot](public/screenshots/tools.png) |
-
 ## Getting Started
 
 ### Prerequisites
