@@ -45,7 +45,13 @@ const RoadmapPage = () => {
       icon: <ChartBarIcon className="h-6 w-6 text-indigo-500" />, 
       date: 'Q3 2024'
     },
-    
+    {
+      title: 'VS Code Extension',
+      description: 'Integrate MyDebugTools directly into your VS Code workflow for seamless debugging and productivity.',
+      status: 'planned',
+      icon: <GlobeAltIcon className="h-6 w-6 text-green-500" />, 
+      date: 'Q4 2024'
+    },
   ];
 
   const getStatusBadge = (status: string) => {
