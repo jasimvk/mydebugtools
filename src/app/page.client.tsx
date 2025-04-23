@@ -157,7 +157,11 @@ const roadmapItems = [
     status: "planned",
     icon: <Cpu className="h-5 w-5 text-blue-500" />
   },
-   
+  {
+    title: "VS Code Extension",
+    status: "planned",
+    icon: <GlobeAltIcon className="h-5 w-5 text-green-500" />
+  },
 ];
 
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
