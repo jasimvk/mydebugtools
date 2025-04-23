@@ -55,7 +55,8 @@
     "simple-icons": "^11.0.0",
     "tailwind-merge": "^3.2.0",
     "use-debounce": "^10.0.4",
-    "w3c-css-validator": "^1.4.0"
+    "w3c-css-validator": "^1.4.0",
+    "sql.js": "^1.8.0"
   },
   "devDependencies": {
     "@babel/core": "^7.26.10",
