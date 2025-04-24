@@ -12,6 +12,43 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "MyDebugTools - All-in-one Developer Debugging Toolkit",
   description: "A powerful collection of development tools including JSON Formatter, JWT Decoder, Base64 Tools, API Tester, and Icon Finder - all in one place.",
+  metadataBase: new URL('https://mydebugtools.com'),
+  themeColor: '#2563eb',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-snippet': -1,
+      'max-image-preview': 'large',
+      'max-video-preview': -1,
+    },
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://mydebugtools.com/',
+    siteName: 'MyDebugTools',
+    title: 'MyDebugTools - All-in-one Developer Debugging Toolkit',
+    description: 'A powerful collection of development tools including JSON Formatter, JWT Decoder, Base64 Tools, API Tester, and Icon Finder - all in one place.',
+    images: [
+      {
+        url: 'https://mydebugtools.com/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'MyDebugTools - All-in-one Developer Toolkit',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    site: '@jasimvk',
+    creator: '@jasimvk',
+    title: 'MyDebugTools - All-in-one Developer Debugging Toolkit',
+    description: 'A powerful collection of development tools including JSON Formatter, JWT Decoder, Base64 Tools, API Tester, and Icon Finder - all in one place.',
+    images: ['https://mydebugtools.com/og-image.png'],
+  },
 };
 
 export default function RootLayout({
