@@ -121,7 +121,7 @@ export default function ToolsLayout({
               <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
             </div>
           </div>
-          
+
           <nav className="space-y-1">
             {filteredTools.length > 0 ? (
               filteredTools.map((tool) => {
@@ -155,6 +155,19 @@ export default function ToolsLayout({
           {children}
         </div>
         <footer className="w-full flex justify-center items-center gap-4 py-4 border-t border-gray-200 mt-8">
+          <a
+            href="/CHANGELOG.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center space-x-2 p-1 text-blue-600 hover:underline font-medium"
+            title="View recent updates and changelog"
+            aria-label="Updates"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
+            </svg>
+            <span>Updates</span>
+          </a>
           <a
             href="https://github.com/jasimvk/mydebugtools/issues"
             target="_blank"
