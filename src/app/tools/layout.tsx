@@ -101,7 +101,7 @@ export default function ToolsLayout({
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-gray-50">
       {/* Sidebar - hidden on mobile, shown on md+ screens */}
-      <aside className="hidden md:block w-64 bg-white border-r border-gray-200">
+      <aside className="hidden md:block w-72 bg-white border-r border-gray-200">
         <div className="p-4 sticky top-0 h-screen overflow-y-auto">
           <Link href="/" className="flex items-center space-x-2 mb-4">
             <Terminal />
