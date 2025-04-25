@@ -77,6 +77,12 @@ const tools = [
     description: 'Find the perfect icon for your project',
     path: '/tools/icons',
     icon: MagnifyingGlassIcon
+  },
+  {
+    name: 'Database Query Tool (SQLite)',
+    description: 'Run SQL queries on SQLite files directly in your browser',
+    path: '/tools/database',
+    icon: Terminal
   }
 ];
 
