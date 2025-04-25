@@ -156,7 +156,7 @@ export default function ToolsLayout({
         </div>
         <footer className="w-full flex justify-center items-center gap-4 py-4 border-t border-gray-200 mt-8">
           <a
-            href="/CHANGELOG.md"
+            href="https://github.com/jasimvk/mydebugtools/blob/main/CHANGELOG.md"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center space-x-2 p-1 text-blue-600 hover:underline font-medium"
