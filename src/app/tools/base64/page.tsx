@@ -24,6 +24,7 @@ export default function Base64Tools() {
   const [formattingStatus, setFormattingStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [conversionMode, setConversionMode] = useState<'text' | 'file'>('text');
   const [fileType, setFileType] = useState<'image' | 'pdf'>('image');
+  const [outputType, setOutputType] = useState<'image' | 'pdf'>('image');
 
   const cleanBase64 = (input: string): string => {
     try {
@@ -65,15 +66,11 @@ export default function Base64Tools() {
     try {
       setFormattingStatus('idle');
       const cleaned = cleanBase64(input);
-      
-      // Just set the cleaned Base64 string without any prefix
       setInput(cleaned);
       setError('');
       setFormattingStatus('success');
-      
-      // If auto-update is enabled, the conversion will happen automatically
-      if (!autoUpdate) {
-        convertBase64ToImage();
+      if (!autoUpdate && conversionMode === 'text') {
+        convertBase64ToOutput();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to format Base64 string');
@@ -81,35 +78,50 @@ export default function Base64Tools() {
     }
   };
 
-  const convertBase64ToImage = () => {
+  const convertBase64ToOutput = () => {
     try {
       setIsLoading(true);
       if (!input.trim()) {
         setOutput('');
         setError('Please enter a Base64 string');
         setIsImage(false);
+        setIsPdf(false);
+        setIsLoading(false);
         return;
       }
-
       const cleanedInput = cleanBase64(input);
-      const imageData = `data:image/png;base64,${cleanedInput}`;
-      
-      // Test if the image data is valid by creating an image element
-      const img = new Image();
-      img.onload = () => {
-        setOutput(imageData);
-        setIsImage(true);
+      if (outputType === 'image') {
+        const imageData = `data:image/png;base64,${cleanedInput}`;
+        const img = new window.Image();
+        img.onload = () => {
+          setOutput(imageData);
+          setIsImage(true);
+          setIsPdf(false);
+          setError('');
+          setIsLoading(false);
+        };
+        img.onerror = () => {
+          setError('Invalid image data');
+          setOutput('');
+          setIsImage(false);
+          setIsPdf(false);
+          setIsLoading(false);
+        };
+        img.src = imageData;
+      } else {
+        // PDF
+        const pdfData = `data:application/pdf;base64,${cleanedInput}`;
+        setOutput(pdfData);
+        setIsPdf(true);
+        setIsImage(false);
         setError('');
         setIsLoading(false);
-      };
-      img.onerror = () => {
-        throw new Error('Invalid image data');
-      };
-      img.src = imageData;
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to convert Base64 to image');
+      setError(err instanceof Error ? err.message : 'Failed to convert Base64');
       setOutput('');
       setIsImage(false);
+      setIsPdf(false);
       setIsLoading(false);
     }
   };
@@ -162,10 +174,10 @@ export default function Base64Tools() {
   };
 
   useEffect(() => {
-    if (autoUpdate && input.trim()) {
-      convertBase64ToImage();
+    if (autoUpdate && input.trim() && conversionMode === 'text') {
+      convertBase64ToOutput();
     }
-  }, [input, autoUpdate]);
+  }, [input, autoUpdate, outputType, conversionMode]);
 
   const copyToClipboard = async () => {
     try {
@@ -247,6 +259,16 @@ export default function Base64Tools() {
             File to Base64
           </button>
         </div>
+        {conversionMode === 'text' && (
+          <select
+            value={outputType}
+            onChange={e => setOutputType(e.target.value as 'image' | 'pdf')}
+            className="ml-4 px-3 py-2 border rounded-lg text-sm bg-white"
+          >
+            <option value="image">Image</option>
+            <option value="pdf">PDF</option>
+          </select>
+        )}
         {conversionMode === 'file' && (
           <div className="flex items-center gap-2">
             <button
@@ -333,7 +355,7 @@ export default function Base64Tools() {
             )}
             {conversionMode === 'text' && !autoUpdate && (
               <button
-                onClick={convertBase64ToImage}
+                onClick={convertBase64ToOutput}
                 className="absolute bottom-4 right-4 flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <CommandLineIcon className="h-5 w-5" />
@@ -360,7 +382,7 @@ export default function Base64Tools() {
         {/* Output */}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">
-            {isPdf ? 'PDF Preview' : 'Image Preview'}
+            {conversionMode === 'text' ? (outputType === 'pdf' ? 'PDF Preview' : 'Image Preview') : (isPdf ? 'PDF Preview' : 'Image Preview')}
           </label>
           <div className="w-full h-[300px] p-4 bg-gray-50 border border-gray-200 rounded-lg overflow-auto flex items-center justify-center">
             {isLoading ? (
@@ -370,15 +392,15 @@ export default function Base64Tools() {
               </div>
             ) : error ? (
               <span className="text-red-500">{error}</span>
-            ) : isImage ? (
+            ) : ((conversionMode === 'text' ? outputType === 'image' : isImage)) ? (
               <img 
-                src={`data:image/png;base64,${output}`}
+                src={output}
                 alt="Converted Image" 
                 className="max-w-full max-h-full object-contain"
               />
-            ) : isPdf ? (
+            ) : ((conversionMode === 'text' ? outputType === 'pdf' : isPdf)) ? (
               <iframe
-                src={`data:application/pdf;base64,${output}`}
+                src={output}
                 title="PDF Preview"
                 className="w-full h-full rounded"
               />
