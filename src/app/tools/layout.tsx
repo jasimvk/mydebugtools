@@ -154,42 +154,47 @@ export default function ToolsLayout({
         <div className="container mx-auto p-4 md:p-6">
           {children}
         </div>
-        <footer className="w-full flex justify-center items-center gap-4 py-4 border-t border-gray-200 mt-8">
-          <a
-            href="https://github.com/jasimvk/mydebugtools/blob/main/CHANGELOG.md"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center space-x-2 p-1 text-blue-600 hover:underline font-medium"
-            title="View recent updates and changelog"
-            aria-label="Updates"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
-            </svg>
-            <span>Updates</span>
-          </a>
-          <a
-            href="https://github.com/jasimvk/mydebugtools/issues"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center space-x-2 p-1 text-gray-500 hover:text-black hover:bg-gray-100 rounded-full transition-all duration-200 group"
-            title="🐞 Report an Issue on GitHub"
-            aria-label="Report an Issue on GitHub"
-          >
-            <Bug className="h-5 w-5 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-200" />
-            <span className="text-sm font-medium hidden sm:inline">Report Issue</span>
-          </a>
-          <a
-            href="https://github.com/jasimvk/mydebugtools"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center space-x-2 p-1 text-gray-500 hover:text-black hover:bg-gray-100 rounded-full transition-all duration-200 group"
-            title="🤝 Contribute on GitHub"
-            aria-label="Contribute on GitHub"
-          >
-            <Github className="h-5 w-5 group-hover:-rotate-12 group-hover:scale-110 transition-transform duration-200" />
-            <span className="text-sm font-medium hidden sm:inline">Contribute</span>
-          </a>
+        <footer className="w-full flex flex-col items-center gap-2 py-4 border-t border-gray-200 mt-8">
+          <div className="flex justify-center items-center gap-4">
+            <a
+              href="https://github.com/jasimvk/mydebugtools/blob/main/CHANGELOG.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-2 p-1 text-blue-600 hover:underline font-medium"
+              title="View recent updates and changelog"
+              aria-label="Updates"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
+              </svg>
+              <span>Updates</span>
+            </a>
+            <a
+              href="https://github.com/jasimvk/mydebugtools/issues"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-2 p-1 text-gray-500 hover:text-black hover:bg-gray-100 rounded-full transition-all duration-200 group"
+              title="🐞 Report an Issue on GitHub"
+              aria-label="Report an Issue on GitHub"
+            >
+              <Bug className="h-5 w-5 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-200" />
+              <span className="text-sm font-medium hidden sm:inline">Report Issue</span>
+            </a>
+            <a
+              href="https://github.com/jasimvk/mydebugtools"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-2 p-1 text-gray-500 hover:text-black hover:bg-gray-100 rounded-full transition-all duration-200 group"
+              title="🤝 Contribute on GitHub"
+              aria-label="Contribute on GitHub"
+            >
+              <Github className="h-5 w-5 group-hover:-rotate-12 group-hover:scale-110 transition-transform duration-200" />
+              <span className="text-sm font-medium hidden sm:inline">Contribute</span>
+            </a>
+          </div>
+          <div className="text-xs text-gray-500 mt-2">
+            Built by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Jasim</a>
+          </div>
         </footer>
       </main>
     </div>
