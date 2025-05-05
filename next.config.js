@@ -15,6 +15,10 @@ const nextConfig = {
   experimental: {
     esmExternals: false,
   },
+  // Skip static generation and use client-side rendering instead
+  // This avoids the useSearchParams Suspense boundary errors during build
+  output: 'export',
+  trailingSlash: true,
 }
 
 module.exports = nextConfig 
