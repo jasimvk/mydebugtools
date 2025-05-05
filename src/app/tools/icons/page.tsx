@@ -2,22 +2,8 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { MagnifyingGlassIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
-import * as OutlineIcons from '@heroicons/react/24/outline';
-import * as SolidIcons from '@heroicons/react/24/solid';
-import * as MaterialIcons from '@mui/icons-material';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { library } from '@fortawesome/fontawesome-svg-core';
-import { fas } from '@fortawesome/free-solid-svg-icons';
-import { far } from '@fortawesome/free-regular-svg-icons';
-import { fab } from '@fortawesome/free-brands-svg-icons';
-import * as SimpleIcons from 'simple-icons';
-import * as PhosphorIcons from 'phosphor-react';
-import * as LucideIcons from 'lucide-react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useDebounce } from 'use-debounce';
-
-// Initialize FontAwesome library
-library.add(fas, far, fab);
 
 type IconStyle = 'outline' | 'solid' | 'regular' | 'brands' | 'fill' | 'line';
 type IconProvider = 'heroicons' | 'material-ui' | 'fontawesome' | 'simple-icons' | 'phosphor' | 'lucide' | 'all';
@@ -81,110 +67,6 @@ interface IconInfo {
   styles: IconStyle[];
 }
 
-// Helper function to get icons from different providers
-const getIconsFromProvider = (provider: IconProvider): IconInfo[] => {
-  switch (provider) {
-    case 'heroicons':
-      return Object.keys(OutlineIcons).map(name => ({
-        name: name.replace(/Icon$/, ''),
-        provider: 'heroicons' as const,
-        Component: (OutlineIcons as any)[name],
-        styles: ['outline', 'solid'] as IconStyle[]
-      }));
-    case 'material-ui':
-      return Object.entries(MaterialIcons)
-        .filter(([key, component]) => {
-          // Filter out non-icon components and special exports
-          return typeof component === 'object' && 
-                 component !== null &&
-                 'render' in component &&
-                 key !== 'default' && 
-                 !key.startsWith('Outlined') && 
-                 !key.startsWith('Rounded') && 
-                 !key.startsWith('Sharp') && 
-                 !key.startsWith('TwoTone');
-        })
-        .map(([name, component]) => ({
-          name: name.replace(/([A-Z])/g, ' $1').trim(),
-          provider: 'material-ui' as const,
-          Component: component as React.ComponentType<any>,
-          styles: ['solid'] as IconStyle[]
-        }));
-    case 'fontawesome':
-      return [
-        ...Object.keys(fas)
-          .filter(key => key !== 'prefix' && key !== 'fas')
-          .map(name => ({
-            name: name.replace(/^fa/, ''),
-            provider: 'fontawesome' as const,
-            Component: (props: any) => <FontAwesomeIcon icon={fas[name as keyof typeof fas]} {...props} />,
-            styles: ['solid'] as IconStyle[]
-          })),
-        ...Object.keys(far)
-          .filter(key => key !== 'prefix' && key !== 'far')
-          .map(name => ({
-            name: name.replace(/^fa/, ''),
-            provider: 'fontawesome' as const,
-            Component: (props: any) => <FontAwesomeIcon icon={far[name as keyof typeof far]} {...props} />,
-            styles: ['regular'] as IconStyle[]
-          })),
-        ...Object.keys(fab)
-          .filter(key => key !== 'prefix' && key !== 'fab')
-          .map(name => ({
-            name: name.replace(/^fa/, ''),
-            provider: 'fontawesome' as const,
-            Component: (props: any) => <FontAwesomeIcon icon={fab[name as keyof typeof fab]} {...props} />,
-            styles: ['brands'] as IconStyle[]
-          }))
-      ];
-    case 'simple-icons':
-      return Object.keys(SimpleIcons)
-        .filter(key => typeof (SimpleIcons as any)[key] === 'function')
-        .map(name => ({
-          name,
-          provider: 'simple-icons' as const,
-          Component: (SimpleIcons as any)[name],
-          styles: ['solid'] as IconStyle[]
-        }));
-    case 'phosphor':
-      return Object.keys(PhosphorIcons)
-        .filter(key => typeof (PhosphorIcons as any)[key] === 'function' && !key.includes('Weight'))
-        .map(name => ({
-          name: name.replace(/([A-Z])/g, ' $1').trim(),
-          provider: 'phosphor' as const,
-          Component: (PhosphorIcons as any)[name],
-          styles: ['regular', 'fill'] as IconStyle[]
-        }));
-    case 'lucide':
-      return Object.entries(LucideIcons)
-        .filter(([key, component]) => {
-          // Only include actual icon components
-          return typeof component === 'function' && 
-                 key !== 'default' &&
-                 !key.startsWith('create') &&
-                 !key.startsWith('replace');
-        })
-        .map(([name, Component]) => ({
-          name, // Keep the original name without transformation
-          provider: 'lucide' as const,
-          Component: Component as React.ComponentType<any>,
-          styles: ['solid'] as IconStyle[]
-        }));
-    default:
-      return [];
-  }
-};
-
-// Combine all icons
-const allIcons: IconInfo[] = [
-  ...getIconsFromProvider('heroicons'),
-  ...getIconsFromProvider('material-ui'),
-  ...getIconsFromProvider('fontawesome'),
-  ...getIconsFromProvider('simple-icons'),
-  ...getIconsFromProvider('phosphor'),
-  ...getIconsFromProvider('lucide')
-];
-
 const presetSizes = [
   { label: 'XS', value: 16 },
   { label: 'SM', value: 20 },
@@ -195,13 +77,16 @@ const presetSizes = [
 
 export default function IconFinder() {
   const [loading, setLoading] = useState(true);
+  const [loadingProvider, setLoadingProvider] = useState<IconProvider | null>(null);
   const [icons, setIcons] = useState<IconInfo[]>([]);
   const [search, setSearch] = useState('');
-  const [selectedProvider, setSelectedProvider] = useState<IconProvider>('heroicons');
+  const [selectedProvider, setSelectedProvider] = useState<IconProvider>('heroicons'); // Default to heroicons
   const [style, setStyle] = useState<IconStyle>('outline');
   const [selectedSize, setSelectedSize] = useState(24);
   const [selectedColor, setSelectedColor] = useState('#000000');
   const [copied, setCopied] = useState<string | null>(null);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [activeProviders, setActiveProviders] = useState<IconProvider[]>([]);
   
   const [parentElement, setParentElement] = useState<HTMLDivElement | null>(null);
   const parentRef = useCallback((node: HTMLDivElement) => {
@@ -215,7 +100,7 @@ export default function IconFinder() {
   const filteredIcons = icons.filter(icon => {
     const matchesSearch = icon.name.toLowerCase().includes(debouncedSearch.toLowerCase());
     const matchesProvider = selectedProvider === 'all' || icon.provider === selectedProvider;
-    const matchesStyle = icon.styles.includes(style);
+    const matchesStyle = style === 'outline' || icon.styles.includes(style);
     return matchesSearch && matchesProvider && matchesStyle;
   });
 
@@ -313,36 +198,214 @@ export default function IconFinder() {
     }
   };
 
-  useEffect(() => {
-    const loadIcons = async () => {
-      setLoading(true);
-      try {
-        const allIcons = [
-          ...getIconsFromProvider('heroicons'),
-          ...getIconsFromProvider('material-ui'),
-          ...getIconsFromProvider('fontawesome'),
-          ...getIconsFromProvider('simple-icons'),
-          ...getIconsFromProvider('phosphor'),
-          ...getIconsFromProvider('lucide')
-        ];
-        setIcons(allIcons);
-      } catch (error) {
-        console.error('Error loading icons:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Function to dynamically import icon libraries and convert to IconInfo array
+  const loadIconProvider = async (provider: IconProvider) => {
+    if (activeProviders.includes(provider)) {
+      return; // Already loaded
+    }
 
-    loadIcons();
+    setLoading(true);
+    setLoadingProvider(provider);
+    
+    try {
+      let newIcons: IconInfo[] = [];
+      
+      switch (provider) {
+        case 'heroicons': {
+          const OutlineIcons = await import('@heroicons/react/24/outline');
+          newIcons = Object.entries(OutlineIcons)
+            .filter(([key]) => key !== 'default')
+            .map(([name, Component]) => ({
+              name: name.replace(/Icon$/, ''),
+              provider: 'heroicons',
+              Component: Component as React.ComponentType<any>,
+              styles: ['outline', 'solid']
+            }));
+          break;
+        }
+        
+        case 'material-ui': {
+          const MaterialIcons = await import('@mui/icons-material');
+          newIcons = Object.entries(MaterialIcons)
+            .filter(([key, component]) => {
+              return typeof component === 'object' && 
+                     component !== null &&
+                     'render' in component &&
+                     key !== 'default' && 
+                     !key.startsWith('Outlined') && 
+                     !key.startsWith('Rounded') && 
+                     !key.startsWith('Sharp') && 
+                     !key.startsWith('TwoTone');
+            })
+            .map(([name, Component]) => ({
+              name: name.replace(/([A-Z])/g, ' $1').trim(),
+              provider: 'material-ui',
+              Component: Component as React.ComponentType<any>,
+              styles: ['solid']
+            }));
+          break;
+        }
+        
+        case 'fontawesome': {
+          // Import FontAwesome components and setup
+          const { library } = await import('@fortawesome/fontawesome-svg-core');
+          const { fas } = await import('@fortawesome/free-solid-svg-icons');
+          const { far } = await import('@fortawesome/free-regular-svg-icons');
+          const { fab } = await import('@fortawesome/free-brands-svg-icons');
+          const { FontAwesomeIcon } = await import('@fortawesome/react-fontawesome');
+          
+          // Initialize FontAwesome library
+          library.add(fas, far, fab);
+          
+          // Create components for solid icons
+          const solidIcons = Object.keys(fas)
+            .filter(key => key !== 'prefix' && key !== 'fas')
+            .map(name => ({
+              name: name.replace(/^fa/, ''),
+              provider: 'fontawesome' as const,
+              Component: (props: any) => <FontAwesomeIcon icon={fas[name as keyof typeof fas]} {...props} />,
+              styles: ['solid'] as IconStyle[]
+            }));
+            
+          // Create components for regular icons
+          const regularIcons = Object.keys(far)
+            .filter(key => key !== 'prefix' && key !== 'far')
+            .map(name => ({
+              name: name.replace(/^fa/, ''),
+              provider: 'fontawesome' as const,
+              Component: (props: any) => <FontAwesomeIcon icon={far[name as keyof typeof far]} {...props} />,
+              styles: ['regular'] as IconStyle[]
+            }));
+            
+          // Create components for brand icons
+          const brandIcons = Object.keys(fab)
+            .filter(key => key !== 'prefix' && key !== 'fab')
+            .map(name => ({
+              name: name.replace(/^fa/, ''),
+              provider: 'fontawesome' as const,
+              Component: (props: any) => <FontAwesomeIcon icon={fab[name as keyof typeof fab]} {...props} />,
+              styles: ['brands'] as IconStyle[]
+            }));
+            
+          newIcons = [...solidIcons, ...regularIcons, ...brandIcons];
+          break;
+        }
+        
+        case 'simple-icons': {
+          const SimpleIcons = await import('simple-icons');
+          newIcons = Object.entries(SimpleIcons)
+            .filter(([key, component]) => key !== 'default' && typeof component === 'function')
+            .map(([name, Component]) => ({
+              name,
+              provider: 'simple-icons',
+              Component: Component as React.ComponentType<any>,
+              styles: ['solid']
+            }));
+          break;
+        }
+        
+        case 'phosphor': {
+          const PhosphorIcons = await import('phosphor-react');
+          newIcons = Object.entries(PhosphorIcons)
+            .filter(([key, component]) => {
+              return key !== 'default' && 
+                     typeof component === 'function' && 
+                     !key.includes('Weight');
+            })
+            .map(([name, Component]) => ({
+              name: name.replace(/([A-Z])/g, ' $1').trim(),
+              provider: 'phosphor',
+              Component: Component as React.ComponentType<any>,
+              styles: ['regular', 'fill']
+            }));
+          break;
+        }
+        
+        case 'lucide': {
+          const LucideIcons = await import('lucide-react');
+          newIcons = Object.entries(LucideIcons)
+            .filter(([key, component]) => {
+              return key !== 'default' && 
+                     typeof component === 'function' && 
+                     !key.startsWith('create') && 
+                     !key.startsWith('replace');
+            })
+            .map(([name, Component]) => ({
+              name,
+              provider: 'lucide',
+              Component: Component as React.ComponentType<any>,
+              styles: ['solid']
+            }));
+          break;
+        }
+        
+        case 'all': {
+          // For "all", load each provider one by one if not already loaded
+          const allProviders: IconProvider[] = ['heroicons', 'material-ui', 'fontawesome', 'simple-icons', 'phosphor', 'lucide'];
+          let completedCount = 0;
+          
+          for (const currProvider of allProviders) {
+            if (!activeProviders.includes(currProvider)) {
+              setLoadingProvider(currProvider);
+              setLoadingProgress(Math.floor((completedCount / allProviders.length) * 100));
+              
+              await loadIconProvider(currProvider);
+              completedCount++;
+            } else {
+              completedCount++;
+            }
+          }
+          
+          setLoadingProgress(100);
+          break;
+        }
+      }
+      
+      if (provider !== 'all') {
+        setIcons(prevIcons => [...prevIcons, ...newIcons]);
+        setActiveProviders(prev => [...prev, provider]);
+      }
+    } catch (error) {
+      console.error(`Error loading icons from ${provider}:`, error);
+    } finally {
+      setLoading(false);
+      setLoadingProvider(null);
+    }
+  };
+
+  // Load initial provider when component mounts
+  useEffect(() => {
+    loadIconProvider('heroicons');
   }, []);
+
+  // When provider selection changes, load that provider if needed
+  useEffect(() => {
+    if (!activeProviders.includes(selectedProvider) && selectedProvider !== 'all') {
+      loadIconProvider(selectedProvider);
+    } else if (selectedProvider === 'all' && !activeProviders.includes('all')) {
+      loadIconProvider('all');
+    }
+  }, [selectedProvider, activeProviders]);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Icon Finder</h1>
-          <p className="text-gray-600">Find and copy icons from multiple providers</p>
+          <p className="text-gray-600">Browse, search and copy icons from popular libraries</p>
         </div>
+      </div>
+
+      <div className="p-4 bg-blue-50 rounded-lg mb-4">
+        <h2 className="text-lg font-semibold text-blue-700 mb-2">How to use:</h2>
+        <ul className="list-disc pl-5 text-blue-700 space-y-1">
+          <li>Select an icon library from the dropdown to browse its icons</li>
+          <li>Use the &quot;All&quot; option to view icons from all libraries (may use more memory)</li>
+          <li>Search by name to find specific icons</li>
+          <li>Click any icon to copy its import code</li>
+          <li>Customize size and color before copying</li>
+          <li>Download icons as SVG or PNG files</li>
+        </ul>
       </div>
 
       <div className="flex flex-wrap gap-4">
@@ -352,7 +415,7 @@ export default function IconFinder() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search icons..."
+            placeholder="Search icons by name..."
             className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
@@ -360,10 +423,12 @@ export default function IconFinder() {
         <select
           value={selectedProvider}
           onChange={(e) => {
-            setSelectedProvider(e.target.value as IconProvider);
-            setStyle(iconProviders[e.target.value as IconProvider].styles[0]);
+            const newProvider = e.target.value as IconProvider;
+            setSelectedProvider(newProvider);
+            setStyle(iconProviders[newProvider].styles[0]);
           }}
           className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+          aria-label="Select icon library"
         >
           {Object.entries(iconProviders).map(([key, provider]) => (
             <option key={key} value={key}>{provider.label}</option>
@@ -374,6 +439,7 @@ export default function IconFinder() {
           value={style}
           onChange={(e) => setStyle(e.target.value as IconStyle)}
           className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+          aria-label="Select icon style"
         >
           {iconProviders[selectedProvider].styles.map(styleOption => (
             <option key={styleOption} value={styleOption}>
@@ -417,14 +483,32 @@ export default function IconFinder() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-[600px]">
+        <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
           <div className="flex flex-col items-center gap-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-            <p className="text-gray-600">Loading icons...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <p className="text-gray-600 font-medium">
+              {selectedProvider === 'all' 
+                ? `Loading all icon libraries (${loadingProgress}%)...`
+                : `Loading ${iconProviders[selectedProvider].name} icons...`}
+            </p>
+            {loadingProvider && (
+              <p className="text-gray-500 text-sm">Currently loading: {iconProviders[loadingProvider].name}</p>
+            )}
           </div>
         </div>
       ) : (
         <>
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-gray-500">
+              Showing {filteredIcons.length} {filteredIcons.length === 1 ? 'icon' : 'icons'}
+              {selectedProvider !== 'all' && ` from ${iconProviders[selectedProvider].name}`}
+              {search && ` matching "${search}"`}
+            </p>
+            {filteredIcons.length > 0 && (
+              <p className="text-sm text-gray-500">Click any icon to copy its code</p>
+            )}
+          </div>
+          
           <div 
             ref={parentRef}
             className="h-[600px] overflow-auto"
@@ -465,6 +549,7 @@ export default function IconFinder() {
                           onClick={() => copyToClipboard(icon)}
                           className="w-full p-4 flex flex-col items-center justify-center gap-2 bg-white border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-sm transition-all"
                           data-icon-id={`${icon.provider}-${icon.name}`}
+                          title={`Click to copy ${icon.name} code`}
                         >
                           <icon.Component
                             className="transition-all"
@@ -476,7 +561,7 @@ export default function IconFinder() {
                           />
                           <div className="text-xs text-center">
                             {copied === icon.name ? (
-                              <span className="text-green-600">Copied!</span>
+                              <span className="text-green-600 font-medium">Copied!</span>
                             ) : (
                               <span className="text-gray-600">{icon.name}</span>
                             )}
@@ -512,8 +597,26 @@ export default function IconFinder() {
           </div>
 
           {filteredIcons.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
-              No icons found matching "{search}"
+            <div className="flex flex-col items-center justify-center py-16 bg-gray-50 rounded-lg">
+              <div className="text-center max-w-md">
+                <MagnifyingGlassIcon className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No icons found</h3>
+                <p className="text-gray-500 mb-4">
+                  {search ? (
+                    <>No icons matching "<strong>{search}</strong>" found in {selectedProvider === 'all' ? 'any library' : iconProviders[selectedProvider].name}.</>
+                  ) : (
+                    <>Try selecting a different library or style from the dropdown menus above.</>
+                  )}
+                </p>
+                {search && (
+                  <button 
+                    onClick={() => setSearch('')}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Clear search
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </>
