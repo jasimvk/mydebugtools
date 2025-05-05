@@ -12,6 +12,7 @@ import {
   InformationCircleIcon,
   EyeDropperIcon
 } from '@heroicons/react/24/outline';
+import SuspenseBoundary from '@/components/SuspenseBoundary';
 
 // Color formats
 const colorFormats = [
@@ -146,7 +147,7 @@ const colorUtils = {
   }
 };
 
-export default function ColorPickerPage() {
+function ColorPickerContent() {
   const [color, setColor] = useState('#000000');
   const [format, setFormat] = useState('hex');
   const [showHelp, setShowHelp] = useState(false);
@@ -573,5 +574,14 @@ export default function ColorPickerPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+// Export a wrapper component that uses SuspenseBoundary
+export default function ColorPickerPage() {
+  return (
+    <SuspenseBoundary>
+      <ColorPickerContent />
+    </SuspenseBoundary>
   );
 } 
