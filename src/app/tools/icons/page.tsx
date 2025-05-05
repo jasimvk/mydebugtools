@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, Suspense } from 'react';
 import { MagnifyingGlassIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useDebounce } from 'use-debounce';
@@ -75,7 +75,7 @@ const presetSizes = [
   { label: 'XL', value: 40 }
 ];
 
-export default function IconFinder() {
+function IconFinderContent() {
   const [loading, setLoading] = useState(true);
   const [loadingProvider, setLoadingProvider] = useState<IconProvider | null>(null);
   const [icons, setIcons] = useState<IconInfo[]>([]);
@@ -294,13 +294,30 @@ export default function IconFinder() {
         case 'simple-icons': {
           const SimpleIcons = await import('simple-icons');
           newIcons = Object.entries(SimpleIcons)
-            .filter(([key, component]) => key !== 'default' && typeof component === 'function')
-            .map(([name, Component]) => ({
-              name,
-              provider: 'simple-icons',
-              Component: Component as React.ComponentType<any>,
-              styles: ['solid']
-            }));
+            .filter(([key, component]) => key !== 'default' && typeof component === 'object' && 'slug' in component)
+            .map(([name, iconData]) => {
+              // Create a React component from the SVG data
+              const SimpleIconComponent = (props: any) => {
+                const { size = 24, color = '#000000', ...restProps } = props;
+                return (
+                  <svg 
+                    width={size} 
+                    height={size} 
+                    viewBox="0 0 24 24" 
+                    fill={color} 
+                    dangerouslySetInnerHTML={{ __html: (iconData as any).path }} 
+                    {...restProps}
+                  />
+                );
+              };
+              
+              return {
+                name,
+                provider: 'simple-icons' as IconProvider,
+                Component: SimpleIconComponent,
+                styles: ['solid'] as IconStyle[]
+              };
+            });
           break;
         }
         
@@ -622,5 +639,20 @@ export default function IconFinder() {
         </>
       )}
     </div>
+  );
+}
+
+export default function IconFinder() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <p className="text-gray-600 font-medium">Loading Icon Finder...</p>
+        </div>
+      </div>
+    }>
+      <IconFinderContent />
+    </Suspense>
   );
 } 
