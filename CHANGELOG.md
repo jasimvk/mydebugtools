@@ -15,6 +15,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Improved layout for advanced color information view
   - Better responsiveness for mobile devices
   - Added empty state for recent colors
+- **Icon Finder Tool**:
+  - Optimized memory usage with on-demand loading of icon libraries
+  - Changed default to load only one library at a time
+  - Added progress indicators for multi-library loading
+  - Improved instructions and user guidance
 
 ## [1.0.0] - 2025-03-28
 
