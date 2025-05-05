@@ -81,13 +81,13 @@ const tools = [
     icon: CommandLineIcon,
     bgClass: 'bg-indigo-500',
   },
-  {
-    name: 'CSS Tools',
-    description: 'Format and optimize CSS code',
-    path: '/tools/css',
-    icon: PaintBrushIcon,
-    bgClass: 'bg-pink-500',
-  },
+  // {
+  //   name: 'CSS Tools',
+  //   description: 'Format and optimize CSS code',
+  //   path: '/tools/css',
+  //   icon: PaintBrushIcon,
+  //   bgClass: 'bg-pink-500',
+  // },
   {
     name: 'Color Picker',
     description: 'Pick and convert colors',

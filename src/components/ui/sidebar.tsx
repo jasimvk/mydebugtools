@@ -69,13 +69,6 @@ const tools = [
     bgClass: 'bg-green-500'
   },
   {
-    name: 'CSS Tools',
-    description: 'Minify, beautify, and validate your CSS code',
-    path: '/tools/css',
-    icon: CodeBracketIcon,
-    bgClass: 'bg-gradient-to-br from-cyan-100 to-cyan-200'
-  },
-  {
     name: 'Color Picker',
     description: 'Pick, convert, and manage colors in various formats',
     path: '/tools/color',
