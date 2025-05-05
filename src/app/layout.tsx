@@ -1,7 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import GoogleAnalytics from "./components/GoogleAnalytics";
+import AnalyticsProvider from "./components/AnalyticsProvider";
+import Providers from "./providers";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -9,11 +11,14 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
+export const viewport: Viewport = {
+  themeColor: '#2563eb',
+};
+
 export const metadata: Metadata = {
   title: "MyDebugTools - All-in-one Developer Debugging Toolkit",
   description: "A powerful collection of development tools including JSON Formatter, JWT Decoder, Base64 Tools, API Tester, and Icon Finder - all in one place.",
   metadataBase: new URL('https://mydebugtools.com'),
-  themeColor: '#2563eb',
   robots: {
     index: true,
     follow: true,
@@ -62,9 +67,13 @@ export default function RootLayout({
         {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
           <GoogleAnalytics measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
         )}
-        <main className="flex-1">
-          {children}
-        </main>
+        <AnalyticsProvider>
+          <main className="flex-1">
+            <Providers>
+              {children}
+            </Providers>
+          </main>
+        </AnalyticsProvider>
       </body>
     </html>
   );
