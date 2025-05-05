@@ -38,6 +38,114 @@ const keyboardShortcuts = [
   { key: 'Ctrl+P / Cmd+P', description: 'Pick color from screen' }
 ];
 
+// Color conversion utilities
+const colorUtils = {
+  hexToRgb: (hex: string): { r: number, g: number, b: number } | null => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  },
+  
+  rgbToHsl: (r: number, g: number, b: number): { h: number, s: number, l: number } => {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0, s, l = (max + min) / 2;
+
+    if (max === min) {
+      h = s = 0; // achromatic
+    } else {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      
+      h /= 6;
+    }
+
+    return {
+      h: Math.round(h * 360),
+      s: Math.round(s * 100),
+      l: Math.round(l * 100)
+    };
+  },
+  
+  rgbToCmyk: (r: number, g: number, b: number): { c: number, m: number, y: number, k: number } => {
+    r = r / 255;
+    g = g / 255;
+    b = b / 255;
+    
+    const k = 1 - Math.max(r, g, b);
+    const c = k === 1 ? 0 : (1 - r - k) / (1 - k);
+    const m = k === 1 ? 0 : (1 - g - k) / (1 - k);
+    const y = k === 1 ? 0 : (1 - b - k) / (1 - k);
+    
+    return {
+      c: Math.round(c * 100),
+      m: Math.round(m * 100),
+      y: Math.round(y * 100),
+      k: Math.round(k * 100)
+    };
+  },
+  
+  rgbToHsv: (r: number, g: number, b: number): { h: number, s: number, v: number } => {
+    r = r / 255;
+    g = g / 255;
+    b = b / 255;
+    
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0, s, v = max;
+    
+    const d = max - min;
+    s = max === 0 ? 0 : d / max;
+    
+    if (max === min) {
+      h = 0; // achromatic
+    } else {
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+
+    return {
+      h: Math.round(h * 360),
+      s: Math.round(s * 100),
+      v: Math.round(v * 100)
+    };
+  },
+
+  // Format values for display
+  formatRgb: (r: number, g: number, b: number): string => {
+    return `rgb(${r}, ${g}, ${b})`;
+  },
+  
+  formatHsl: (h: number, s: number, l: number): string => {
+    return `hsl(${h}, ${s}%, ${l}%)`;
+  },
+  
+  formatCmyk: (c: number, m: number, y: number, k: number): string => {
+    return `cmyk(${c}%, ${m}%, ${y}%, ${k}%)`;
+  },
+  
+  formatHsv: (h: number, s: number, v: number): string => {
+    return `hsv(${h}, ${s}%, ${v}%)`;
+  }
+};
+
 export default function ColorPickerPage() {
   const [color, setColor] = useState('#000000');
   const [format, setFormat] = useState('hex');
@@ -46,6 +154,7 @@ export default function ColorPickerPage() {
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
   const [recentColors, setRecentColors] = useState<string[]>([]);
   const [selectedPalette, setSelectedPalette] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Show notification
   const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
@@ -56,12 +165,34 @@ export default function ColorPickerPage() {
   // Convert color between formats
   const convertColor = (color: string, fromFormat: string, toFormat: string) => {
     try {
-      // Implementation will be added
+      // Basic implementation
       return color;
     } catch (error) {
       showNotification('Error converting color', 'error');
       return color;
     }
+  };
+
+  // Get color in all formats for the advanced view
+  const getColorFormats = (hexColor: string) => {
+    const rgb = colorUtils.hexToRgb(hexColor);
+    if (!rgb) return null;
+    
+    const { r, g, b } = rgb;
+    const hsl = colorUtils.rgbToHsl(r, g, b);
+    const cmyk = colorUtils.rgbToCmyk(r, g, b);
+    const hsv = colorUtils.rgbToHsv(r, g, b);
+    
+    return {
+      hex: hexColor,
+      rgb: colorUtils.formatRgb(r, g, b),
+      hsl: colorUtils.formatHsl(hsl.h, hsl.s, hsl.l),
+      cmyk: colorUtils.formatCmyk(cmyk.c, cmyk.m, cmyk.y, cmyk.k),
+      hsv: colorUtils.formatHsv(hsv.h, hsv.s, hsv.v),
+      values: {
+        rgb, hsl, cmyk, hsv
+      }
+    };
   };
 
   // Copy color to clipboard
@@ -132,6 +263,9 @@ export default function ColorPickerPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [color, format]);
+
+  // Get all color formats
+  const colorFormatsData = getColorFormats(color);
 
   return (
     <div className="container mx-auto p-4">
@@ -206,22 +340,25 @@ export default function ColorPickerPage() {
               <div>
                 <label className="block text-sm font-medium mb-1">Color Picker</label>
                 <div className="flex gap-2">
-                  <input
-                    type="color"
-                    value={color}
-                    onChange={(e) => handleColorChange(e.target.value)}
-                    className="w-full h-10 p-1 border rounded-md"
-                  />
+                  <div className="w-full border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 p-1 flex items-center">
+                    <input
+                      type="color"
+                      value={color}
+                      onChange={(e) => handleColorChange(e.target.value)}
+                      className="w-full h-10"
+                      style={{ backgroundColor: 'transparent' }}
+                    />
+                  </div>
                   <button 
                     onClick={() => copyToClipboard(color)}
-                    className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+                    className="p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
                     title="Copy color"
                   >
                     <DocumentDuplicateIcon className="h-5 w-5" />
                   </button>
                   <button 
                     onClick={resetColor}
-                    className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+                    className="p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
                     title="Reset color"
                   >
                     <ArrowPathIcon className="h-5 w-5" />
@@ -230,34 +367,158 @@ export default function ColorPickerPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Color Format</label>
-                <select 
-                  value={format} 
-                  onChange={(e) => handleFormatChange(e.target.value)}
-                  className="w-full p-2 border rounded-md"
-                >
-                  {colorFormats.map(format => (
-                    <option key={format.value} value={format.value}>{format.label}</option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium mb-1">Format</label>
+                <div className="flex gap-2">
+                  <select
+                    value={format}
+                    onChange={(e) => handleFormatChange(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-900 dark:text-white"
+                  >
+                    {colorFormats.map((format) => (
+                      <option key={format.value} value={format.value}>
+                        {format.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className={`p-2 rounded border transition-colors ${showAdvanced ? 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-900 dark:text-blue-300 dark:border-blue-700' : 'hover:bg-gray-200 border-gray-300 dark:hover:bg-gray-700 dark:border-gray-600'}`}
+                    title={showAdvanced ? "Show simple view" : "Show advanced view"}
+                  >
+                    {showAdvanced ? (
+                      <ChevronUpIcon className="h-5 w-5" />
+                    ) : (
+                      <ChevronDownIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Color Value</label>
-                <input
-                  type="text"
-                  value={color}
-                  readOnly
-                  className="w-full p-2 border rounded-md font-mono bg-gray-50 dark:bg-gray-800"
-                />
-              </div>
+              {!showAdvanced && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Color Value</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={color}
+                      readOnly
+                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md font-mono bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    />
+                    <button 
+                      onClick={() => copyToClipboard(color)}
+                      className="p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      title="Copy color value"
+                    >
+                      <DocumentDuplicateIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {showAdvanced && colorFormatsData && (
+                <div className="p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900">
+                  <div className="flex flex-wrap justify-between items-center mb-2">
+                    <h4 className="text-sm font-medium mb-1">Color Values</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(colorFormatsData).map(([key, value]) => {
+                        if (key === 'values') return null;
+                        return (
+                          <button
+                            key={key}
+                            onClick={() => copyToClipboard(value as string)}
+                            className="text-xs px-2 py-1 bg-white border border-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-600 dark:hover:bg-gray-700 rounded flex items-center gap-1 text-gray-900 dark:text-white"
+                            title={`Copy ${key.toUpperCase()} value: ${value}`}
+                          >
+                            <span className="uppercase font-semibold">{key}</span>
+                            <DocumentDuplicateIcon className="h-3 w-3" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                    <div>
+                      <span className="font-medium">RGB</span>
+                      <div className="grid grid-cols-3 gap-1 mt-1">
+                        <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
+                          <span className="block text-gray-500 dark:text-gray-400">R</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{colorFormatsData.values.rgb.r}</span>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
+                          <span className="block text-gray-500 dark:text-gray-400">G</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{colorFormatsData.values.rgb.g}</span>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
+                          <span className="block text-gray-500 dark:text-gray-400">B</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{colorFormatsData.values.rgb.b}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="font-medium">HSL</span>
+                      <div className="grid grid-cols-3 gap-1 mt-1">
+                        <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
+                          <span className="block text-gray-500 dark:text-gray-400">H</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{colorFormatsData.values.hsl.h}°</span>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
+                          <span className="block text-gray-500 dark:text-gray-400">S</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{colorFormatsData.values.hsl.s}%</span>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
+                          <span className="block text-gray-500 dark:text-gray-400">L</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{colorFormatsData.values.hsl.l}%</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="font-medium">CMYK</span>
+                      <div className="grid grid-cols-4 gap-1 mt-1">
+                        <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
+                          <span className="block text-gray-500 dark:text-gray-400">C</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{colorFormatsData.values.cmyk.c}%</span>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
+                          <span className="block text-gray-500 dark:text-gray-400">M</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{colorFormatsData.values.cmyk.m}%</span>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
+                          <span className="block text-gray-500 dark:text-gray-400">Y</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{colorFormatsData.values.cmyk.y}%</span>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
+                          <span className="block text-gray-500 dark:text-gray-400">K</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{colorFormatsData.values.cmyk.k}%</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="font-medium">HSV</span>
+                      <div className="grid grid-cols-3 gap-1 mt-1">
+                        <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
+                          <span className="block text-gray-500 dark:text-gray-400">H</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{colorFormatsData.values.hsv.h}°</span>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
+                          <span className="block text-gray-500 dark:text-gray-400">S</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{colorFormatsData.values.hsv.s}%</span>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
+                          <span className="block text-gray-500 dark:text-gray-400">V</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{colorFormatsData.values.hsv.v}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-medium mb-2">Color Preview</h3>
                 <div 
-                  className="w-full h-32 rounded-lg border"
+                  className="w-full h-32 rounded-lg border border-gray-300 dark:border-gray-600"
                   style={{ backgroundColor: color }}
                 />
               </div>
@@ -265,15 +526,20 @@ export default function ColorPickerPage() {
               <div>
                 <h3 className="text-sm font-medium mb-2">Recent Colors</h3>
                 <div className="grid grid-cols-5 gap-2">
-                  {recentColors.map((color, index) => (
+                  {recentColors.map((recentColor, index) => (
                     <button
                       key={index}
-                      onClick={() => handleColorChange(color)}
-                      className="w-full aspect-square rounded-lg border"
-                      style={{ backgroundColor: color }}
-                      title={color}
+                      onClick={() => handleColorChange(recentColor)}
+                      className="w-full aspect-square rounded-lg border border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 transition-colors"
+                      style={{ backgroundColor: recentColor }}
+                      title={recentColor}
                     />
                   ))}
+                  {recentColors.length === 0 && (
+                    <div className="col-span-5 p-4 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-600">
+                      No recent colors yet. Pick a color to add it here.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -286,17 +552,17 @@ export default function ColorPickerPage() {
               {colorPalettes.map((palette) => (
                 <div 
                   key={palette.name}
-                  className="p-4 border rounded-lg hover:border-blue-500 cursor-pointer"
+                  className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 cursor-pointer transition-colors"
                   onClick={() => handlePaletteSelect(palette.name)}
                 >
                   <h4 className="text-sm font-medium mb-2">{palette.name}</h4>
                   <div className="grid grid-cols-5 gap-1">
-                    {palette.colors.map((color, index) => (
+                    {palette.colors.map((paletteColor, index) => (
                       <div
                         key={index}
-                        className="w-full aspect-square rounded"
-                        style={{ backgroundColor: color }}
-                        title={color}
+                        className="w-full aspect-square rounded border border-gray-200 dark:border-gray-700"
+                        style={{ backgroundColor: paletteColor }}
+                        title={paletteColor}
                       />
                     ))}
                   </div>
