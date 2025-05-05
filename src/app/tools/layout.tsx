@@ -19,7 +19,7 @@ import { useState } from 'react';
 // Tools ordered by popularity and trending status
 const tools = [
   {
-    name: 'JSON',
+    name: 'JSON Tools',
     description: 'Format, validate, and beautify your JSON data with syntax highlighting',
     path: '/tools/json',
     icon: CurlyBracesIcon
@@ -30,18 +30,18 @@ const tools = [
     path: '/tools/jwt',
     icon: KeyIcon
   },
-  {
-    name: 'API Tester',
-    description: 'Test your APIs with a lightweight, fast interface',
-    path: '/tools/api',
-    icon: WrenchIcon
-  },
-  {
-    name: 'Regex Tester',
-    description: 'Test and validate regular expressions with real-time matching',
-    path: '/tools/regex',
-    icon: MagnifyingGlassIcon
-  },
+  // {
+  //   name: 'API Tester',
+  //   description: 'Test your APIs with a lightweight, fast interface',
+  //   path: '/tools/api',
+  //   icon: WrenchIcon
+  // },
+  // {
+  //   name: 'Regex Tester',
+  //   description: 'Test and validate regular expressions with real-time matching',
+  //   path: '/tools/regex',
+  //   icon: MagnifyingGlassIcon
+  // },
   {
     name: 'Code Diff',
     description: 'Compare and analyze code differences',
@@ -54,12 +54,12 @@ const tools = [
     path: '/tools/base64',
     icon: CommandLineIcon
   },
-  {
-    name: 'CSS Tools',
-    description: 'Minify, beautify, and validate your CSS code',
-    path: '/tools/css',
-    icon: CodeBracketIcon
-  },
+  // {
+  //   name: 'CSS Tools',
+  //   description: 'Minify, beautify, and validate your CSS code',
+  //   path: '/tools/css',
+  //   icon: CodeBracketIcon
+  // },
   {
     name: 'Color Picker',
     description: 'Pick, convert, and manage colors in various formats',
@@ -78,12 +78,12 @@ const tools = [
     path: '/tools/icons',
     icon: MagnifyingGlassIcon
   },
-  {
-    name: 'Database Query Tool (SQLite)',
-    description: 'Run SQL queries on SQLite files directly in your browser',
-    path: '/tools/database',
-    icon: Terminal
-  }
+  // {
+  //   name: 'Database Query Tool (SQLite)',
+  //   description: 'Run SQL queries on SQLite files directly in your browser',
+  //   path: '/tools/database',
+  //   icon: Terminal
+  // }
 ];
 
 export default function ToolsLayout({
