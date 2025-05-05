@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [Unreleased]
 
 - Initial changelog setup.
+- **Color Picker Tool**:
+  - Improved UI with better contrast and readability
+  - Fixed background colors for color value displays
+  - Enhanced text colors and added proper borders
+  - Added individual copy buttons for each color format
+  - Improved layout for advanced color information view
+  - Better responsiveness for mobile devices
+  - Added empty state for recent colors
 
 ## [1.0.0] - 2025-03-28
 
