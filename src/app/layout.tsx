@@ -4,6 +4,7 @@ import "./globals.css";
 import GoogleAnalytics from "./components/GoogleAnalytics";
 import AnalyticsProvider from "./components/AnalyticsProvider";
 import Providers from "./providers";
+import StructuredData from "@/components/StructuredData";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -13,12 +14,16 @@ const inter = Inter({
 
 export const viewport: Viewport = {
   themeColor: '#2563eb',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
 };
 
 export const metadata: Metadata = {
   title: "MyDebugTools - All-in-one Developer Debugging Toolkit",
   description: "A powerful collection of development tools including JSON Formatter, JWT Decoder, Base64 Tools, API Tester, and Icon Finder - all in one place.",
   metadataBase: new URL('https://mydebugtools.com'),
+  keywords: "developer tools, json formatter, jwt decoder, base64 encoder, api tester, icon finder, color picker, regex tester, online tools, web developer tools",
   robots: {
     index: true,
     follow: true,
@@ -29,6 +34,9 @@ export const metadata: Metadata = {
       'max-image-preview': 'large',
       'max-video-preview': -1,
     },
+  },
+  alternates: {
+    canonical: 'https://mydebugtools.com',
   },
   openGraph: {
     type: 'website',
@@ -67,6 +75,7 @@ export default function RootLayout({
         {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
           <GoogleAnalytics measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
         )}
+        <StructuredData /> 
         <AnalyticsProvider>
           <main className="flex-1">
             <Providers>

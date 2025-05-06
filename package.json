@@ -4,7 +4,7 @@
   "description": "A comprehensive suite of debugging and development tools for web developers",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run generate-sitemap && next build",
     "start": "next start",
     "lint": "next lint",
     "clean": "rm -rf dist",
@@ -13,7 +13,8 @@
     "build:extension": "npm run clean && npm run copy && npm run zip",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "generate-sitemap": "node scripts/generate-sitemap.js"
   },
   "dependencies": {
     "@emotion/react": "^11.11.3",
