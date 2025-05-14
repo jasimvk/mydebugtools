@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   CodeBracketIcon, 
@@ -70,7 +70,7 @@ p {
   background-color: #0056b3;
 }`;
 
-export default function CSSToolsPage() {
+function CSSFormatterContent() {
   const [css, setCSS] = useState(sampleCSS);
   const [showHelp, setShowHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -386,6 +386,23 @@ export default function CSSToolsPage() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+export default function CSSFormatter() {
+  return (
+    <div className="container mx-auto p-4">
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <p className="text-gray-600 font-medium">Loading CSS Formatter...</p>
+          </div>
+        </div>
+      }>
+        <CSSFormatterContent />
+      </Suspense>
     </div>
   );
 } 

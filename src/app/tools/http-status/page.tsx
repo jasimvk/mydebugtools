@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { InformationCircleIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import StructuredData from '@/components/StructuredData';
@@ -178,7 +178,16 @@ function HTTPStatusCodesContent() {
 export default function HTTPStatusCodes() {
   return (
     <div className="container mx-auto p-4">
-      <HTTPStatusCodesContent />
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <p className="text-gray-600 font-medium">Loading HTTP Status Codes...</p>
+          </div>
+        </div>
+      }>
+        <HTTPStatusCodesContent />
+      </Suspense>
     </div>
   );
 } 

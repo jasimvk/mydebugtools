@@ -20,10 +20,10 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "MyDebugTools - All-in-one Developer Debugging Toolkit",
-  description: "A powerful collection of development tools including JSON Formatter, JWT Decoder, Base64 Tools, API Tester, and Icon Finder - all in one place.",
+  title: 'Developer Tools | MyDebugTools',
+  description: 'A collection of essential developer tools including JSON formatter, JWT decoder, API tester, regex tester, and more.',
+  keywords: 'developer tools, online tools, json formatter, jwt decoder, api tester, regex tester, sqlite, code diff, icon finder, base64, markdown, color picker, css tools',
   metadataBase: new URL('https://mydebugtools.com'),
-  keywords: "developer tools, json formatter, jwt decoder, base64 encoder, api tester, icon finder, color picker, regex tester, online tools, web developer tools",
   robots: {
     index: true,
     follow: true,

@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect, Suspense } from 'react';
 import { MagnifyingGlassIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useDebounce } from 'use-debounce';
+import StructuredData from '@/components/StructuredData';
 
 type IconStyle = 'outline' | 'solid' | 'regular' | 'brands' | 'fill' | 'line';
 type IconProvider = 'heroicons' | 'material-ui' | 'fontawesome' | 'simple-icons' | 'phosphor' | 'lucide' | 'all';
@@ -406,6 +407,12 @@ function IconFinderContent() {
 
   return (
     <div className="space-y-6">
+      <StructuredData 
+        title="Icon Finder | MyDebugTools"
+        description="Search and browse popular icon libraries including Heroicons, Material UI, Font Awesome, Simple Icons, Phosphor and Lucide."
+        toolType="WebApplication"
+      />
+      
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Icon Finder</h1>
@@ -642,17 +649,19 @@ function IconFinderContent() {
   );
 }
 
-export default function IconFinder() {
+export default function Icons() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          <p className="text-gray-600 font-medium">Loading Icon Finder...</p>
+    <div className="container mx-auto p-4">
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <p className="text-gray-600 font-medium">Loading Icons...</p>
+          </div>
         </div>
-      </div>
-    }>
-      <IconFinderContent />
-    </Suspense>
+      }>
+        <IconFinderContent />
+      </Suspense>
+    </div>
   );
 } 

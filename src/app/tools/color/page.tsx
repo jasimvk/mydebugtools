@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   SwatchIcon, 
@@ -13,6 +13,7 @@ import {
   EyeDropperIcon
 } from '@heroicons/react/24/outline';
 import SuspenseBoundary from '@/components/SuspenseBoundary';
+import StructuredData from '@/components/StructuredData';
 
 // Color formats
 const colorFormats = [
@@ -270,6 +271,12 @@ function ColorPickerContent() {
 
   return (
     <div className="container mx-auto p-4">
+      <StructuredData 
+        title="Color Picker | MyDebugTools"
+        description="Online color picker tool with RGB, HEX, HSL, CMYK, and HSV color formats."
+        toolType="WebApplication"
+      />
+      
       {/* Notification */}
       {notification && (
         <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
@@ -580,8 +587,15 @@ function ColorPickerContent() {
 // Export a wrapper component that uses SuspenseBoundary
 export default function ColorPickerPage() {
   return (
-    <SuspenseBoundary>
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <p className="text-gray-600 font-medium">Loading Color Converter...</p>
+        </div>
+      </div>
+    }>
       <ColorPickerContent />
-    </SuspenseBoundary>
+    </Suspense>
   );
 } 

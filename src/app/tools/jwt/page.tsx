@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { KeyIcon, ClipboardIcon } from '@heroicons/react/24/outline';
 
 interface JWTPayload {
   [key: string]: any;
 }
 
-export default function JWTDecoder() {
+function JWTDecoderContent() {
   const [token, setToken] = useState('');
   const [header, setHeader] = useState<JWTPayload | null>(null);
   const [payload, setPayload] = useState<JWTPayload | null>(null);
@@ -119,6 +119,23 @@ export default function JWTDecoder() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+export default function JWTDecoder() {
+  return (
+    <div className="container mx-auto p-4">
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <p className="text-gray-600 font-medium">Loading JWT Decoder...</p>
+          </div>
+        </div>
+      }>
+        <JWTDecoderContent />
+      </Suspense>
     </div>
   );
 } 

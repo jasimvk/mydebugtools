@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { 
   WrenchIcon, 
   ArrowPathIcon, 
@@ -107,7 +107,7 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const RATE_LIMIT = 10; // requests per minute
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 
-export default function APITester() {
+function APITesterContent() {
   const [url, setUrl] = useState('');
   const [method, setMethod] = useState<HttpMethod>('GET');
   const [headers, setHeaders] = useState<Header[]>([{ key: '', value: '', enabled: true }]);
@@ -1027,6 +1027,23 @@ ${method !== 'GET' ? `-d '${body}'` : ''}`
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+export default function APITester() {
+  return (
+    <div className="container mx-auto p-4">
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <p className="text-gray-600 font-medium">Loading API Tester...</p>
+          </div>
+        </div>
+      }>
+        <APITesterContent />
+      </Suspense>
     </div>
   );
 } 
