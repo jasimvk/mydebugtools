@@ -15,6 +15,7 @@ const pages = [
   { url: '/tools/regex/', changefreq: 'monthly', priority: 0.8 },
   { url: '/tools/color/', changefreq: 'monthly', priority: 0.8 },
   { url: '/tools/icons/', changefreq: 'monthly', priority: 0.8 },
+  { url: '/tools/http-status/', changefreq: 'monthly', priority: 0.8 },
   // Add more tools as they are added to your application
 ];
 
