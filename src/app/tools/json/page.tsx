@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import nextDynamic from 'next/dynamic';
 import { 
   ArrowPathIcon, 
@@ -877,7 +877,7 @@ const CompareEditor: React.FC<{
   );
 };
 
-export default function JSONFormatter() {
+function JSONFormatterContent() {
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -1696,6 +1696,23 @@ export default function JSONFormatter() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+export default function JSONFormatter() {
+  return (
+    <div className="container mx-auto p-4">
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <p className="text-gray-600 font-medium">Loading JSON Formatter...</p>
+          </div>
+        </div>
+      }>
+        <JSONFormatterContent />
+      </Suspense>
     </div>
   );
 } 

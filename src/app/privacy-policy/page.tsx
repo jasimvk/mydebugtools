@@ -1,6 +1,8 @@
-import React from 'react';
+'use client';
 
-export default function PrivacyPolicy() {
+import React, { useState, Suspense } from 'react';
+
+function PrivacyPolicyContent() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
@@ -104,6 +106,23 @@ export default function PrivacyPolicy() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+export default function PrivacyPolicy() {
+  return (
+    <div className="container mx-auto p-4">
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <p className="text-gray-600 font-medium">Loading Privacy Policy...</p>
+          </div>
+        </div>
+      }>
+        <PrivacyPolicyContent />
+      </Suspense>
     </div>
   );
 } 

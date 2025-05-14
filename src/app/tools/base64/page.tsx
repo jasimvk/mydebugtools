@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { 
   CommandLineIcon, 
   ClipboardIcon, 
@@ -13,7 +13,7 @@ import {
   ArrowUpTrayIcon
 } from '@heroicons/react/24/outline';
 
-export default function Base64Tools() {
+function Base64ConverterContent() {
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
   const [error, setError] = useState('');
@@ -433,6 +433,23 @@ export default function Base64Tools() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+export default function Base64Converter() {
+  return (
+    <div className="container mx-auto p-4">
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <p className="text-gray-600 font-medium">Loading Base64 Converter...</p>
+          </div>
+        </div>
+      }>
+        <Base64ConverterContent />
+      </Suspense>
     </div>
   );
 } 

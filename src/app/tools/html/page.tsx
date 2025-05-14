@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   DocumentCheckIcon, 
@@ -60,7 +60,7 @@ const sampleHTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-export default function HTMLValidatorPage() {
+function HTMLFormatterContent() {
   const [html, setHTML] = useState(sampleHTML);
   const [showHelp, setShowHelp] = useState(false);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
@@ -371,6 +371,23 @@ export default function HTMLValidatorPage() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+export default function HTMLFormatter() {
+  return (
+    <div className="container mx-auto p-4">
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <p className="text-gray-600 font-medium">Loading HTML Formatter...</p>
+          </div>
+        </div>
+      }>
+        <HTMLFormatterContent />
+      </Suspense>
     </div>
   );
 } 

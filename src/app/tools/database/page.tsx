@@ -1,5 +1,5 @@
 'use client';
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 // @ts-ignore
 import initSqlJs from 'sql.js';
@@ -31,7 +31,7 @@ function arrayToCSV(columns: string[], rows: any[][]): string {
   return [columns.join(','), ...rows.map(row => row.map(escape).join(','))].join('\n');
 }
 
-const DatabaseQueryTool = () => {
+function DatabaseContent() {
   const [db, setDb] = useState<any>(null);
   const [query, setQuery] = useState('SELECT name FROM sqlite_master WHERE type=\'table\';');
   const [results, setResults] = useState<any[]>([]);
@@ -349,6 +349,21 @@ const DatabaseQueryTool = () => {
       </div>
     </div>
   );
-};
+}
 
-export default DatabaseQueryTool; 
+export default function Database() {
+  return (
+    <div className="container mx-auto p-4">
+      <Suspense fallback={
+        <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+            <p className="text-gray-600 font-medium">Loading Database Tools...</p>
+          </div>
+        </div>
+      }>
+        <DatabaseContent />
+      </Suspense>
+    </div>
+  );
+} 
