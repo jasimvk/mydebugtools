@@ -3,6 +3,7 @@
 import Script from 'next/script'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useEffect } from 'react'
+import SuspenseBoundary from '@/components/SuspenseBoundary'
 
 // Add gtag to the window object type
 declare global {
@@ -15,7 +16,7 @@ declare global {
   }
 }
 
-export default function GoogleAnalytics({ measurementId }: { measurementId: string }) {
+function GoogleAnalyticsContent({ measurementId }: { measurementId: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   
@@ -50,4 +51,12 @@ export default function GoogleAnalytics({ measurementId }: { measurementId: stri
       />
     </>
   )
+}
+
+export default function GoogleAnalytics({ measurementId }: { measurementId: string }) {
+  return (
+    <SuspenseBoundary>
+      <GoogleAnalyticsContent measurementId={measurementId} />
+    </SuspenseBoundary>
+  );
 } 

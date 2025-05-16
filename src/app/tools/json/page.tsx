@@ -41,6 +41,7 @@ import {
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { type EditorProps } from '@monaco-editor/react';
+import PageWrapper from '@/components/PageWrapper';
 
 // Move these imports to be dynamically loaded
 const loadDependencies = async () => {
@@ -877,7 +878,7 @@ const CompareEditor: React.FC<{
   );
 };
 
-export default function JSONFormatter() {
+function JSONFormatter() {
   const [input, setInput] = useState('');
   const [output, setOutput] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -1697,5 +1698,14 @@ export default function JSONFormatter() {
         </div>
       )}
     </div>
+  );
+}
+
+// Wrap the component with PageWrapper
+export default function Page() {
+  return (
+    <PageWrapper>
+      <JSONFormatter />
+    </PageWrapper>
   );
 } 

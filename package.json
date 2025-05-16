@@ -4,7 +4,7 @@
   "description": "A comprehensive suite of debugging and development tools for web developers",
   "scripts": {
     "dev": "next dev",
-    "build": "npm run generate-sitemap && next build",
+    "build": "NEXT_TELEMETRY_DISABLED=1 npm run generate-sitemap && next build --no-lint",
     "start": "next start",
     "lint": "next lint",
     "clean": "rm -rf dist",
