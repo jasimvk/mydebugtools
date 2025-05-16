@@ -1,0 +1,18 @@
+Exception Type: EXC_CRASH (SIGABRT)
+Exception Codes: 0x0000000000000000, 0x0000000000000000
+Exception Note: EXC_CORPSE_NOTIFY
+Triggered by Thread: 0
+
+Thread 0 name: Dispatch queue: com.apple.main-thread
+Thread 0 Crashed:
+0   libsystem_kernel.dylib          0x00000001a04c1e30 __pthread_kill + 8
+1   libsystem_pthread.dylib         0x00000001a04b8d7c pthread_kill + 268
+2   libsystem_c.dylib               0x000000019f3b1cf8 abort + 168
+3   MyApp                           0x0000000100123456 -[MyViewController viewDidLoad] + 123
+4   UIKitCore                       0x00000001b2c3d7f0 -[UIViewController loadViewIfRequired] + 932
+5   UIKitCore                       0x00000001b2c3dbc4 -[UIViewController view] + 28
+6   UIKitCore                       0x00000001b2d8a6a8 -[UINavigationController _startCustomTransition:] + 928
+7   UIKitCore                       0x00000001b2d8b1b0 -[UINavigationController _startDeferredTransitionIfNeeded:] + 684
+8   UIKitCore                       0x00000001b2d8b4b8 -[UINavigationController __viewWillLayoutSubviews] + 168
+9   UIKitCore                       0x00000001b2d6d72c -[UILayoutContainerView layoutSubviews] + 224
+10  UIKitCore                       0x00000001b2e8d798 -[UIView(CALayerDelegate) layoutSublayersOfLayer:] + 2852 
