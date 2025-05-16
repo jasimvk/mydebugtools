@@ -1,0 +1,10 @@
+[Performance] JavaScript Bundle Load: 350ms
+[Performance] Native Bridge Init: 120ms
+[Performance] Module Registry Init: 80ms
+[Performance] React Tree Setup: 150ms
+[Performance] First Render: 250ms
+[Performance] Layout Pass: 100ms
+[Performance] API Initialization: 180ms
+[Performance] Image Cache Setup: 90ms
+[Performance] Navigation Setup: 130ms
+[Performance] Redux Store Init: 70ms 
