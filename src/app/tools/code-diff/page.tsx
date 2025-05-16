@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { DiffEditor } from '@monaco-editor/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -57,7 +57,7 @@ const keyboardShortcuts = [
   { key: 'Ctrl+U / Cmd+U', description: 'Load from URL' }
 ];
 
-function CodeDiffContent() {
+export default function CodeDiffPage() {
   const [originalCode, setOriginalCode] = useState('');
   const [modifiedCode, setModifiedCode] = useState('');
   const [language, setLanguage] = useState('javascript');
@@ -604,20 +604,5 @@ function CodeDiffContent() {
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-export default function CodeDiff() {
-  return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          <p className="text-gray-600 font-medium">Loading Code Diff...</p>
-        </div>
-      </div>
-    }>
-      <CodeDiffContent />
-    </Suspense>
   );
 } 

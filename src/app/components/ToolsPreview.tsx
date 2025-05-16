@@ -15,6 +15,12 @@ const tools = [
     imagePlaceholder: 'bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800'
   },
   {
+    name: 'HTTP Status Codes',
+    description: 'Comprehensive reference for HTTP status codes',
+    path: '/tools/http-status',
+    imagePlaceholder: 'bg-gradient-to-br from-indigo-100 to-indigo-200 dark:from-indigo-900 dark:to-indigo-800'
+  },
+  {
     name: 'Base64 Tools',
     description: 'Encode and decode Base64 strings',
     path: '/tools/base64',

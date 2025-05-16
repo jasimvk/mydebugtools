@@ -1,6 +1,6 @@
 # Allow all web crawlers
 User-agent: *
 Allow: /
-
+ 
 # Sitemap
 Sitemap: https://mydebugtools.com/sitemap.xml 

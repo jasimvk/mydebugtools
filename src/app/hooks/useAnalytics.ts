@@ -36,7 +36,7 @@ export const event = ({ action, category, label, value }: {
 export default function useAnalytics() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  
+
   useEffect(() => {
     if (pathname && process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID) {
       const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '');
