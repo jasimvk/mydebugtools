@@ -1,0 +1,13 @@
+2024-03-15 10:30:45.789 E/AndroidRuntime: FATAL EXCEPTION: main
+Process: com.myapp.debug, PID: 12345
+java.lang.NullPointerException: Attempt to invoke virtual method 'void android.widget.TextView.setText(java.lang.CharSequence)' on a null object reference
+    at com.myapp.ui.MainActivity.onCreate(MainActivity.java:42)
+    at android.app.Activity.performCreate(Activity.java:8000)
+    at android.app.Activity.performCreate(Activity.java:7984)
+    at android.app.Instrumentation.callActivityOnCreate(Instrumentation.java:1309)
+    at android.app.ActivityThread.performLaunchActivity(ActivityThread.java:3422)
+    at android.app.ActivityThread.handleLaunchActivity(ActivityThread.java:3601)
+    at android.app.servertransaction.LaunchActivityItem.execute(LaunchActivityItem.java:85)
+    at android.app.servertransaction.TransactionExecutor.executeCallbacks(TransactionExecutor.java:135)
+    at android.app.servertransaction.TransactionExecutor.execute(TransactionExecutor.java:95)
+    at android.app.ActivityThread$H.handleMessage(ActivityThread.java:2066) 

@@ -1,0 +1,18 @@
+Error: NoSuchMethodError: The method 'getData' was called on null
+#0      MyWidget.build (package:myapp/widgets/my_widget.dart:42:7)
+#1      StatelessElement.build (package:flutter/src/widgets/framework.dart:4701:28)
+#2      ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:4587:15)
+#3      Element.rebuild (package:flutter/src/widgets/framework.dart:4311:5)
+#4      ComponentElement._firstBuild (package:flutter/src/widgets/framework.dart:4566:5)
+#5      ComponentElement.mount (package:flutter/src/widgets/framework.dart:4561:5)
+<asynchronous suspension>
+#6      Element.inflateWidget (package:flutter/src/widgets/framework.dart:3631:14)
+#7      MultiChildRenderObjectElement.inflateWidget (package:flutter/src/widgets/framework.dart:6261:36)
+#8      Element.updateChild (package:flutter/src/widgets/framework.dart:3383:18)
+#9      RenderObjectElement.updateChildren (package:flutter/src/widgets/framework.dart:5808:32)
+#10     MultiChildRenderObjectElement.update (package:flutter/src/widgets/framework.dart:6284:17)
+#11     Element.updateChild (package:flutter/src/widgets/framework.dart:3370:15)
+#12     ComponentElement.performRebuild (package:flutter/src/widgets/framework.dart:4612:16)
+#13     Element.rebuild (package:flutter/src/widgets/framework.dart:4311:5)
+#14     StatefulElement.update (package:flutter/src/widgets/framework.dart:4802:5)
+#15     Element.updateChild (package:flutter/src/widgets/framework.dart:3370:15) 
