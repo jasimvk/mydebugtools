@@ -1,9 +1,8 @@
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import GoogleAnalytics from "./components/GoogleAnalytics";
-import AnalyticsProvider from "./components/AnalyticsProvider";
-import Providers from "./providers";
+import ClientRoot from "./components/ClientRoot";
 import StructuredData from "@/components/StructuredData";
 
 const inter = Inter({
@@ -72,17 +71,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className={`${inter.className} antialiased bg-white text-gray-900 min-h-screen flex flex-col`}>
-        {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
-          <GoogleAnalytics measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
-        )}
-        <StructuredData /> 
-        <AnalyticsProvider>
-          <main className="flex-1">
-            <Providers>
-              {children}
-            </Providers>
-          </main>
-        </AnalyticsProvider>
+        <StructuredData />
+        <Suspense fallback={null}>
+          <ClientRoot>
+            {children}
+          </ClientRoot>
+        </Suspense>
       </body>
     </html>
   );
