@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -14,11 +13,27 @@ import {
   DocumentTextIcon,
   CheckIcon,
   DocumentCheckIcon,
+  ExclamationTriangleIcon,
+  ChartBarIcon,
 } from '@heroicons/react/24/outline';
 import { CurlyBracesIcon } from 'lucide-react';
 
 // Tools ordered by popularity and trending status
 const tools = [
+  {
+    name: 'Crash Beautifier',
+    description: 'Format and beautify crash logs from React Native, Android, iOS, and Flutter',
+    path: '/tools/crash-beautifier',
+    icon: ExclamationTriangleIcon,
+    bgClass: 'bg-gradient-to-br from-red-100 to-red-200'
+  },
+  {
+    name: 'Startup Profiling (RN)',
+    description: 'Analyze and visualize React Native app startup performance metrics',
+    path: '/tools/startup-profiling',
+    icon: ChartBarIcon,
+    bgClass: 'bg-gradient-to-br from-indigo-100 to-indigo-200'
+  },
   {
     name: 'JSON',
     description: 'Format, validate, and beautify your JSON data with syntax highlighting',
