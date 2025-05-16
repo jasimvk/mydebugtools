@@ -18,18 +18,9 @@ export const pageview = (url: string, id: string) => {
   }
 }
 
-export const event = ({ action, category, label, value }: {
-  action: string
-  category: string
-  label: string
-  value?: number
-}) => {
+export const event = ({ action, params }: { action: string; params: any }) => {
   if (typeof window.gtag !== 'undefined') {
-    window.gtag('event', action, {
-      event_category: category,
-      event_label: label,
-      value: value,
-    })
+    window.gtag('event', action, params)
   }
 }
 

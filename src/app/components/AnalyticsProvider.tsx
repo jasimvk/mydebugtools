@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import SuspenseBoundary from '@/components/SuspenseBoundary';
 
 declare global {
   interface Window {
@@ -10,7 +11,7 @@ declare global {
   }
 }
 
-export default function AnalyticsProvider({ children }: { children: ReactNode }) {
+function AnalyticsProviderContent({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -25,4 +26,14 @@ export default function AnalyticsProvider({ children }: { children: ReactNode })
   }, [pathname, searchParams]);
 
   return <>{children}</>;
+}
+
+export default function AnalyticsProvider({ children }: { children: ReactNode }) {
+  return (
+    <SuspenseBoundary>
+      <AnalyticsProviderContent>
+        {children}
+      </AnalyticsProviderContent>
+    </SuspenseBoundary>
+  );
 } 

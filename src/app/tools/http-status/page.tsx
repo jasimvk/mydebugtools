@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { MagnifyingGlassIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import StructuredData from '@/components/StructuredData';
 import SuspenseBoundary from '@/components/SuspenseBoundary';
+import { Suspense } from 'react';
 
 interface StatusCode {
   code: number;
