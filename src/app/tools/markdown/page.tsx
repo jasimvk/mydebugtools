@@ -20,6 +20,7 @@ import rehypeKatex from 'rehype-katex';
 import rehypePrism from 'rehype-prism-plus';
 import 'katex/dist/katex.min.css';
 import 'prismjs/themes/prism.css';
+import MarkdownContent from './MarkdownContent';
 
 // Keyboard shortcuts
 const keyboardShortcuts = [
@@ -293,19 +294,17 @@ function MarkdownEditorContent() {
   );
 }
 
-export default function MarkdownEditor() {
+export default function Markdown() {
   return (
-    <div className="container mx-auto p-4">
-      <Suspense fallback={
-        <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
-          <div className="flex flex-col items-center gap-3">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            <p className="text-gray-600 font-medium">Loading Markdown Editor...</p>
-          </div>
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <p className="text-gray-600 font-medium">Loading Markdown Preview...</p>
         </div>
-      }>
-        <MarkdownEditorContent />
-      </Suspense>
-    </div>
+      </div>
+    }>
+      <MarkdownContent />
+    </Suspense>
   );
 } 
