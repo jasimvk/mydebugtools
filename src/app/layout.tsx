@@ -1,8 +1,9 @@
-import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import ClientRoot from "./components/ClientRoot";
+import GoogleAnalytics from "./components/GoogleAnalytics";
+import AnalyticsProvider from "./components/AnalyticsProvider";
+import Providers from "./providers";
 import StructuredData from "@/components/StructuredData";
 
 const inter = Inter({
@@ -19,10 +20,10 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Developer Tools | MyDebugTools',
-  description: 'A collection of essential developer tools including JSON formatter, JWT decoder, API tester, regex tester, and more.',
-  keywords: 'developer tools, online tools, json formatter, jwt decoder, api tester, regex tester, sqlite, code diff, icon finder, base64, markdown, color picker, css tools',
+  title: "MyDebugTools - All-in-one Developer Debugging Toolkit",
+  description: "A powerful collection of development tools including JSON Formatter, JWT Decoder, Base64 Tools, API Tester, and Icon Finder - all in one place.",
   metadataBase: new URL('https://mydebugtools.com'),
+  keywords: "developer tools, json formatter, jwt decoder, base64 encoder, api tester, icon finder, color picker, regex tester, online tools, web developer tools",
   robots: {
     index: true,
     follow: true,
@@ -71,12 +72,17 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className={`${inter.className} antialiased bg-white text-gray-900 min-h-screen flex flex-col`}>
-        <StructuredData />
-        <Suspense fallback={null}>
-          <ClientRoot>
-            {children}
-          </ClientRoot>
-        </Suspense>
+        {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
+          <GoogleAnalytics measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
+        )}
+        <StructuredData /> 
+        <AnalyticsProvider>
+        <main className="flex-1">
+            <Providers>
+          {children}
+            </Providers>
+        </main>
+        </AnalyticsProvider>
       </body>
     </html>
   );

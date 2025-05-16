@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   DocumentTextIcon, 
@@ -20,7 +20,6 @@ import rehypeKatex from 'rehype-katex';
 import rehypePrism from 'rehype-prism-plus';
 import 'katex/dist/katex.min.css';
 import 'prismjs/themes/prism.css';
-import MarkdownContent from './MarkdownContent';
 
 // Keyboard shortcuts
 const keyboardShortcuts = [
@@ -71,7 +70,7 @@ function hello() {
 - [ ] Add more features
 `;
 
-function MarkdownEditorContent() {
+export default function MarkdownPreviewPage() {
   const [markdown, setMarkdown] = useState(sampleMarkdown);
   const [showHelp, setShowHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -291,20 +290,5 @@ function MarkdownEditorContent() {
         </CardContent>
       </Card>
     </div>
-  );
-}
-
-export default function Markdown() {
-  return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          <p className="text-gray-600 font-medium">Loading Markdown Preview...</p>
-        </div>
-      </div>
-    }>
-      <MarkdownContent />
-    </Suspense>
   );
 } 

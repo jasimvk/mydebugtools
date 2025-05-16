@@ -54,6 +54,13 @@ const tools = [
     bgClass: 'bg-purple-500',
   },
   {
+    name: 'HTTP Status Codes',
+    description: 'Comprehensive reference for HTTP status codes',
+    path: '/tools/http-status',
+    icon: GlobeAltIcon,
+    bgClass: 'bg-indigo-500',
+  },
+  {
     name: 'API Tester',
     description: 'Test and debug API endpoints',
     path: '/tools/api',

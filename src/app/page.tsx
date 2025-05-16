@@ -1,17 +1,39 @@
-import { Suspense } from 'react';
-import HomeContent from './HomeContent';
+import { redirect } from 'next/navigation';
+import type { Metadata } from "next";
 
-export default function Home() {
-  return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          <p className="text-gray-600 font-medium">Loading Home Page...</p>
-        </div>
-      </div>
-    }>
-      <HomeContent />
-    </Suspense>
-  );
+export const metadata: Metadata = {
+  title: 'Developer Tools | MyDebugTools',
+  description: 'A collection of essential developer tools including JSON formatter, JWT decoder, API tester, regex tester, and more.',
+  keywords: 'developer tools, online tools, json formatter, jwt decoder, api tester, regex tester, sqlite, code diff, icon finder, base64, markdown, color picker, css tools',
+  alternates: {
+    canonical: 'https://mydebugtools.com/',
+  },
+  openGraph: {
+    title: 'Developer Tools | MyDebugTools',
+    description: 'A collection of essential developer tools including JSON formatter, JWT decoder, API tester, regex tester, and more.',
+    url: 'https://mydebugtools.com/',
+    siteName: 'MyDebugTools',
+    images: [
+      {
+        url: 'https://mydebugtools.com/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'MyDebugTools - All-in-one Developer Toolkit',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Developer Tools | MyDebugTools',
+    description: 'A collection of essential developer tools including JSON formatter, JWT decoder, API tester, regex tester, and more.',
+    site: '@jasimvk',
+    creator: '@jasimvk',
+    images: ['https://mydebugtools.com/og-image.png'],
+  },
+};
+
+export default function Page() {
+  redirect('/tools/json');
 }

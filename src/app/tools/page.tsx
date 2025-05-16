@@ -1,17 +1,13 @@
-import { Suspense } from 'react';
-import ToolsContent from './ToolsContent';
+import { redirect } from 'next/navigation';
+import type { Metadata } from "next";
 
-export default function Tools() {
-  return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center h-[600px] bg-gray-50 rounded-lg">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-          <p className="text-gray-600 font-medium">Loading Tools...</p>
-        </div>
-      </div>
-    }>
-      <ToolsContent />
-    </Suspense>
-  );
+export const metadata: Metadata = {
+  title: 'Developer Tools | MyDebugTools',
+  description: 'A collection of essential developer tools including JSON formatter, JWT decoder, API tester, regex tester, and more.',
+};
+
+export default function ToolsPage() {
+  redirect('/tools/json');
+  // To add a visible link to the Database Query Tool, update the redirect logic or navigation UI here:
+  // <a href="/tools/database" className="block p-4 bg-white rounded shadow mb-2 hover:bg-blue-50 transition">Database Query Tool (SQLite)</a>
 } 
