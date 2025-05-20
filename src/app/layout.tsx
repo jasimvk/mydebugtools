@@ -66,9 +66,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
     <html lang="en" className={inter.variable}>
       <body className={`${inter.className} antialiased bg-white text-gray-900 min-h-screen flex flex-col`}>
@@ -77,11 +77,9 @@ export default function RootLayout({
         )}
         <StructuredData /> 
         <AnalyticsProvider>
-        <main className="flex-1">
-            <Providers>
-          {children}
-            </Providers>
-        </main>
+          <Providers>
+            {children}
+          </Providers>
         </AnalyticsProvider>
       </body>
     </html>

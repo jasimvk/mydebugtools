@@ -25,6 +25,30 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  async rewrites() {
+    return [
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'test.mydebugtools.com',
+          },
+        ],
+        destination: '/new/:path*',
+      },
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'mydebugtools.com',
+          },
+        ],
+        destination: '/stable/:path*',
+      },
+    ];
+  },
 }
 
 module.exports = nextConfig 
