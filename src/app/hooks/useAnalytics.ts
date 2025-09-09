@@ -1,26 +1,13 @@
 'use client';
 
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
+import { pageview, trackEvent, trackToolUsage, trackConversion, trackEngagement } from '../utils/analytics'
 
 declare global {
   interface Window {
     gtag: (command: string, ...args: any[]) => void;
     dataLayer: any[];
-  }
-}
-
-export const pageview = (url: string, id: string) => {
-  if (typeof window.gtag !== 'undefined') {
-    window.gtag('config', id, {
-      page_path: url,
-    })
-  }
-}
-
-export const event = ({ action, params }: { action: string; params: any }) => {
-  if (typeof window.gtag !== 'undefined') {
-    window.gtag('event', action, params)
   }
 }
 
@@ -35,7 +22,27 @@ export default function useAnalytics() {
     }
   }, [pathname, searchParams])
 
+  // Event tracking functions
+  const trackCustomEvent = useCallback((action: string, category: string, label: string, value?: number) => {
+    trackEvent(action, category, label, value)
+  }, [])
+
+  const trackTool = useCallback((toolName: string, action: string = 'use') => {
+    trackToolUsage(toolName, action)
+  }, [])
+
+  const trackConversionEvent = useCallback((conversionType: string, value?: number) => {
+    trackConversion(conversionType, value)
+  }, [])
+
+  const trackUserEngagement = useCallback((action: string, details?: Record<string, any>) => {
+    trackEngagement(action, details)
+  }, [])
+
   return {
-    event,
+    trackEvent: trackCustomEvent,
+    trackTool,
+    trackConversion: trackConversionEvent,
+    trackEngagement: trackUserEngagement,
   }
 } 
