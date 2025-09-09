@@ -1,3 +1,5 @@
+'use client';
+
 import type { Metadata } from 'next'
 import { buildMetadata } from '@/lib/seo'
 
@@ -7,7 +9,6 @@ export const metadata: Metadata = buildMetadata({
   path: '/tools/json',
   keywords: ['json formatter','json beautifier','json validator','format json','pretty json'],
 })
-'use client';
 
 export const dynamic = "force-dynamic";
 

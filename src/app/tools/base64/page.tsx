@@ -1,3 +1,5 @@
+'use client';
+
 import type { Metadata } from 'next'
 import { buildMetadata } from '@/lib/seo'
 
@@ -7,7 +9,6 @@ export const metadata: Metadata = buildMetadata({
   path: '/tools/base64',
   keywords: ['base64 encoder','base64 decoder','encode base64','decode base64','file to base64'],
 })
-'use client';
 
 import { useState, useEffect } from 'react';
 import { 
