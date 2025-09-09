@@ -1,15 +1,5 @@
 'use client';
 
-import type { Metadata } from 'next'
-import { buildMetadata } from '@/lib/seo'
-
-export const metadata: Metadata = buildMetadata({
-  title: 'Icon Finder – Search and Copy Icons | MyDebugTools',
-  description: 'Find and copy icons quickly for your projects. Browse popular icon sets with easy search.',
-  path: '/tools/icons',
-  keywords: ['icon finder','search icons','copy icons','icon search','svg icons'],
-})
-
 import { useState, useRef, useCallback, useEffect, Suspense } from 'react';
 import { MagnifyingGlassIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { useVirtualizer } from '@tanstack/react-virtual';
