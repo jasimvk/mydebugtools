@@ -1,3 +1,5 @@
+'use client';
+
 import type { Metadata } from 'next'
 import { buildMetadata } from '@/lib/seo'
 
@@ -7,7 +9,6 @@ export const metadata: Metadata = buildMetadata({
   path: '/tools/api',
   keywords: ['api tester','http client','rest client','test api','http request tool'],
 })
-'use client';
 
 export const dynamic = "force-dynamic";
 

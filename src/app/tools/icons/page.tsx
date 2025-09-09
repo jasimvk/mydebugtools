@@ -1,3 +1,5 @@
+'use client';
+
 import type { Metadata } from 'next'
 import { buildMetadata } from '@/lib/seo'
 
@@ -7,7 +9,6 @@ export const metadata: Metadata = buildMetadata({
   path: '/tools/icons',
   keywords: ['icon finder','search icons','copy icons','icon search','svg icons'],
 })
-'use client';
 
 import { useState, useRef, useCallback, useEffect, Suspense } from 'react';
 import { MagnifyingGlassIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';

@@ -1,3 +1,5 @@
+'use client';
+
 import type { Metadata } from 'next'
 import { buildMetadata } from '@/lib/seo'
 
@@ -7,7 +9,6 @@ export const metadata: Metadata = buildMetadata({
   path: '/tools/jwt',
   keywords: ['jwt decoder','jwt viewer','decode jwt','verify jwt','jwt inspector'],
 })
-'use client';
 
 import { useState } from 'react';
 import { KeyIcon, ClipboardIcon } from '@heroicons/react/24/outline';
