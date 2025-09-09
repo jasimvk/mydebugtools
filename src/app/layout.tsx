@@ -5,6 +5,7 @@ import GoogleAnalytics from "./components/GoogleAnalytics";
 import AnalyticsProvider from "./components/AnalyticsProvider";
 import Providers from "./providers";
 import StructuredData from "@/components/StructuredData";
+import Script from "next/script";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -72,6 +73,14 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className={`${inter.className} antialiased bg-white text-gray-900 min-h-screen flex flex-col`}>
+        {process.env.NEXT_PUBLIC_ADSENSE_CLIENT && (
+          <Script
+            id="adsbygoogle-init"
+            strategy="afterInteractive"
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT}`}
+            crossOrigin="anonymous"
+          />
+        )}
         {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
           <GoogleAnalytics measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
         )}
