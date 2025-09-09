@@ -24,6 +24,12 @@ export default function AdSlot({
   useEffect(() => {
     try {
       // @ts-ignore
+      if (process.env.NEXT_PUBLIC_ADSENSE_NPA === '1') {
+        // Request non-personalized ads (diagnostic or when consent not obtained)
+        // @ts-ignore
+        (window.adsbygoogle = window.adsbygoogle || []).requestNonPersonalizedAds = 1;
+      }
+      // @ts-ignore
       (window.adsbygoogle = window.adsbygoogle || []).push({});
     } catch {}
   }, []);
@@ -36,6 +42,7 @@ export default function AdSlot({
       data-ad-slot={adSlot}
       data-ad-format={format}
       data-full-width-responsive={responsive}
+      {...(process.env.NEXT_PUBLIC_ADSENSE_TEST === '1' ? { 'data-adtest': 'on' } : {})}
     />
   )
 }
