@@ -19,38 +19,39 @@ import {
 } from '@heroicons/react/24/outline';
 import { CurlyBracesIcon, Terminal, Github, Bug } from 'lucide-react';
 import { useState } from 'react';
+import AdSlot from '@/app/components/AdSlot';
 
 // Tools organized by category
 const toolCategories = [
-  {
-    name: 'React Native',
-    tools: [
-      {
-        name: 'Crash Decoder',
-        description: 'Format and beautify crash logs from React Native, Android, iOS, and Flutter',
-        path: '/tools/crash-beautifier',
-        icon: ExclamationTriangleIcon
-      },
-      {
-        name: 'Startup Profiling',
-        description: 'Analyze and visualize React Native app startup performance metrics',
-        path: '/tools/startup-profiling',
-        icon: ChartBarIcon
-      },
-      {
-        name: 'Bundle Size Analyzer',
-        description: 'Analyze and optimize your app bundle size',
-        path: '/tools/bundle-analyzer',
-        icon: DocumentTextIcon
-      },
-      {
-        name: 'Build Diff Viewer',
-        description: 'Compare and analyze build differences',
-        path: '/tools/build-diff',
-        icon: ArrowsRightLeftIcon
-      }
-    ]
-  },
+  // {
+  //   name: 'React Native',
+  //   tools: [
+  //     {
+  //       name: 'Crash Decoder',
+  //       description: 'Format and beautify crash logs from React Native, Android, iOS, and Flutter',
+  //       path: '/tools/crash-beautifier',
+  //       icon: ExclamationTriangleIcon
+  //     },
+  //     {
+  //       name: 'Startup Profiling',
+  //       description: 'Analyze and visualize React Native app startup performance metrics',
+  //       path: '/tools/startup-profiling',
+  //       icon: ChartBarIcon
+  //     },
+  //     {
+  //       name: 'Bundle Size Analyzer',
+  //       description: 'Analyze and optimize your app bundle size',
+  //       path: '/tools/bundle-analyzer',
+  //       icon: DocumentTextIcon
+  //     },
+  //     {
+  //       name: 'Build Diff Viewer',
+  //       description: 'Compare and analyze build differences',
+  //       path: '/tools/build-diff',
+  //       icon: ArrowsRightLeftIcon
+  //     }
+  //   ]
+  // },
   {
     name: 'General Tools',
     tools: [
@@ -84,15 +85,44 @@ const toolCategories = [
         path: '/tools/color',
         icon: SwatchIcon
       },
+      // {
+      //   name: 'Icon Finder',
+      //   description: 'Find the perfect icon for your project',
+      //   path: '/tools/icons',
+      //   icon: MagnifyingGlassIcon
+      // }
+    ]
+  },
+  {
+    name: 'React Native',
+    tools: [
       {
-        name: 'Icon Finder',
-        description: 'Find the perfect icon for your project',
-        path: '/tools/icons',
-        icon: MagnifyingGlassIcon
+        name: 'Crash Decoder',
+        description: 'Format and beautify crash logs from React Native, Android, iOS, and Flutter',
+        path: '/tools/crash-beautifier',
+        icon: ExclamationTriangleIcon
+      },
+      {
+        name: 'Startup Profiling',
+        description: 'Analyze and visualize React Native app startup performance metrics',
+        path: '/tools/startup-profiling',
+        icon: ChartBarIcon
+      },
+      {
+        name: 'Bundle Size Analyzer',
+        description: 'Analyze and optimize your app bundle size',
+        path: '/tools/bundle-analyzer',
+        icon: DocumentTextIcon
+      },
+      {
+        name: 'Build Diff Viewer',
+        description: 'Compare and analyze build differences',
+        path: '/tools/build-diff',
+        icon: ArrowsRightLeftIcon
       }
     ]
   }
-];
+]
 
 export default function ToolsLayout({
   children,
@@ -101,7 +131,6 @@ export default function ToolsLayout({
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
-    'React Native': true, // Default expanded
     'General Tools': true
   });
   
@@ -195,7 +224,13 @@ export default function ToolsLayout({
         <div className="container mx-auto p-4 md:p-6">
           {children}
         </div>
-        <footer className="w-full flex flex-col items-center gap-2 py-4 border-t border-gray-200 mt-8">
+        
+        {/* Ad placement above footer */}
+        <div className="container mx-auto px-4 md:px-6 py-4">
+          <AdSlot adSlot="8212501976" />
+        </div>
+        
+        <footer className="w-full flex flex-col items-center gap-2 py-6 border-t border-gray-200 mt-8 bg-gray-50">
           <div className="flex justify-center items-center gap-4">
             <a
               href="https://github.com/jasimvk/mydebugtools/blob/main/CHANGELOG.md"

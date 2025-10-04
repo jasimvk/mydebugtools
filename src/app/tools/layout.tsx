@@ -23,35 +23,35 @@ import AdSlot from '@/app/components/AdSlot';
 
 // Tools organized by category
 const toolCategories = [
-  {
-    name: 'React Native',
-    tools: [
-      {
-        name: 'Crash Decoder',
-        description: 'Format and beautify crash logs from React Native, Android, iOS, and Flutter',
-        path: '/tools/crash-beautifier',
-        icon: ExclamationTriangleIcon
-      },
-      {
-        name: 'Startup Profiling',
-        description: 'Analyze and visualize React Native app startup performance metrics',
-        path: '/tools/startup-profiling',
-        icon: ChartBarIcon
-      },
-      {
-        name: 'Bundle Size Analyzer',
-        description: 'Analyze and optimize your app bundle size',
-        path: '/tools/bundle-analyzer',
-        icon: DocumentTextIcon
-      },
-      {
-        name: 'Build Diff Viewer',
-        description: 'Compare and analyze build differences',
-        path: '/tools/build-diff',
-        icon: ArrowsRightLeftIcon
-      }
-    ]
-  },
+  // {
+  //   name: 'React Native',
+  //   tools: [
+  //     {
+  //       name: 'Crash Decoder',
+  //       description: 'Format and beautify crash logs from React Native, Android, iOS, and Flutter',
+  //       path: '/tools/crash-beautifier',
+  //       icon: ExclamationTriangleIcon
+  //     },
+  //     {
+  //       name: 'Startup Profiling',
+  //       description: 'Analyze and visualize React Native app startup performance metrics',
+  //       path: '/tools/startup-profiling',
+  //       icon: ChartBarIcon
+  //     },
+  //     {
+  //       name: 'Bundle Size Analyzer',
+  //       description: 'Analyze and optimize your app bundle size',
+  //       path: '/tools/bundle-analyzer',
+  //       icon: DocumentTextIcon
+  //     },
+  //     {
+  //       name: 'Build Diff Viewer',
+  //       description: 'Compare and analyze build differences',
+  //       path: '/tools/build-diff',
+  //       icon: ArrowsRightLeftIcon
+  //     }
+  //   ]
+  // },
   {
     name: 'General Tools',
     tools: [
@@ -84,13 +84,13 @@ const toolCategories = [
         description: 'Pick, convert, and manage colors in various formats',
         path: '/tools/color',
         icon: SwatchIcon
-      },
-      {
-        name: 'Icon Finder',
-        description: 'Find the perfect icon for your project',
-        path: '/tools/icons',
-        icon: MagnifyingGlassIcon
       }
+      // {
+      //   name: 'Icon Finder',
+      //   description: 'Find the perfect icon for your project',
+      //   path: '/tools/icons',
+      //   icon: MagnifyingGlassIcon
+      // }
     ]
   }
 ];
@@ -102,7 +102,6 @@ export default function ToolsLayout({
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
-    'React Native': true, // Default expanded
     'General Tools': true
   });
   
@@ -194,16 +193,15 @@ export default function ToolsLayout({
       {/* Main content */}
       <main className="flex-1 overflow-auto relative">
         <div className="container mx-auto p-4 md:p-6">
-          {/* Above-the-fold ad placement */}
-          <div className="mb-4">
-            <AdSlot adSlot="8212501976" />
-          </div>
           {children}
         </div>
-        <div className="container mx-auto px-4 md:px-6 mt-4">
+        
+        {/* Ad placement above footer */}
+        <div className="container mx-auto px-4 md:px-6 py-4">
           <AdSlot adSlot="8212501976" />
         </div>
-        <footer className="w-full flex flex-col items-center gap-2 py-4 border-t border-gray-200 mt-8">
+        
+        <footer className="w-full flex flex-col items-center gap-2 py-6 border-t border-gray-200 mt-8 bg-gray-50">
           <div className="flex justify-center items-center gap-4">
             <a
               href="https://github.com/jasimvk/mydebugtools/blob/main/CHANGELOG.md"
@@ -240,6 +238,12 @@ export default function ToolsLayout({
               <Github className="h-5 w-5 group-hover:-rotate-12 group-hover:scale-110 transition-transform duration-200" />
               <span className="text-sm font-medium hidden sm:inline">Contribute</span>
             </a>
+          </div>
+          <div className="flex flex-wrap justify-center gap-4 mt-4 text-xs text-gray-500">
+            <a href="/privacy-policy" className="hover:text-blue-600 hover:underline">Privacy Policy</a>
+            <a href="/terms-of-service" className="hover:text-blue-600 hover:underline">Terms of Service</a>
+            <a href="/cookie-policy" className="hover:text-blue-600 hover:underline">Cookie Policy</a>
+            <a href="/contact" className="hover:text-blue-600 hover:underline">Contact</a>
           </div>
           <div className="text-xs text-gray-500 mt-2">
             Built by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Jasim</a>

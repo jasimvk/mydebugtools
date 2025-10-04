@@ -12,8 +12,22 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   InformationCircleIcon,
-  LinkIcon,
-  ShareIcon
+  ArrowDownTrayIcon,
+  DocumentArrowDownIcon,
+  CodeBracketIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  CheckCircleIcon,
+  ExclamationCircleIcon,
+  ClipboardDocumentIcon,
+  SparklesIcon,
+  AdjustmentsHorizontalIcon,
+  MagnifyingGlassIcon,
+  SunIcon,
+  MoonIcon,
+  Cog6ToothIcon,
+  CommandLineIcon,
+  PlayIcon
 } from '@heroicons/react/24/outline';
 
 // Language options for syntax highlighting
@@ -47,14 +61,30 @@ const wordWrapOptions = [
   { value: 'bounded', label: 'Bounded' }
 ] as const;
 
+// Export format options
+const exportFormats = [
+  { value: 'html', label: 'HTML Report', icon: '🌐' },
+  { value: 'pdf', label: 'PDF Document', icon: '📄' },
+  { value: 'json', label: 'JSON Data', icon: '📊' },
+  { value: 'markdown', label: 'Markdown', icon: '📝' },
+  { value: 'txt', label: 'Plain Text', icon: '📄' }
+];
+
+// Theme options
+const themeOptions = [
+  { value: 'vs', label: 'Light' },
+  { value: 'vs-dark', label: 'Dark' },
+  { value: 'hc-black', label: 'High Contrast Dark' },
+  { value: 'hc-light', label: 'High Contrast Light' }
+];
+
 // Keyboard shortcuts
 const keyboardShortcuts = [
   { key: 'Ctrl+S / Cmd+S', description: 'Swap code' },
   { key: 'Ctrl+C / Cmd+C', description: 'Copy code' },
   { key: 'Ctrl+L / Cmd+L', description: 'Clear code' },
   { key: 'Ctrl+M / Cmd+M', description: 'Toggle view mode' },
-  { key: 'Ctrl+H / Cmd+H', description: 'Show/hide help' },
-  { key: 'Ctrl+U / Cmd+U', description: 'Load from URL' }
+  { key: 'Ctrl+H / Cmd+H', description: 'Show/hide help' }
 ];
 
 export default function CodeDiffPage() {
@@ -70,10 +100,18 @@ export default function CodeDiffPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
-  const [showUrlInput, setShowUrlInput] = useState(false);
-  const [urlInput, setUrlInput] = useState('');
-  const [urlInputType, setUrlInputType] = useState<'original' | 'modified'>('original');
-  const [shareLink, setShareLink] = useState('');
+
+  const [exportFormat, setExportFormat] = useState('html');
+  const [showExportPanel, setShowExportPanel] = useState(false);
+  const [ignoreWhitespace, setIgnoreWhitespace] = useState(false);
+  const [ignoreCaseChanges, setIgnoreCaseChanges] = useState(false);
+  const [showInlineView, setShowInlineView] = useState(false);
+  const [diffStats, setDiffStats] = useState<{additions: number, deletions: number, changes: number} | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [highlightSimilarities, setHighlightSimilarities] = useState(true);
+  const [compactMode, setCompactMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true); // ChatGPT defaults to dark
+  const [isMinimized, setIsMinimized] = useState(false);
 
   // Show notification
   const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
@@ -122,88 +160,205 @@ export default function CodeDiffPage() {
     showNotification('Code cleared', 'info');
   };
 
+  // Update Monaco theme based on dark mode
+  useEffect(() => {
+    setTheme(isDarkMode ? 'vs-dark' : 'vs');
+  }, [isDarkMode]);
+
+  // Calculate diff statistics
+  const calculateDiffStats = () => {
+    if (!originalCode || !modifiedCode) {
+      setDiffStats(null);
+      return;
+    }
+
+    const originalLines = originalCode.split('\n');
+    const modifiedLines = modifiedCode.split('\n');
+    
+    let additions = 0;
+    let deletions = 0;
+    let changes = 0;
+    
+    const maxLines = Math.max(originalLines.length, modifiedLines.length);
+    
+    for (let i = 0; i < maxLines; i++) {
+      const originalLine = originalLines[i] || '';
+      const modifiedLine = modifiedLines[i] || '';
+      
+      if (originalLine !== modifiedLine) {
+        if (!originalLine) additions++;
+        else if (!modifiedLine) deletions++;
+        else changes++;
+      }
+    }
+    
+    setDiffStats({ additions, deletions, changes });
+  };
+
   // Toggle view mode
   const toggleViewMode = () => {
     setRenderSideBySide(!renderSideBySide);
     showNotification(`View mode changed to ${renderSideBySide ? 'inline' : 'side-by-side'}`, 'info');
   };
 
-  // Load code from URL
-  const loadFromUrl = async () => {
-    if (!urlInput) {
-      showNotification('Please enter a URL', 'error');
-      return;
-    }
 
-    try {
-      setIsLoading(true);
-      const response = await fetch(urlInput);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const content = await response.text();
-      
-      if (urlInputType === 'original') {
-        setOriginalCode(content);
-      } else {
-        setModifiedCode(content);
-      }
-      
-      showNotification(`Code loaded from URL successfully`, 'success');
-      setShowUrlInput(false);
-      setUrlInput('');
-    } catch (error) {
-      showNotification(`Error loading from URL: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
-    } finally {
-      setIsLoading(false);
+
+  // Export diff in various formats
+  const exportDiff = (format: string) => {
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `code-diff-${timestamp}`;
+    
+    switch (format) {
+      case 'html':
+        exportAsHTML(filename);
+        break;
+      case 'json':
+        exportAsJSON(filename);
+        break;
+      case 'markdown':
+        exportAsMarkdown(filename);
+        break;
+      case 'txt':
+        exportAsText(filename);
+        break;
+      default:
+        showNotification('Export format not supported yet', 'error');
     }
   };
 
-  // Generate share link
-  const generateShareLink = () => {
+  const exportAsHTML = (filename: string) => {
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Diff Report - ${filename}</title>
+    <style>
+        body { font-family: 'Courier New', monospace; margin: 20px; background: #f5f5f5; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { text-align: center; margin-bottom: 30px; }
+        .stats { background: #e3f2fd; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .diff-container { display: flex; gap: 20px; }
+        .code-block { flex: 1; }
+        .code-block h3 { background: #2196f3; color: white; padding: 10px; margin: 0; }
+        .code-block pre { background: #f8f9fa; padding: 15px; border: 1px solid #ddd; margin: 0; white-space: pre-wrap; }
+        .addition { background-color: #d4edda; }
+        .deletion { background-color: #f8d7da; }
+        .change { background-color: #fff3cd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Code Difference Report</h1>
+            <p>Generated on ${new Date().toLocaleString()}</p>
+        </div>
+        ${diffStats ? `
+        <div class="stats">
+            <h3>📊 Diff Statistics</h3>
+            <p><strong>Additions:</strong> ${diffStats.additions} lines</p>
+            <p><strong>Deletions:</strong> ${diffStats.deletions} lines</p>
+            <p><strong>Changes:</strong> ${diffStats.changes} lines</p>
+        </div>
+        ` : ''}
+        <div class="diff-container">
+            <div class="code-block">
+                <h3>📄 Original Code</h3>
+                <pre>${originalCode.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+            </div>
+            <div class="code-block">
+                <h3>📝 Modified Code</h3>
+                <pre>${modifiedCode.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+    
+    downloadFile(html, `${filename}.html`, 'text/html');
+    showNotification('HTML report exported successfully', 'success');
+  };
+
+  const exportAsJSON = (filename: string) => {
     const data = {
-      original: originalCode,
-      modified: modifiedCode,
-      language,
-      renderSideBySide,
-      showLineNumbers,
-      wordWrap,
-      fontSize
+      metadata: {
+        exportDate: new Date().toISOString(),
+        language,
+        settings: {
+          renderSideBySide,
+          showLineNumbers,
+          wordWrap,
+          fontSize,
+          ignoreWhitespace,
+          ignoreCaseChanges
+        }
+      },
+      originalCode,
+      modifiedCode,
+      statistics: diffStats
     };
     
-    const encodedData = btoa(JSON.stringify(data));
-    const shareUrl = `${window.location.origin}${window.location.pathname}?data=${encodedData}`;
-    setShareLink(shareUrl);
-    showNotification('Share link generated', 'success');
+    downloadFile(JSON.stringify(data, null, 2), `${filename}.json`, 'application/json');
+    showNotification('JSON data exported successfully', 'success');
   };
 
-  // Copy share link to clipboard
-  const copyShareLink = () => {
-    navigator.clipboard.writeText(shareLink);
-    showNotification('Share link copied to clipboard', 'success');
-  };
+  const exportAsMarkdown = (filename: string) => {
+    const markdown = `# 🔍 Code Difference Report
 
-  // Load shared data from URL
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const dataParam = params.get('data');
+**Generated:** ${new Date().toLocaleString()}  
+**Language:** ${language}  
+
+${diffStats ? `## 📊 Statistics
+
+- **Additions:** ${diffStats.additions} lines
+- **Deletions:** ${diffStats.deletions} lines  
+- **Changes:** ${diffStats.changes} lines
+
+` : ''}## 📄 Original Code
+
+\`\`\`${language}
+${originalCode}
+\`\`\`
+
+## 📝 Modified Code
+
+\`\`\`${language}
+${modifiedCode}
+\`\`\`
+
+---
+*Generated by MyDebugTools Code Diff*`;
     
-    if (dataParam) {
-      try {
-        const decodedData = JSON.parse(atob(dataParam));
-        setOriginalCode(decodedData.original || '');
-        setModifiedCode(decodedData.modified || '');
-        setLanguage(decodedData.language || 'javascript');
-        setRenderSideBySide(decodedData.renderSideBySide !== false);
-        setShowLineNumbers(decodedData.showLineNumbers !== false);
-        setWordWrap(decodedData.wordWrap || 'on');
-        setFontSize(decodedData.fontSize || 14);
-        showNotification('Shared comparison loaded', 'success');
-      } catch (error) {
-        showNotification('Error loading shared comparison', 'error');
-      }
-    }
-  }, []);
+    downloadFile(markdown, `${filename}.md`, 'text/markdown');
+    showNotification('Markdown file exported successfully', 'success');
+  };
+
+  const exportAsText = (filename: string) => {
+    const text = `CODE DIFFERENCE REPORT\n${'='.repeat(50)}\n\nGenerated: ${new Date().toLocaleString()}\nLanguage: ${language}\n\n${diffStats ? `STATISTICS:\n- Additions: ${diffStats.additions} lines\n- Deletions: ${diffStats.deletions} lines\n- Changes: ${diffStats.changes} lines\n\n` : ''}ORIGINAL CODE:\n${'-'.repeat(30)}\n${originalCode}\n\nMODIFIED CODE:\n${'-'.repeat(30)}\n${modifiedCode}\n\n---\nGenerated by MyDebugTools Code Diff`;
+    
+    downloadFile(text, `${filename}.txt`, 'text/plain');
+    showNotification('Text file exported successfully', 'success');
+  };
+
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+
+
+  // Calculate diff stats when code changes
+  useEffect(() => {
+    calculateDiffStats();
+  }, [originalCode, modifiedCode]);
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -231,11 +386,7 @@ export default function CodeDiffPage() {
         setShowHelp(!showHelp);
       }
       
-      // Ctrl/Cmd + U to show URL input
-      if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
-        e.preventDefault();
-        setShowUrlInput(!showUrlInput);
-      }
+
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -243,245 +394,263 @@ export default function CodeDiffPage() {
   }, [originalCode, modifiedCode, renderSideBySide]);
 
   return (
-    <div className="container mx-auto p-4">
-      {/* Notification */}
-      {notification && (
-        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
-          notification.type === 'success' ? 'bg-green-500 text-white' :
-          notification.type === 'error' ? 'bg-red-500 text-white' :
-          'bg-blue-500 text-white'
-        }`}>
-          {notification.message}
-        </div>
-      )}
-
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="flex items-center gap-2">
-              <ArrowsRightLeftIcon className="h-6 w-6 text-blue-500" />
-              Code Difference Checker
-            </CardTitle>
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setShowHelp(!showHelp)}
-                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
-                title="Show help"
-              >
-                <QuestionMarkCircleIcon className="h-5 w-5" />
-              </button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Enhanced Header */}
+      <div >
+        <div >
+           
+          
+          {/* Statistics Bar */}
+          {diffStats && (
+            <div className="mt-6 flex justify-center">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg px-6 py-3">
+                <div className="flex items-center gap-6 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-green-400 rounded"></div>
+                    <span><strong>{diffStats?.additions || 0}</strong> additions</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-red-400 rounded"></div>
+                    <span><strong>{diffStats?.deletions || 0}</strong> deletions</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-yellow-400 rounded"></div>
+                    <span><strong>{diffStats?.changes || 0}</strong> changes</span>
+                  </div>
+                </div>
+              </div>
             </div>
+          )}
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto p-4">
+        {/* Notification */}
+        {notification && (
+          <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 flex items-center gap-2 ${
+            notification?.type === 'success' ? 'bg-green-500 text-white' :
+            notification?.type === 'error' ? 'bg-red-500 text-white' :
+            'bg-blue-500 text-white'
+          }`}>
+            {notification?.type === 'success' && <CheckCircleIcon className="h-5 w-5" />}
+            {notification?.type === 'error' && <ExclamationCircleIcon className="h-5 w-5" />}
+            {notification?.type === 'info' && <InformationCircleIcon className="h-5 w-5" />}
+            {notification?.message}
           </div>
-          <CardDescription>
-            Compare two code snippets and see the differences highlighted
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* Help panel */}
+        )}
+
+        {/* ChatGPT-style Main Content */}
+        <div className={`rounded-xl border transition-colors duration-300 overflow-hidden ${
+          isDarkMode 
+            ? 'bg-gray-900 border-gray-700' 
+            : 'bg-white border-gray-200 shadow-sm'
+        }`}>
+          {/* ChatGPT-style Help panel */}
           {showHelp && (
-            <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <h3 className="text-lg font-semibold mb-2 flex items-center gap-1">
+            <div className={`mb-4 p-4 rounded-lg border transition-colors duration-300 ${
+              isDarkMode 
+                ? 'bg-gray-800 border-gray-700' 
+                : 'bg-gray-50 border-gray-200'
+            }`}>
+              <div className="flex items-center gap-2 mb-3">
                 <InformationCircleIcon className="h-5 w-5 text-blue-500" />
-                How to Use
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <h3 className="font-semibold">How to use Code Diff</h3>
+              </div>
+              <div className="space-y-4">
                 <div>
-                  <h4 className="font-medium mb-1">Basic Usage</h4>
-                  <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li>Paste your original code in the left textarea</li>
-                    <li>Paste your modified code in the right textarea</li>
-                    <li>View the differences in the diff viewer below</li>
+                  <h4 className={`font-medium mb-2 ${
+                    isDarkMode ? 'text-gray-200' : 'text-gray-800'
+                  }`}>Quick Start</h4>
+                  <ol className={`list-decimal list-inside space-y-1 text-sm ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    <li>Paste your original code in the left editor</li>
+                    <li>Paste your modified code in the right editor</li>
+                    <li>The differences will be highlighted automatically</li>
+                    <li>Use the toolbar buttons for additional actions</li>
                   </ol>
                 </div>
                 <div>
-                  <h4 className="font-medium mb-1">Keyboard Shortcuts</h4>
-                  <ul className="space-y-1 text-sm">
+                  <h4 className={`font-medium mb-2 ${
+                    isDarkMode ? 'text-gray-200' : 'text-gray-800'
+                  }`}>Keyboard Shortcuts</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {keyboardShortcuts.map((shortcut, index) => (
-                      <li key={index} className="flex justify-between">
-                        <span className="font-mono bg-gray-200 dark:bg-gray-700 px-1 rounded">{shortcut.key}</span>
-                        <span>{shortcut.description}</span>
-                      </li>
+                      <div key={index} className="flex items-center justify-between">
+                        <span className={`text-xs font-mono px-2 py-1 rounded ${
+                          isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-200 text-gray-700'
+                        }`}>{shortcut.key}</span>
+                        <span className={`text-sm ${
+                          isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                        }`}>{shortcut.description}</span>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* URL Input Panel */}
-          {showUrlInput && (
-            <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <h3 className="text-lg font-semibold mb-2 flex items-center gap-1">
-                <LinkIcon className="h-5 w-5 text-blue-500" />
-                Load Code from URL
-              </h3>
-              <div className="flex flex-col gap-2">
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => setUrlInputType('original')}
-                    className={`px-3 py-1 rounded ${
-                      urlInputType === 'original' 
-                        ? 'bg-blue-500 text-white' 
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    Original Code
-                  </button>
-                  <button 
-                    onClick={() => setUrlInputType('modified')}
-                    className={`px-3 py-1 rounded ${
-                      urlInputType === 'modified' 
-                        ? 'bg-blue-500 text-white' 
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    Modified Code
-                  </button>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={urlInput}
-                    onChange={(e) => setUrlInput(e.target.value)}
-                    placeholder="Enter URL to load code from..."
-                    className="flex-1 p-2 border rounded-md"
-                  />
-                  <button 
-                    onClick={loadFromUrl}
-                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                  >
-                    Load
-                  </button>
-                  <button 
-                    onClick={() => setShowUrlInput(false)}
-                    className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                  >
-                    Cancel
-                  </button>
-                </div>
+          {/* ChatGPT-style Export Panel */}
+          {showExportPanel && (
+            <div className={`mb-4 p-4 rounded-lg border transition-colors duration-300 ${
+              isDarkMode 
+                ? 'bg-gray-800 border-gray-700' 
+                : 'bg-gray-50 border-gray-200'
+            }`}>
+              <div className="flex items-center gap-2 mb-3">
+                <ArrowDownTrayIcon className="h-5 w-5 text-blue-500" />
+                <h3 className="font-semibold">Export Options</h3>
               </div>
-            </div>
-          )}
-
-          {/* Share Link Panel */}
-          {shareLink && (
-            <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <h3 className="text-lg font-semibold mb-2 flex items-center gap-1">
-                <ShareIcon className="h-5 w-5 text-blue-500" />
-                Share Comparison
-              </h3>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={shareLink}
-                  readOnly
-                  className="flex-1 p-2 border rounded-md bg-gray-100 dark:bg-gray-700"
-                />
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {exportFormats.map((format) => (
+                  <button
+                    key={format.value}
+                    onClick={() => exportDiff(format.value)}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-all duration-200 ${
+                      isDarkMode 
+                        ? 'border-gray-600 hover:bg-gray-700 hover:border-gray-500' 
+                        : 'border-gray-200 hover:bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-xl">{format.icon}</span>
+                    <span className="text-xs font-medium">{format.label}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex justify-end">
                 <button 
-                  onClick={copyShareLink}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  onClick={() => setShowExportPanel(false)}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                    isDarkMode 
+                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' 
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  }`}
                 >
-                  Copy Link
+                  Close
                 </button>
               </div>
             </div>
           )}
 
-          {/* Action buttons - Simplified like text-compare.com */}
-          <div className="flex flex-wrap gap-2 mb-4 justify-center">
-            <button 
-              onClick={swapCode}
-              className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              <ArrowsRightLeftIcon className="h-4 w-4" />
-              Switch texts
-            </button>
-            <button 
-              onClick={toggleViewMode}
-              className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Compare!
-            </button>
-            <button 
-              onClick={clearCode}
-              className="flex items-center gap-1 px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
-            >
-              <ArrowPathIcon className="h-4 w-4" />
-              Clear all
-            </button>
-            <button 
-              onClick={() => setShowUrlInput(!showUrlInput)}
-              className="flex items-center gap-1 px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
-            >
-              <LinkIcon className="h-4 w-4" />
-              Load from URL
-            </button>
-            <button 
-              onClick={generateShareLink}
-              className="flex items-center gap-1 px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
-            >
-              <ShareIcon className="h-4 w-4" />
-              Share
-            </button>
+
+
+          {/* Enhanced Action buttons */}
+          <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg mb-4">
+            <div className="flex flex-wrap gap-2 justify-center">
+              <button 
+                onClick={swapCode}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                <ArrowsRightLeftIcon className="h-4 w-4" />
+                Swap Code
+              </button>
+              <button 
+                onClick={toggleViewMode}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+              >
+                <SparklesIcon className="h-4 w-4" />
+                {renderSideBySide ? 'Inline View' : 'Side-by-Side'}
+              </button>
+              <button 
+                onClick={clearCode}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                <ArrowPathIcon className="h-4 w-4" />
+                Clear All
+              </button>
+
+              <button 
+                onClick={() => setShowExportPanel(!showExportPanel)}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4" />
+                Export
+              </button>
+            </div>
           </div>
 
-          {/* Controls */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div className="space-y-4">
+          {/* ChatGPT-style Code Input */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium">Original Code</label>
-                <div className="flex gap-2">
+                <label className={`text-sm font-medium ${
+                  isDarkMode ? 'text-gray-200' : 'text-gray-700'
+                }`}>Original Code</label>
+                <div className="flex gap-1">
                   <button 
                     onClick={() => copyToClipboard(originalCode, 'original')}
-                    className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+                    className={`p-1.5 rounded-lg transition-colors ${
+                      isDarkMode 
+                        ? 'hover:bg-gray-700 text-gray-400' 
+                        : 'hover:bg-gray-100 text-gray-600'
+                    }`}
                     title="Copy to clipboard"
                   >
-                    <DocumentDuplicateIcon className="h-5 w-5" />
+                    <DocumentDuplicateIcon className="h-4 w-4" />
                   </button>
-                  <label className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer" title="Upload file">
+                  <label className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
+                    isDarkMode 
+                      ? 'hover:bg-gray-700 text-gray-400' 
+                      : 'hover:bg-gray-100 text-gray-600'
+                  }`} title="Upload file">
                     <input 
                       type="file" 
                       className="hidden" 
                       onChange={(e) => handleFileUpload(e, true)}
                     />
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
+                    <DocumentArrowDownIcon className="h-4 w-4" />
                   </label>
                 </div>
               </div>
               <textarea
-                className="w-full h-48 p-2 border rounded-md font-mono"
+                className={`w-full h-48 p-3 rounded-lg border font-mono text-sm resize-none transition-colors ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-600 text-gray-200 placeholder-gray-500' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                 value={originalCode}
                 onChange={(e) => setOriginalCode(e.target.value)}
                 placeholder="Paste your original code here..."
               />
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium">Modified Code</label>
-                <div className="flex gap-2">
+                <label className={`text-sm font-medium ${
+                  isDarkMode ? 'text-gray-200' : 'text-gray-700'
+                }`}>Modified Code</label>
+                <div className="flex gap-1">
                   <button 
                     onClick={() => copyToClipboard(modifiedCode, 'modified')}
-                    className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+                    className={`p-1.5 rounded-lg transition-colors ${
+                      isDarkMode 
+                        ? 'hover:bg-gray-700 text-gray-400' 
+                        : 'hover:bg-gray-100 text-gray-600'
+                    }`}
                     title="Copy to clipboard"
                   >
-                    <DocumentDuplicateIcon className="h-5 w-5" />
+                    <DocumentDuplicateIcon className="h-4 w-4" />
                   </button>
-                  <label className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer" title="Upload file">
+                  <label className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
+                    isDarkMode 
+                      ? 'hover:bg-gray-700 text-gray-400' 
+                      : 'hover:bg-gray-100 text-gray-600'
+                  }`} title="Upload file">
                     <input 
                       type="file" 
                       className="hidden" 
                       onChange={(e) => handleFileUpload(e, false)}
                     />
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
+                    <DocumentArrowDownIcon className="h-4 w-4" />
                   </label>
                 </div>
               </div>
               <textarea
-                className="w-full h-48 p-2 border rounded-md font-mono"
+                className={`w-full h-48 p-3 rounded-lg border font-mono text-sm resize-none transition-colors ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-600 text-gray-200 placeholder-gray-500' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                 value={modifiedCode}
                 onChange={(e) => setModifiedCode(e.target.value)}
                 placeholder="Paste your modified code here..."
@@ -500,76 +669,124 @@ export default function CodeDiffPage() {
             </button>
           </div>
 
-          {/* Settings */}
+          {/* Enhanced Settings */}
           {showSettings && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div>
-                <label className="block text-sm font-medium mb-1">Language</label>
-                <select 
-                  value={language} 
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full p-2 border rounded-md"
-                >
-                  {languageOptions.map(option => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
+            <div className="mb-4 p-4 bg-gradient-to-r from-gray-50 to-blue-50 dark:from-gray-800 dark:to-blue-900/20 rounded-lg border border-gray-200">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <AdjustmentsHorizontalIcon className="h-5 w-5 text-blue-500" />
+                Comparison Settings
+              </h3>
+              
+              {/* Basic Settings */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Language</label>
+                  <select 
+                    value={language} 
+                    onChange={(e) => setLanguage(e.target.value)}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {languageOptions.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Theme</label>
+                  <select 
+                    value={theme} 
+                    onChange={(e) => setTheme(e.target.value)}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {themeOptions.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Font Size</label>
+                  <select 
+                    value={fontSize} 
+                    onChange={(e) => setFontSize(Number(e.target.value))}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="12">12px</option>
+                    <option value="14">14px</option>
+                    <option value="16">16px</option>
+                    <option value="18">18px</option>
+                    <option value="20">20px</option>
+                    <option value="22">22px</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Word Wrap</label>
+                  <select 
+                    value={wordWrap} 
+                    onChange={(e) => setWordWrap(e.target.value as 'on' | 'off' | 'wordWrapColumn' | 'bounded')}
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {wordWrapOptions.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">View Mode</label>
-                <select 
-                  value={renderSideBySide ? 'side-by-side' : 'inline'} 
-                  onChange={(e) => setRenderSideBySide(e.target.value === 'side-by-side')}
-                  className="w-full p-2 border rounded-md"
-                >
-                  <option value="side-by-side">Side by Side</option>
-                  <option value="inline">Inline</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Font Size</label>
-                <select 
-                  value={fontSize} 
-                  onChange={(e) => setFontSize(Number(e.target.value))}
-                  className="w-full p-2 border rounded-md"
-                >
-                  <option value="12">12px</option>
-                  <option value="14">14px</option>
-                  <option value="16">16px</option>
-                  <option value="18">18px</option>
-                  <option value="20">20px</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Word Wrap</label>
-                <select 
-                  value={wordWrap} 
-                  onChange={(e) => setWordWrap(e.target.value as 'on' | 'off' | 'wordWrapColumn' | 'bounded')}
-                  className="w-full p-2 border rounded-md"
-                >
-                  {wordWrapOptions.map(option => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-center">
-                <input 
-                  type="checkbox" 
-                  id="showLineNumbers" 
-                  checked={showLineNumbers} 
-                  onChange={(e) => setShowLineNumbers(e.target.checked)}
-                  className="mr-2"
-                />
-                <label htmlFor="showLineNumbers" className="text-sm font-medium">Show Line Numbers</label>
+
+              {/* Advanced Options */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="flex items-center space-x-2">
+                  <input 
+                    type="checkbox" 
+                    id="showLineNumbers" 
+                    checked={showLineNumbers} 
+                    onChange={(e) => setShowLineNumbers(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="showLineNumbers" className="text-sm font-medium">Line Numbers</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input 
+                    type="checkbox" 
+                    id="ignoreWhitespace" 
+                    checked={ignoreWhitespace} 
+                    onChange={(e) => setIgnoreWhitespace(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="ignoreWhitespace" className="text-sm font-medium">Ignore Whitespace</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input 
+                    type="checkbox" 
+                    id="ignoreCaseChanges" 
+                    checked={ignoreCaseChanges} 
+                    onChange={(e) => setIgnoreCaseChanges(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="ignoreCaseChanges" className="text-sm font-medium">Ignore Case</label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input 
+                    type="checkbox" 
+                    id="compactMode" 
+                    checked={compactMode} 
+                    onChange={(e) => setCompactMode(e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="compactMode" className="text-sm font-medium">Compact Mode</label>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Diff Editor */}
-          <div className="h-[500px] border rounded-md">
+          {/* ChatGPT-style Diff Editor */}
+          <div className={`h-[500px] border-t transition-colors duration-300 ${
+            isDarkMode ? 'border-gray-700' : 'border-gray-200'
+          }`}>
             {isLoading ? (
               <div className="h-full flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+                <div className={`animate-spin rounded-full h-8 w-8 border-2 border-t-transparent ${
+                  isDarkMode ? 'border-gray-400' : 'border-gray-600'
+                }`}></div>
               </div>
             ) : (
               <DiffEditor
@@ -577,32 +794,36 @@ export default function CodeDiffPage() {
                 language={language}
                 original={originalCode}
                 modified={modifiedCode}
-                theme={theme}
+                theme={isDarkMode ? 'vs-dark' : 'vs'}
                 options={{
                   readOnly: true,
                   renderSideBySide,
-                  minimap: { enabled: false },
+                  minimap: { enabled: !compactMode },
                   lineNumbers: showLineNumbers ? 'on' : 'off',
                   wordWrap,
                   fontSize,
                   scrollBeyondLastLine: false,
                   automaticLayout: true,
                   diffWordWrap: 'on',
-                  ignoreTrimWhitespace: false,
+                  ignoreTrimWhitespace: ignoreWhitespace,
                   renderIndicators: true,
                   renderWhitespace: 'selection',
                   renderValidationDecorations: 'on',
                   renderLineHighlight: 'all',
-                  renderOverviewRuler: true,
+                  renderOverviewRuler: !compactMode,
                   renderFinalNewline: 'on',
                   renderControlCharacters: true,
-                  renderLineHighlightOnlyWhenFocus: false
+                  renderLineHighlightOnlyWhenFocus: false,
+                  enableSplitViewResizing: true,
+                  padding: { top: 16, bottom: 16 },
+                  smoothScrolling: true,
+                  cursorBlinking: 'smooth'
                 }}
               />
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 } 
