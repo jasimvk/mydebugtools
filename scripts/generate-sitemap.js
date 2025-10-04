@@ -16,6 +16,13 @@ const pages = [
   { url: '/tools/color/', changefreq: 'monthly', priority: 0.8 },
   { url: '/tools/icons/', changefreq: 'monthly', priority: 0.8 },
   { url: '/tools/http-status/', changefreq: 'monthly', priority: 0.8 },
+  // Policy and legal pages
+  { url: '/privacy-policy/', changefreq: 'monthly', priority: 0.6 },
+  { url: '/terms-of-service/', changefreq: 'monthly', priority: 0.6 },
+  { url: '/cookie-policy/', changefreq: 'monthly', priority: 0.6 },
+  { url: '/contact/', changefreq: 'monthly', priority: 0.7 },
+  { url: '/about/', changefreq: 'monthly', priority: 0.7 },
+  { url: '/roadmap/', changefreq: 'weekly', priority: 0.7 },
   // Add more tools as they are added to your application
 ];
 

@@ -5,6 +5,7 @@ import GoogleAnalytics from "./components/GoogleAnalytics";
 import AnalyticsProvider from "./components/AnalyticsProvider";
 import Providers from "./providers";
 import StructuredData from "@/components/StructuredData";
+import CookieConsent from "./components/CookieConsent";
 import Script from "next/script";
 
 const inter = Inter({
@@ -90,6 +91,7 @@ export default function RootLayout({
             {children}
           </Providers>
         </AnalyticsProvider>
+        <CookieConsent />
       </body>
     </html>
   );

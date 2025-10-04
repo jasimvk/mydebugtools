@@ -4,6 +4,8 @@ import Script from 'next/script'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useEffect } from 'react'
 import SuspenseBoundary from '@/components/SuspenseBoundary'
+import AdManager from './AdManager'
+import { hasConsentForCategory } from './cookieUtils'
 
 // Add gtag to the window object type
 declare global {
@@ -19,15 +21,22 @@ declare global {
 function GoogleAnalyticsContent({ measurementId }: { measurementId: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const adManager = AdManager.getInstance();
   
   useEffect(() => {
-    if (pathname && typeof window.gtag !== 'undefined') {
+    // Check if analytics cookies are allowed
+    const allowAnalytics = hasConsentForCategory('analytics');
+    
+    if (pathname && typeof window.gtag !== 'undefined' && allowAnalytics) {
       const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '');
       window.gtag('config', measurementId, {
         page_path: url,
       });
     }
-  }, [pathname, searchParams, measurementId]);
+    
+    // Clear ad manager on route change to prevent duplicate ad loading
+    adManager.reset();
+  }, [pathname, searchParams, measurementId, adManager]);
   
   return (
     <>

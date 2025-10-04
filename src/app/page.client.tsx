@@ -522,6 +522,21 @@ export default function Home() {
                 </Link>
               </li>
               <li>
+                <Link href="/terms-of-service" className="text-gray-400 hover:text-white transition-colors">
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link href="/cookie-policy" className="text-gray-400 hover:text-white transition-colors">
+                  Cookie Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="text-gray-400 hover:text-white transition-colors">
+                  Contact
+                </Link>
+              </li>
+              <li>
                 <a href="https://github.com/jasimvk/mydebugtools/blob/main/LICENSE" className="text-gray-400 hover:text-white transition-colors" target="_blank" rel="noopener noreferrer">
                   License
                 </a>
