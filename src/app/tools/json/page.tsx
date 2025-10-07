@@ -276,8 +276,8 @@ export default function JSONTools() {
                 <div className="border-2 border-gray-200 rounded-lg overflow-hidden relative">
                   <textarea
                     value={output}
-                    readOnly
-                    className="w-full h-96 p-4 font-mono text-sm bg-gray-50 border-0 resize-none"
+                    onChange={(e) => setOutput(e.target.value)}
+                    className="w-full h-96 p-4 font-mono text-sm bg-gray-50 border-0 focus:ring-2 focus:ring-blue-500 focus:bg-white resize-none"
                     placeholder="Formatted JSON will appear here..."
                   />
                   {!output && (
