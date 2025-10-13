@@ -1,321 +1,412 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { 
-  CodeBracketIcon, 
-  CheckCircleIcon, 
-  ExclamationCircleIcon,
-  ClipboardIcon,
-  ArrowDownTrayIcon,
-  SparklesIcon,
-  LightBulbIcon,
-  TrashIcon,
-  DocumentTextIcon,
-  SunIcon,
-  MoonIcon,
-  Cog6ToothIcon,
-  QuestionMarkCircleIcon,
-  BeakerIcon,
-  ChartBarIcon,
-  PlayIcon
-} from '@heroicons/react/24/outline';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
+import { ClipboardIcon, ArrowDownTrayIcon, FolderOpenIcon, LinkIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
+import AceEditor from 'react-ace';
+
+import 'ace-builds/src-noconflict/mode-json';
+import 'ace-builds/src-noconflict/theme-github';
+import 'ace-builds/src-noconflict/theme-tomorrow';
+
+const ReactJson = dynamic(() => import('react-json-view'), { ssr: false });
+
+type JsonValue = any;
 
 export default function JSONTools() {
-  const [input, setInput] = useState('');
-  const [output, setOutput] = useState('');
+  const [jsonInput, setJsonInput] = useState<string>('{}');
+  const [parsedJson, setParsedJson] = useState<JsonValue>({});
+  const [treeCollapsed, setTreeCollapsed] = useState<number | boolean>(2);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [stats, setStats] = useState<{ size: number; lines: number; nodes: number } | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(true); // ChatGPT defaults to dark
-  const [showHelp, setShowHelp] = useState(false);
-  const [showStats, setShowStats] = useState(false);
+  const [activeTab, setActiveTab] = useState<'tree' | 'text'>('tree');
+  const [isPretty, setIsPretty] = useState(true);
+  const [loadingUrl, setLoadingUrl] = useState(false);
 
-  const calculateStats = (jsonString: string) => {
-    try {
-      const parsed = JSON.parse(jsonString);
-      const countNodes = (obj: any): number => {
-        if (typeof obj !== 'object' || obj === null) return 1;
-        if (Array.isArray(obj)) return obj.reduce((count: number, item) => count + countNodes(item), 1);
-        return Object.values(obj).reduce((count: number, value) => count + countNodes(value), 1);
-      };
-      
-      return {
-        size: new Blob([jsonString]).size,
-        lines: jsonString.split('\n').length,
-        nodes: countNodes(parsed)
-      };
-    } catch {
-      return null;
-    }
-  };
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const urlInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFormat = () => {
+  // Parse JSON input text to object
+  const parseJsonInput = useCallback(() => {
     try {
-      const parsed = JSON.parse(input);
-      const formatted = JSON.stringify(parsed, null, 2);
-      setOutput(formatted);
+      const parsed = JSON.parse(jsonInput);
+      setParsedJson(parsed);
       setError('');
-      setSuccess('JSON formatted successfully!');
-      setStats(calculateStats(input));
-      setTimeout(() => setSuccess(''), 3000);
+      setTreeCollapsed(2);
     } catch (e) {
       setError('Invalid JSON: ' + (e as Error).message);
-      setOutput('');
-      setStats(null);
     }
-  };
+  }, [jsonInput]);
 
-  const handleMinify = () => {
-    try {
-      const parsed = JSON.parse(input);
-      const minified = JSON.stringify(parsed);
-      setOutput(minified);
-      setError('');
-      setSuccess('JSON minified successfully!');
-      setStats(calculateStats(input));
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (e) {
-      setError('Invalid JSON: ' + (e as Error).message);
-      setOutput('');
-      setStats(null);
-    }
-  };
-
-  const handleValidate = () => {
-    try {
-      JSON.parse(input);
-      setError('');
-      setSuccess('JSON is valid!');
-      setStats(calculateStats(input));
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (e) {
-      setError('Invalid JSON: ' + (e as Error).message);
-      setStats(null);
-    }
-  };
-
-  const handleClear = () => {
-    setInput('');
-    setOutput('');
-    setError('');
-    setSuccess('');
-    setStats(null);
-  };
-
-  const handleLoadSample = () => {
-    const sampleData = {
-      "name": "MyDebugTools JSON Example",
-      "version": "2.0.0",
-      "features": {
-        "formatting": true,
-        "validation": true,
-        "minification": true
-      },
-      "users": [
-        {
-          "id": 1,
-          "name": "John Developer",
-          "role": "Frontend Developer",
-          "active": true,
-          "skills": ["React", "TypeScript", "JSON"]
-        },
-        {
-          "id": 2,
-          "name": "Sarah Designer",
-          "role": "UI/UX Designer",
-          "active": true,
-          "skills": ["Figma", "CSS", "Design Systems"]
-        }
-      ],
-      "metadata": {
-        "created": "2024-01-01T00:00:00Z",
-        "lastModified": new Date().toISOString(),
-        "environment": "production"
+  // Update jsonInput text when parsedJson changes (for tree edits)
+  const updateJsonInputFromParsed = useCallback(
+    (json: JsonValue) => {
+      try {
+        const text = isPretty ? JSON.stringify(json, null, 2) : JSON.stringify(json);
+        setJsonInput(text);
+        setParsedJson(json);
+        setError('');
+      } catch (e) {
+        setError('Error updating JSON text: ' + (e as Error).message);
       }
-    };
-    setInput(JSON.stringify(sampleData, null, 2));
-    setError('');
-    setSuccess('Sample JSON loaded!');
-    setTimeout(() => setSuccess(''), 3000);
+    },
+    [isPretty]
+  );
+
+  // On initial load parse the default JSON input
+  useEffect(() => {
+    parseJsonInput();
+  }, []);
+
+  // Copy text to clipboard
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
+  // Download JSON file
   const handleDownload = () => {
-    if (!output) return;
-    const blob = new Blob([output], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'formatted.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    setSuccess('File downloaded!');
-    setTimeout(() => setSuccess(''), 3000);
+    try {
+      const blob = new Blob([jsonInput], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'json-data.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // ignore
+    }
   };
+
+  // Load file from input
+  const handleFileLoad = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      setJsonInput(text);
+      setActiveTab('text');
+      setTimeout(() => parseJsonInput(), 0);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  // Load JSON from URL
+  const handleLoadUrl = async () => {
+    const url = urlInputRef.current?.value.trim();
+    if (!url) return;
+    setLoadingUrl(true);
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
+      const text = await res.text();
+      setJsonInput(text);
+      setActiveTab('text');
+      setTimeout(() => parseJsonInput(), 0);
+      urlInputRef.current!.value = '';
+      setError('');
+    } catch (e) {
+      setError('Failed to load URL: ' + (e as Error).message);
+    } finally {
+      setLoadingUrl(false);
+    }
+  };
+
+  // Expand or collapse all in tree view
+  const toggleExpandCollapse = () => {
+    if (treeCollapsed === false || treeCollapsed === 0) {
+      setTreeCollapsed(2);
+    } else {
+      setTreeCollapsed(false);
+    }
+  };
+
+  // Handle edits in tree view
+  const handleTreeEdit = (edit: any) => {
+    if (!edit.updated_src) return;
+    updateJsonInputFromParsed(edit.updated_src);
+  };
+
+  // Pretty or minify toggle
+  const togglePretty = () => {
+    try {
+      const obj = JSON.parse(jsonInput);
+      if (isPretty) {
+        // Minify
+        setJsonInput(JSON.stringify(obj));
+        setIsPretty(false);
+      } else {
+        // Pretty
+        setJsonInput(JSON.stringify(obj, null, 2));
+        setIsPretty(true);
+      }
+      setError('');
+    } catch (e) {
+      setError('Invalid JSON: ' + (e as Error).message);
+    }
+  };
+
+  // Filter JSON for search term (keys or string values)
+  const filteredJson = (obj: any, term: string): any => {
+    if (!term) return obj;
+    const termLower = term.toLowerCase();
+
+    const filterRecursive = (value: any): any => {
+      if (typeof value === 'string' && value.toLowerCase().includes(termLower)) return value;
+      if (typeof value !== 'object' || value === null) return null;
+
+      if (Array.isArray(value)) {
+        const filteredArr = value.map(filterRecursive).filter(v => v !== null);
+        return filteredArr.length > 0 ? filteredArr : null;
+      }
+
+      const filteredObj: any = {};
+      for (const key in value) {
+        const keyMatch = key.toLowerCase().includes(termLower);
+        const filteredValue = filterRecursive(value[key]);
+        if (keyMatch) {
+          filteredObj[key] = value[key];
+        } else if (filteredValue !== null) {
+          filteredObj[key] = filteredValue;
+        }
+      }
+      return Object.keys(filteredObj).length > 0 ? filteredObj : null;
+    };
+
+    return filterRecursive(obj);
+  };
+
+  // Highlight matching keys and values in react-json-view by overriding style
+  // react-json-view does not support custom highlight natively, so we rely on filteredJson to reduce displayed nodes.
 
   return (
-    <div>
-      <div>
-        <div className="max-w-7xl mx-auto px-4 py-8">
-        
-          {/* Quick Actions Bar */}
-          <div className="flex flex-wrap justify-center gap-3 mt-6">
-            <button
-              onClick={handleLoadSample}
-              className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center"
-            >
-              <LightBulbIcon className="h-4 w-4 mr-2" />
-              Load Sample
-            </button>
-            <button
-              onClick={handleClear}
-              className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center"
-            >
-              <TrashIcon className="h-4 w-4 mr-2" />
-              Clear All
-            </button>
-            <button
-              onClick={handleFormat}
-              className="bg-white/30 hover:bg-white/40 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center"
-            >
-              <SparklesIcon className="h-4 w-4 mr-2" />
-              Quick Format
-            </button>
-          </div>
+    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col p-4 md:p-8">
+      <h1 className="text-3xl font-bold mb-6 text-center md:text-left">JSON Viewer & Editor</h1>
+
+      {/* Toolbar */}
+      <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mb-4 gap-2">
+        <button
+          onClick={parseJsonInput}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition"
+          title="Parse JSON"
+          aria-label="Parse JSON"
+        >
+          Parse
+        </button>
+
+        <button
+          onClick={toggleExpandCollapse}
+          className="flex items-center gap-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-semibold transition"
+          title={treeCollapsed === false || treeCollapsed === 0 ? 'Collapse All' : 'Expand All'}
+          aria-label="Expand or Collapse All"
+        >
+          {treeCollapsed === false || treeCollapsed === 0 ? (
+            <>
+              Collapse All <ChevronUpIcon className="w-4 h-4" />
+            </>
+          ) : (
+            <>
+              Expand All <ChevronDownIcon className="w-4 h-4" />
+            </>
+          )}
+        </button>
+
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded font-semibold transition"
+          title="Load JSON from File"
+          aria-label="Load JSON from File"
+        >
+          <FolderOpenIcon className="w-5 h-5" />
+          Load File
+        </button>
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          accept=".json,.txt"
+          onChange={handleFileLoad}
+          aria-hidden="true"
+          tabIndex={-1}
+        />
+
+        <div className="flex items-center gap-2 flex-grow max-w-xs">
+          <input
+            ref={urlInputRef}
+            type="url"
+            placeholder="Load JSON from URL"
+            className="flex-grow px-3 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            aria-label="Load JSON from URL"
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleLoadUrl();
+              }
+            }}
+            disabled={loadingUrl}
+          />
+          <button
+            onClick={handleLoadUrl}
+            className="flex items-center gap-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold transition"
+            disabled={loadingUrl}
+            aria-label="Load JSON from URL button"
+            title="Load JSON from URL"
+          >
+            <LinkIcon className="w-5 h-5" />
+            {loadingUrl ? 'Loading...' : 'Load'}
+          </button>
+        </div>
+
+        <button
+          onClick={() => handleCopy(jsonInput)}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-semibold transition"
+          title="Copy JSON to Clipboard"
+          aria-label="Copy JSON to Clipboard"
+        >
+          <ClipboardIcon className="w-5 h-5" />
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+
+        <button
+          onClick={handleDownload}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-semibold transition"
+          title="Download JSON"
+          aria-label="Download JSON"
+        >
+          <ArrowDownTrayIcon className="w-5 h-5" />
+          Download
+        </button>
+
+        <button
+          onClick={togglePretty}
+          className="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded font-semibold transition whitespace-nowrap"
+          title="Toggle Pretty/Minify"
+          aria-label="Toggle Pretty or Minify JSON"
+        >
+          {isPretty ? 'Minify' : 'Pretty'}
+        </button>
+      </div>
+
+      {/* Search */}
+      <div className="mb-4 max-w-md">
+        <input
+          type="search"
+          placeholder="Search keys and values..."
+          className="w-full px-3 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          aria-label="Search JSON keys and values"
+        />
+      </div>
+
+      {/* Tabs */}
+      <div className="mb-4 border-b border-gray-300 flex space-x-2">
+        <button
+          onClick={() => setActiveTab('tree')}
+          className={`py-2 px-4 font-semibold rounded-t-lg transition ${
+            activeTab === 'tree'
+              ? 'bg-white border border-b-0 border-gray-300'
+              : 'bg-gray-200 hover:bg-gray-300'
+          }`}
+          aria-selected={activeTab === 'tree'}
+          role="tab"
+          id="tab-tree"
+          aria-controls="tabpanel-tree"
+        >
+          Tree
+        </button>
+        <button
+          onClick={() => setActiveTab('text')}
+          className={`py-2 px-4 font-semibold rounded-t-lg transition ${
+            activeTab === 'text'
+              ? 'bg-white border border-b-0 border-gray-300'
+              : 'bg-gray-200 hover:bg-gray-300'
+          }`}
+          aria-selected={activeTab === 'text'}
+          role="tab"
+          id="tab-text"
+          aria-controls="tabpanel-text"
+        >
+          Text
+        </button>
+      </div>
+
+      {/* Content */}
+      <div
+        className="flex flex-col md:flex-row gap-4 flex-grow min-h-[400px]"
+        style={{ minHeight: 400 }}
+      >
+        {/* Left pane: JSON Input (Text Tab) or placeholder for Tree tab */}
+        <div className="flex flex-col flex-grow md:flex-[1_1_50%] border border-gray-300 rounded-lg overflow-hidden bg-white shadow">
+          {activeTab === 'text' ? (
+            <AceEditor
+              mode="json"
+              theme="tomorrow"
+              name="json-text-editor"
+              value={jsonInput}
+              onChange={value => setJsonInput(value)}
+              width="100%"
+              height="100%"
+              fontSize={14}
+              showPrintMargin={false}
+              showGutter={true}
+              highlightActiveLine={true}
+              setOptions={{
+                showLineNumbers: true,
+                tabSize: 2,
+                useWorker: false,
+                wrap: true,
+              }}
+              aria-label="JSON text editor"
+            />
+          ) : (
+            <div className="p-4 text-gray-500 select-none flex items-center justify-center h-full">
+              Switch to Text tab to edit raw JSON
+            </div>
+          )}
+        </div>
+
+        {/* Right pane: JSON Viewer (Tree Tab) or placeholder for Text tab */}
+        <div className="flex flex-col flex-grow md:flex-[1_1_50%] border border-gray-300 rounded-lg overflow-auto bg-white shadow p-4 max-h-[80vh]">
+          {activeTab === 'tree' ? (
+            error ? (
+              <div className="text-red-500 font-semibold whitespace-pre-wrap">{error}</div>
+            ) : (
+              <ReactJson
+                src={filteredJson(parsedJson, searchTerm) || {}}
+                theme="rjv-default"
+                collapsed={treeCollapsed}
+                enableClipboard={false}
+                onEdit={handleTreeEdit}
+                onAdd={handleTreeEdit}
+                onDelete={handleTreeEdit}
+                style={{ fontSize: '1em', fontFamily: 'monospace', overflowWrap: 'break-word' }}
+                name={null}
+                quotesOnKeys={false}
+                collapseStringsAfterLength={50}
+                displayObjectSize={false}
+                displayDataTypes={false}
+              />
+            )
+          ) : (
+            <div className="p-4 text-gray-500 select-none flex items-center justify-center h-full">
+              Switch to Tree tab to view and edit JSON tree
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Status Messages */}
-        {error && (
-          <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
-            <div className="flex items-center">
-              <ExclamationCircleIcon className="h-5 w-5 text-red-400 mr-3" />
-              <div>
-                <p className="text-red-800 font-medium">Error</p>
-                <p className="text-red-700 text-sm mt-1 font-mono">{error}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-6 bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg">
-            <div className="flex items-center">
-              <CheckCircleIcon className="h-5 w-5 text-green-400 mr-3" />
-              <p className="text-green-800 font-medium">{success}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Statistics Bar */}
-        {stats && (
-          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-blue-800 font-medium flex items-center">
-                <DocumentTextIcon className="h-5 w-5 mr-2" />
-                JSON Statistics
-              </h3>
-              <div className="flex gap-6 text-sm text-blue-600">
-                <span><strong>{stats.size}</strong> bytes</span>
-                <span><strong>{stats.lines}</strong> lines</span>
-                <span><strong>{stats.nodes}</strong> nodes</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800">Input JSON</h3>
-                <div className="border-2 border-gray-200 rounded-lg overflow-hidden hover:border-blue-300 transition-colors">
-                  <textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    className="w-full h-96 p-4 font-mono text-sm bg-gray-50 border-0 focus:ring-2 focus:ring-blue-500 focus:bg-white resize-none"
-                    placeholder="Paste your JSON here..."
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={handleFormat}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
-                  >
-                    <SparklesIcon className="h-4 w-4 mr-2" />
-                    Format
-                  </button>
-                  <button
-                    onClick={handleMinify}
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
-                  >
-                    <CodeBracketIcon className="h-4 w-4 mr-2" />
-                    Minify
-                  </button>
-                  <button
-                    onClick={handleValidate}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
-                  >
-                    <CheckCircleIcon className="h-4 w-4 mr-2" />
-                    Validate
-                  </button>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(input)}
-                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
-                  >
-                    <ClipboardIcon className="h-4 w-4 mr-2" />
-                    Copy
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-800">Formatted Output</h3>
-                <div className="border-2 border-gray-200 rounded-lg overflow-hidden relative">
-                  <textarea
-                    value={output}
-                    readOnly
-                    className="w-full h-96 p-4 font-mono text-sm bg-gray-50 border-0 resize-none"
-                    placeholder="Formatted JSON will appear here..."
-                  />
-                  {!output && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50/90">
-                      <div className="text-gray-400 text-center">
-                        <p className="font-medium">Formatted JSON will appear here</p>
-                        <p className="text-sm mt-2">Enter JSON and click Format</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {output && (
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(output);
-                        setSuccess('Copied to clipboard!');
-                        setTimeout(() => setSuccess(''), 3000);
-                      }}
-                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
-                    >
-                      <ClipboardIcon className="h-4 w-4 mr-2" />
-                      Copy Result
-                    </button>
-                    <button
-                      onClick={handleDownload}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center"
-                    >
-                      <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                      Download
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+      {/* Error message below */}
+      {error && (
+        <div className="mt-4 text-red-600 font-semibold whitespace-pre-wrap" role="alert">
+          {error}
         </div>
-      </div>
+      )}
     </div>
   );
 }
