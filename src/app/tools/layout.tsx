@@ -101,6 +101,7 @@ export default function ToolsLayout({
   children: React.ReactNode;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true); // Always start collapsed
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
     'General Tools': true
   });
@@ -123,28 +124,66 @@ export default function ToolsLayout({
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-gray-50">
       {/* Sidebar - hidden on mobile, shown on md+ screens */}
-      <aside className="hidden md:block w-72 bg-white border-r border-gray-200">
-        <div className="p-4 sticky top-0 h-screen overflow-y-auto">
-          <Link href="/" className="flex items-center space-x-2 mb-4">
-            <Terminal />
-            <span className="text-xl font-bold">MyDebugTools</span>
-          </Link>
-          
-          {/* Search input */}
-          <div className="mb-6 relative">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search tools..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-            </div>
+      <aside className={`hidden md:block bg-white border-r border-gray-200 transition-all duration-300 ${
+        sidebarCollapsed ? 'w-16' : 'w-72'
+      }`}>
+        <div className="p-4 sticky top-0 h-screen overflow-y-auto flex flex-col">
+          {/* Header - Logo only */}
+          <div className="flex items-center justify-center mb-4">
+            {!sidebarCollapsed ? (
+              <Link href="/" className="flex items-center space-x-2">
+                <Terminal />
+                <span className="text-xl font-bold">MyDebugTools</span>
+              </Link>
+            ) : (
+              <Link href="/" className="flex items-center justify-center w-full" title="MyDebugTools">
+                <Terminal className="h-8 w-8 text-blue-600" />
+              </Link>
+            )}
           </div>
+          
+          {/* Search input - hide when collapsed */}
+          {!sidebarCollapsed && (
+            <div className="mb-6 relative">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search tools..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+              </div>
+            </div>
+          )}
 
-          <nav className="space-y-6">
+          {/* Navigation */}
+          {sidebarCollapsed ? (
+            // Collapsed view - icons with names below
+            <nav className="space-y-2 flex-1">
+              {filteredCategories.map((category) => (
+                category.tools.map((tool) => {
+                  const Icon = tool.icon;
+                  return (
+                    <Link
+                      key={tool.name}
+                      href={tool.path}
+                      className="flex flex-col items-center justify-center p-1.5 rounded-lg hover:bg-blue-50 text-gray-700 hover:text-blue-600 transition-colors group"
+                      title={tool.name}
+                    >
+                      <Icon className="h-10 w-10 mb-1" strokeWidth={1.5} />
+                      <span className="text-[8px] text-center leading-tight text-gray-600 group-hover:text-blue-600 font-medium px-0.5">
+                        {tool.name}
+                      </span>
+                    </Link>
+                  );
+                })
+              ))}
+            </nav>
+          ) : (
+            // Expanded view - full content
+            <nav className="space-y-6 flex-1">
             {filteredCategories.length > 0 ? (
               filteredCategories.map((category) => (
                 <div key={category.name}>
@@ -187,12 +226,31 @@ export default function ToolsLayout({
               </div>
             )}
           </nav>
+          )}
+          
+          {/* Toggle button at bottom */}
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="w-full p-2 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center"
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {sidebarCollapsed ? (
+                <ChevronRightIcon className="h-5 w-5 text-gray-600" />
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <ChevronDownIcon className="h-5 w-5 text-gray-600 rotate-[-90deg]" />
+                  <span className="text-sm text-gray-600">Collapse</span>
+                </div>
+              )}
+            </button>
+          </div>
         </div>
       </aside>
 
       {/* Main content */}
       <main className="flex-1 overflow-auto relative">
-        <div className="container mx-auto p-4 md:p-6">
+        <div className="container mx-auto">
           {children}
         </div>
         

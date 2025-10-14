@@ -1,31 +1,65 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import dynamic from 'next/dynamic';
-import { ClipboardIcon, ArrowDownTrayIcon, FolderOpenIcon, LinkIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
-import AceEditor from 'react-ace';
-
-import 'ace-builds/src-noconflict/mode-json';
-import 'ace-builds/src-noconflict/theme-github';
-import 'ace-builds/src-noconflict/theme-tomorrow';
-
-const ReactJson = dynamic(() => import('react-json-view'), { ssr: false });
+import { JSONTree } from 'react-json-tree';
+import { 
+  ClipboardIcon, 
+  ArrowDownTrayIcon, 
+  FolderOpenIcon, 
+  LinkIcon, 
+  ChevronDownIcon, 
+  ChevronUpIcon,
+  ClipboardDocumentListIcon,
+  DocumentTextIcon,
+  ArrowsPointingInIcon,
+  XMarkIcon,
+  ArrowUpTrayIcon
+} from '@heroicons/react/24/outline';
 
 type JsonValue = any;
 
+// Theme for JSONTree - Postman style with red keys and black values
+  const jsonTreeTheme = {
+    scheme: 'postman-light',
+    author: 'custom',
+    base00: '#ffffff',      // Background
+    base01: '#f6f6f6',      // Lighter Background
+    base02: '#efefef',      // Selection Background
+    base03: '#999999',      // Comments, Invisibles
+    base04: '#8e8e8e',      // Dark Foreground
+    base05: '#000000',      // Default Foreground - BLACK for values
+    base06: '#2e2e2e',      // Light Foreground
+    base07: '#1a1a1a',      // Light Background
+    base08: '#e53935',      // Variables, XML Tags
+    base09: '#000000',      // Integers, Boolean, Constants - BLACK
+    base0A: '#dc3545',      // Classes, Markup Bold - RED for keys
+    base0B: '#000000',      // Strings, Markup Code - BLACK
+    base0C: '#00acc1',      // Support, Regular Expressions
+    base0D: '#dc3545',      // Functions, Methods - RED for keys
+    base0E: '#9c27b0',      // Keywords, Storage
+    base0F: '#8d6e63',      // Deprecated
+  };
+
 export default function JSONTools() {
-  const [jsonInput, setJsonInput] = useState<string>('{\n  "name": "MyDebugTools",\n  "message": "Paste your JSON here or click Sample"\n}');
+  const [jsonInput, setJsonInput] = useState<string>('{\n  "success": true,\n  "message": "Your request has been processed successfully.",\n  "statusCode": 200,\n  "respData": [\n    {\n      "JPL_SEQ_NO": 1,\n      "JPL_DESC": "Building Insurance",\n      "JPL_CURR_CODE": "AED",\n      "JPL_FC_VAL": 27.703,\n      "Benefits": null\n    },\n    {\n      "JPL_SEQ_NO": 2,\n      "JPL_DESC": "Plan A",\n      "JPL_CURR_CODE": "AED",\n      "JPL_FC_VAL": 339,\n      "Benefits": [\n        {\n          "name": "Home Contents",\n          "cvgbenefits": [\n            {\n              "CvgDesc": "Home Contents Cover (Other than Jewellery and Valuables) ",\n              "Cvgcur": "AED",\n              "CvgLmt": "50000"\n            },\n            {\n              "CvgDesc": "Jewellery and Valuables including Mobile Phones, Laptops, Jewellery, and watches",\n              "Cvgcur": "AED",\n              "CvgLmt": "20000"\n            }\n          ]\n        }\n      ]\n    }\n  ],\n  "errCode": null\n}');
   const [parsedJson, setParsedJson] = useState<JsonValue>({});
   const [treeCollapsed, setTreeCollapsed] = useState<number | boolean>(2);
+  const [expandAll, setExpandAll] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'tree' | 'text'>('tree');
   const [isPretty, setIsPretty] = useState(true);
   const [loadingUrl, setLoadingUrl] = useState(false);
+  const [selectedPath, setSelectedPath] = useState<string>('');
+  const [selectedNode, setSelectedNode] = useState<any>(null);
+  const [jsonStats, setJsonStats] = useState({ lines: 0, chars: 0, size: '0 B' });
+  const [isValid, setIsValid] = useState(true);
+  const [showStatsModal, setShowStatsModal] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
+  const treeContainerRef = useRef<HTMLDivElement>(null);
 
   // Parse JSON input text to object
   const parseJsonInput = useCallback(() => {
@@ -33,9 +67,20 @@ export default function JSONTools() {
       const parsed = JSON.parse(jsonInput);
       setParsedJson(parsed);
       setError('');
+      setIsValid(true);
       setTreeCollapsed(2);
+      
+      // Update stats
+      const lines = jsonInput.split('\n').length;
+      const chars = jsonInput.length;
+      const size = new Blob([jsonInput]).size;
+      const sizeStr = size < 1024 ? `${size} B` : 
+                     size < 1024 * 1024 ? `${(size / 1024).toFixed(2)} KB` :
+                     `${(size / (1024 * 1024)).toFixed(2)} MB`;
+      setJsonStats({ lines, chars, size: sizeStr });
     } catch (e) {
       setError('Invalid JSON: ' + (e as Error).message);
+      setIsValid(false);
     }
   }, [jsonInput]);
 
@@ -126,10 +171,12 @@ export default function JSONTools() {
 
   // Expand or collapse all in tree view
   const toggleExpandCollapse = () => {
-    if (treeCollapsed === false || treeCollapsed === 0) {
-      setTreeCollapsed(2);
+    setExpandAll(!expandAll);
+    // Force re-render by toggling the state
+    if (expandAll) {
+      setTreeCollapsed(1); // Collapse to level 1
     } else {
-      setTreeCollapsed(false);
+      setTreeCollapsed(false); // Expand all levels
     }
   };
 
@@ -137,6 +184,8 @@ export default function JSONTools() {
   const handleTreeEdit = (edit: any) => {
     if (!edit.updated_src) return;
     updateJsonInputFromParsed(edit.updated_src);
+    // Update the right panel by updating parsed JSON
+    setParsedJson(edit.updated_src);
   };
 
   // Pretty or minify toggle
@@ -158,13 +207,99 @@ export default function JSONTools() {
     }
   };
 
-  // Filter JSON for search term (keys or string values)
+  // Format JSON (always prettify)
+  const handleFormat = () => {
+    try {
+      const obj = JSON.parse(jsonInput);
+      setJsonInput(JSON.stringify(obj, null, 2));
+      setIsPretty(true);
+      setError('');
+    } catch (e) {
+      setError('Invalid JSON: ' + (e as Error).message);
+    }
+  };
+
+  // Remove white space (minify)
+  const handleRemoveWhiteSpace = () => {
+    try {
+      const obj = JSON.parse(jsonInput);
+      setJsonInput(JSON.stringify(obj));
+      setIsPretty(false);
+      setError('');
+    } catch (e) {
+      setError('Invalid JSON: ' + (e as Error).message);
+    }
+  };
+
+  // Paste from clipboard
+  const handlePasteFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      setJsonInput(text);
+      setActiveTab('text');
+      setTimeout(() => {
+        parseJsonInput();
+        // Auto-format on paste if JSON is valid
+        try {
+          const obj = JSON.parse(text);
+          setJsonInput(JSON.stringify(obj, null, 2));
+          setIsPretty(true);
+        } catch {
+          // If invalid, just show the pasted text
+        }
+      }, 0);
+    } catch (e) {
+      setError('Failed to paste from clipboard. Please paste manually.');
+    }
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + F for format
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        handleFormat();
+      }
+      // Ctrl/Cmd + M for minify
+      if ((e.ctrlKey || e.metaKey) && e.key === 'm') {
+        e.preventDefault();
+        handleRemoveWhiteSpace();
+      }
+      // Ctrl/Cmd + V when not in textarea
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        handlePasteFromClipboard();
+      }
+      // Ctrl/Cmd + C for copy
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        handleCopy(jsonInput);
+      }
+      // Ctrl/Cmd + E for expand/collapse all (in tree view)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'e' && activeTab === 'tree') {
+        e.preventDefault();
+        toggleExpandCollapse();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [jsonInput, activeTab]);
+
+  // Filter JSON for search term (keys and all values: strings, numbers, booleans, null)
   const filteredJson = (obj: any, term: string): any => {
     if (!term) return obj;
     const termLower = term.toLowerCase();
 
     const filterRecursive = (value: any): any => {
+      // Check if the value itself matches
+      if (value === null && 'null'.includes(termLower)) return value;
       if (typeof value === 'string' && value.toLowerCase().includes(termLower)) return value;
+      if (typeof value === 'number' && value.toString().includes(termLower)) return value;
+      if (typeof value === 'boolean' && value.toString().includes(termLower)) return value;
+      
+      // If not an object, return null (no match)
       if (typeof value !== 'object' || value === null) return null;
 
       if (Array.isArray(value)) {
@@ -177,8 +312,10 @@ export default function JSONTools() {
         const keyMatch = key.toLowerCase().includes(termLower);
         const filteredValue = filterRecursive(value[key]);
         if (keyMatch) {
+          // If key matches, include entire value
           filteredObj[key] = value[key];
         } else if (filteredValue !== null) {
+          // If value matches, include it
           filteredObj[key] = filteredValue;
         }
       }
@@ -186,6 +323,69 @@ export default function JSONTools() {
     };
 
     return filterRecursive(obj);
+  };
+
+  // Count search results
+  const countSearchResults = (obj: any, term: string): number => {
+    if (!term || !obj) return 0;
+    const termLower = term.toLowerCase();
+    let count = 0;
+
+    const countRecursive = (value: any): void => {
+      if (value === null && 'null'.includes(termLower)) {
+        count++;
+        return;
+      }
+      if (typeof value === 'string' && value.toLowerCase().includes(termLower)) {
+        count++;
+        return;
+      }
+      if (typeof value === 'number' && value.toString().includes(termLower)) {
+        count++;
+        return;
+      }
+      if (typeof value === 'boolean' && value.toString().includes(termLower)) {
+        count++;
+        return;
+      }
+      
+      if (typeof value !== 'object' || value === null) return;
+
+      if (Array.isArray(value)) {
+        value.forEach(countRecursive);
+      } else {
+        for (const key in value) {
+          if (key.toLowerCase().includes(termLower)) {
+            count++;
+          }
+          countRecursive(value[key]);
+        }
+      }
+    };
+
+    countRecursive(obj);
+    return count;
+  };
+
+  // Count expandable nodes (objects and arrays)
+  const countExpandableNodes = (obj: any): number => {
+    if (!obj || typeof obj !== 'object') return 0;
+    let count = 0;
+
+    const countRecursive = (value: any): void => {
+      if (typeof value !== 'object' || value === null) return;
+      
+      count++; // This node itself is expandable
+      
+      if (Array.isArray(value)) {
+        value.forEach(countRecursive);
+      } else {
+        Object.values(value).forEach(countRecursive);
+      }
+    };
+
+    countRecursive(obj);
+    return count;
   };
 
   // Highlight matching keys and values in react-json-view by overriding style
@@ -230,157 +430,691 @@ export default function JSONTools() {
     }
   };
 
-  // Handle paste in text editor wrapper
-  const handlePasteInText = async (e: React.ClipboardEvent) => {
-    const text = e.clipboardData.getData('text');
-    if (text) {
-      setJsonInput(text);
+  // Extract immediate keys and values for right panel
+  const extractImmediateProperties = (obj: any): Array<[string, any]> => {
+    if (obj === null || obj === undefined) return [];
+    if (typeof obj !== 'object') return [];
+    
+    if (Array.isArray(obj)) {
+      return obj.map((item, index) => [String(index), item]);
+    }
+    
+    return Object.entries(obj);
+  };
+
+  // Extract keys and values for side panel
+  const extractKeysAndValues = (obj: any, prefix = '', showOnlyImmediate = false): Array<{ path: string; value: any; type: string }> => {
+    const result: Array<{ path: string; value: any; type: string }> = [];
+    
+    if (obj === null || obj === undefined) {
+      result.push({ path: prefix || '(null)', value: obj, type: 'null' });
+      return result;
+    }
+
+    const type = Array.isArray(obj) ? 'array' : typeof obj;
+
+    // If we only want immediate children and this is an object/array
+    if (showOnlyImmediate && (type === 'object' || type === 'array')) {
+      if (type === 'array') {
+        obj.forEach((item: any, index: number) => {
+          if (item === null || item === undefined) {
+            result.push({ 
+              path: `[${index}]`, 
+              value: item, 
+              type: 'null' 
+            });
+          } else {
+            const itemType = Array.isArray(item) ? 'array' : typeof item;
+            const displayValue = itemType === 'object' && item !== null ? `Object(${Object.keys(item).length})` :
+                                itemType === 'array' ? `Array(${item.length})` : item;
+            result.push({ 
+              path: `[${index}]`, 
+              value: displayValue, 
+              type: itemType 
+            });
+          }
+        });
+      } else {
+        Object.keys(obj).forEach(key => {
+          const value = obj[key];
+          if (value === null || value === undefined) {
+            result.push({ 
+              path: key, 
+              value: value, 
+              type: 'null' 
+            });
+          } else {
+            const itemType = Array.isArray(value) ? 'array' : typeof value;
+            const displayValue = itemType === 'object' && value !== null ? `Object(${Object.keys(value).length})` :
+                                itemType === 'array' ? `Array(${value.length})` : value;
+            result.push({ 
+              path: key, 
+              value: displayValue, 
+              type: itemType 
+            });
+          }
+        });
+      }
+      return result;
+    }
+
+    // Original recursive behavior for full tree
+    const traverse = (current: any, currentPath: string) => {
+      if (current === null || current === undefined) {
+        result.push({ path: currentPath, value: current, type: 'null' });
+        return;
+      }
+
+      const type = Array.isArray(current) ? 'array' : typeof current;
+
+      if (type === 'object' || type === 'array') {
+        if (type === 'array') {
+          result.push({ path: currentPath, value: `Array(${current.length})`, type: 'array' });
+          current.forEach((item: any, index: number) => {
+            traverse(item, `${currentPath}[${index}]`);
+          });
+        } else {
+          const keys = Object.keys(current);
+          result.push({ path: currentPath, value: `Object(${keys.length})`, type: 'object' });
+          keys.forEach(key => {
+            traverse(current[key], currentPath ? `${currentPath}.${key}` : key);
+          });
+        }
+      } else {
+        result.push({ path: currentPath, value: current, type });
+      }
+    };
+
+    traverse(obj, prefix);
+    return result;
+  };
+
+  // Handle clicking on a key-value item to navigate and show in right panel
+  const handleSelectPath = (path: string) => {
+    if (!path || path === '(root)') {
+      setSelectedNode(null);
+      setSelectedPath('');
+      setSearchTerm('');
+      return;
+    }
+
+    // Navigate to the node using the path
+    let node = parsedJson;
+    const pathParts = path.split(/\.|\[|\]/).filter(p => p !== '');
+    
+    for (const part of pathParts) {
+      if (node && typeof node === 'object') {
+        node = node[part];
+      } else {
+        break;
+      }
+    }
+    
+    // Ensure path ends with a dot
+    const finalPath = path.endsWith('.') ? path : `${path}.`;
+    
+    setSelectedNode(node);
+    setSelectedPath(finalPath);
+    setSearchTerm('');
+    
+    if (activeTab !== 'tree') {
+      setActiveTab('tree');
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col p-4 md:p-8">
-      <h1 className="text-3xl font-bold mb-6 text-center md:text-left">JSON Viewer & Editor</h1>
+  // Handle selecting a node in the tree view
+  const handleTreeSelect = (select: any) => {
+    if (!select) {
+      // No selection, show root
+      setSelectedNode(null);
+      setSelectedPath('');
+      return;
+    }
+
+    // Build the full path and navigate to the node
+    let fullPath = '';
+    let node = parsedJson;
+    
+    // First navigate through namespace (parent path)
+    if (select.namespace && select.namespace.length > 0) {
+      for (let i = 0; i < select.namespace.length; i++) {
+        const key = select.namespace[i];
+        if (node && typeof node === 'object') {
+          node = node[key];
+          // Build path
+          if (!isNaN(Number(key))) {
+            fullPath += `[${key}]`;
+          } else {
+            // Add dot before property name if needed
+            if (fullPath && !fullPath.endsWith('.')) {
+              fullPath += '.';
+            }
+            fullPath += key;
+          }
+        }
+      }
+    }
+    
+    // Then add the selected name itself
+    if (select.name !== null && select.name !== undefined) {
+      // Build final path
+      if (!isNaN(Number(select.name))) {
+        fullPath += `[${select.name}]`;
+      } else {
+        // Add dot before property name if needed
+        if (fullPath && !fullPath.endsWith('.')) {
+          fullPath += '.';
+        }
+        fullPath += select.name;
+      }
       
-      {/* Help Banner */}
- 
+      // Navigate to the actual node
+      if (node && typeof node === 'object') {
+        node = node[select.name];
+      }
+    }
 
-      {/* Sticky Toolbar */}
-      <div className="sticky top-0 z-10 bg-gray-50 pb-2 mb-4 shadow-sm flex flex-col md:flex-row md:items-center md:space-x-4 gap-2">
-        <button onClick={parseJsonInput} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition" title="Parse JSON and update tree" aria-label="Parse JSON">Parse</button>
-        <button onClick={toggleExpandCollapse} className="flex items-center gap-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-semibold transition" title={treeCollapsed === false || treeCollapsed === 0 ? 'Collapse All' : 'Expand All'} aria-label="Expand or Collapse All">{treeCollapsed === false || treeCollapsed === 0 ? (<><span>Collapse All</span> <ChevronUpIcon className="w-4 h-4" /></>) : (<><span>Expand All</span> <ChevronDownIcon className="w-4 h-4" /></>)}</button>
-        <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded font-semibold transition" title="Load JSON from file" aria-label="Load JSON from File"><FolderOpenIcon className="w-5 h-5" />Load File</button>
-        <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json,.txt" onChange={handleFileLoad} aria-hidden="true" tabIndex={-1} />
-        <button onClick={handleSample} className="flex items-center gap-2 px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded font-semibold transition" title="Load sample JSON" aria-label="Load sample JSON">Sample</button>
-        <button onClick={handleReset} className="flex items-center gap-2 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded font-semibold transition" title="Reset all" aria-label="Reset">Reset</button>
-        <div className="flex items-center gap-2 flex-grow max-w-xs">
-          <input ref={urlInputRef} type="url" placeholder="Load JSON from URL" className="flex-grow px-3 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Load JSON from URL" onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleLoadUrl(); } }} disabled={loadingUrl} />
-          <button onClick={handleLoadUrl} className="flex items-center gap-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold transition" disabled={loadingUrl} aria-label="Load JSON from URL button" title="Load JSON from URL"><LinkIcon className="w-5 h-5" />{loadingUrl ? 'Loading...' : 'Load'}</button>
+    // Set the selected node and path
+    setSelectedNode(node);
+    setSelectedPath(fullPath || 'root');
+  };
+
+  // Note: Custom click handler removed - using react-json-view's onSelect instead
+
+  return (
+    <div className="bg-[#fafafa] text-gray-900 flex flex-col">
+      <style jsx global>{`
+        /* Replace arrows with +/- symbols */
+        .rst__tree .rst__lineBlock::before,
+        .rst__tree .rst__lineBlock::after,
+        li[role="treeitem"]::before,
+        li[role="treeitem"] > div::before {
+          display: none !important;
+        }
+        
+        /* Style for collapsed/expanded indicators */
+        li[role="treeitem"] > div > span:first-child::before {
+          content: '+';
+          display: inline-block;
+          width: 16px;
+          height: 16px;
+          line-height: 14px;
+          text-align: center;
+          margin-right: 4px;
+          font-weight: bold;
+          font-size: 16px;
+          color: #666;
+          cursor: pointer;
+        }
+        
+        li[role="treeitem"][aria-expanded="true"] > div > span:first-child::before {
+          content: '−';
+        }
+        
+        li[role="treeitem"][aria-expanded="false"] > div > span:first-child::before {
+          content: '+';
+        }
+      `}</style>
+      <h1 className="text-2xl font-semibold mb-6 text-gray-800 px-6 pt-6">JSON Viewer</h1>
+      
+      
+
+      {/* Tabs - Postman Style */}
+      <div className="mb-0 border-b border-gray-300 bg-white">
+        <div className="flex">
+          <button
+            onClick={() => setActiveTab('text')}
+            className={`px-6 py-3 font-medium transition-all relative ${
+              activeTab === 'text'
+                ? 'text-orange-600 bg-white border-b-2 border-orange-600'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+            }`}
+            role="tab"
+          >
+            Text
+          </button>
+          <button
+            onClick={() => setActiveTab('tree')}
+            className={`px-6 py-3 font-medium transition-all relative ${
+              activeTab === 'tree'
+                ? 'text-orange-600 bg-white border-b-2 border-orange-600'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+            }`}
+            role="tab"
+          >
+            Tree
+          </button>
         </div>
-        <button onClick={() => handleCopy(jsonInput)} className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-semibold transition" title="Copy JSON to clipboard" aria-label="Copy JSON to Clipboard"><ClipboardIcon className="w-5 h-5" />{copied ? 'Copied' : 'Copy'}</button>
-        <button onClick={handleDownload} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-semibold transition" title="Download JSON" aria-label="Download JSON"><ArrowDownTrayIcon className="w-5 h-5" />Download</button>
-        <button onClick={togglePretty} className="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded font-semibold transition whitespace-nowrap" title="Toggle pretty/minify" aria-label="Toggle Pretty or Minify JSON">{isPretty ? 'Minify' : 'Pretty'}</button>
       </div>
 
-      {/* Search */}
-      <div className="mb-4 max-w-md">
-        <input
-          type="search"
-          placeholder="Search keys and values..."
-          className="w-full px-3 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          aria-label="Search JSON keys and values"
-        />
-      </div>
-
-      {/* Tabs */}
-      <div className="mb-4 border-b border-gray-300 flex space-x-2">
-        <button
-          onClick={() => setActiveTab('tree')}
-          className={`py-2 px-4 font-semibold rounded-t-lg transition ${
-            activeTab === 'tree'
-              ? 'bg-white border border-b-0 border-gray-300'
-              : 'bg-gray-200 hover:bg-gray-300'
-          }`}
-          aria-selected={activeTab === 'tree'}
-          role="tab"
-          id="tab-tree"
-          aria-controls="tabpanel-tree"
-        >
-          🌲 Tree View
-        </button>
-        <button
-          onClick={() => setActiveTab('text')}
-          className={`py-2 px-4 font-semibold rounded-t-lg transition ${
-            activeTab === 'text'
-              ? 'bg-white border border-b-0 border-gray-300'
-              : 'bg-gray-200 hover:bg-gray-300'
-          }`}
-          aria-selected={activeTab === 'text'}
-          role="tab"
-          id="tab-text"
-          aria-controls="tabpanel-text"
-        >
-          📝 Text Editor
-        </button>
-      </div>
-
-      {/* Single Content Area */}
-      <div className="flex flex-col flex-grow min-h-[600px]">
-        <div className="flex flex-col flex-grow border border-gray-300 rounded-lg overflow-hidden bg-white shadow">
-          {activeTab === 'text' ? (
-            <div 
-              className="flex flex-col flex-grow"
-              onPaste={handlePasteInText}
-            >
-              <AceEditor
-                mode="json"
-                theme="tomorrow"
-                name="json-text-editor"
-                value={jsonInput}
-                onChange={value => setJsonInput(value)}
-                width="100%"
-                height="100%"
-                fontSize={14}
-                showPrintMargin={false}
-                showGutter={true}
-                highlightActiveLine={true}
-                setOptions={{
-                  showLineNumbers: true,
-                  tabSize: 2,
-                  useWorker: false,
-                  wrap: true,
-                  enableBasicAutocompletion: false,
-                  enableLiveAutocompletion: false,
-                  enableSnippets: false,
-                }}
-                editorProps={{ $blockScrolling: true }}
-                aria-label="JSON text editor"
-                commands={[
-                  {
-                    name: 'paste',
-                    bindKey: { win: 'Ctrl-V', mac: 'Cmd-V' },
-                    exec: (editor: any) => {
-                      // Ace will handle paste natively
-                    }
-                  }
-                ]}
-              />
+      {/* Content Area - Postman Style */}
+      {activeTab === 'text' && (
+        <div className="space-y-0">
+          {/* Toolbar - Postman Style */}
+          <div className="bg-[#f7f7f7] border border-gray-300 border-b-0 px-3 py-2 flex flex-wrap gap-1">
+            <div className="flex gap-1">
+              <button 
+                onClick={handlePasteFromClipboard} 
+                className="px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-300 rounded transition-colors flex items-center gap-1.5"
+                title="Paste from clipboard"
+              >
+                <ClipboardDocumentListIcon className="h-4 w-4" />
+                Paste
+              </button>
+              <button 
+                onClick={() => handleCopy(jsonInput)} 
+                className="px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-300 rounded transition-colors flex items-center gap-1.5"
+                title="Copy to clipboard"
+              >
+                <ClipboardIcon className="h-4 w-4" />
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
             </div>
-          ) : (
-            <div 
-              className="flex flex-col flex-grow overflow-auto p-4"
-              onPaste={handlePasteInTree}
-              tabIndex={0}
-            >
-              {error ? (
-                <div className="text-red-500 font-semibold whitespace-pre-wrap p-4 bg-red-50 rounded border border-red-200">
-                  <p className="font-bold mb-2">❌ JSON Parse Error:</p>
-                  <p className="text-sm">{error}</p>
-                  <p className="text-xs mt-2 text-gray-600">💡 Try switching to Text tab to fix the JSON syntax</p>
-                </div>
-              ) : (
-                <ReactJson
-                  src={filteredJson(parsedJson, searchTerm) || {}}
-                  theme="rjv-default"
-                  collapsed={treeCollapsed}
-                  enableClipboard={true}
-                  onEdit={handleTreeEdit}
-                  onAdd={handleTreeEdit}
-                  onDelete={handleTreeEdit}
-                  style={{ fontSize: '1.1em', fontFamily: 'monospace', overflowWrap: 'break-word', lineHeight: '1.6' }}
-                  name={null}
-                  quotesOnKeys={false}
-                  collapseStringsAfterLength={50}
-                  displayObjectSize={true}
-                  displayDataTypes={false}
+            
+            <div className="border-l border-gray-400 mx-2"></div>
+            
+            <div className="flex gap-1">
+              <button 
+                onClick={handleFormat} 
+                className="px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-300 rounded transition-colors flex items-center gap-1.5"
+                title="Format JSON"
+              >
+                <DocumentTextIcon className="h-4 w-4" />
+                Format
+              </button>
+              <button 
+                onClick={handleRemoveWhiteSpace} 
+                className="px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-300 rounded transition-colors flex items-center gap-1.5"
+                title="Minify JSON"
+              >
+                <ArrowsPointingInIcon className="h-4 w-4" />
+                Minify
+              </button>
+            </div>
+            
+            <div className="border-l border-gray-400 mx-2"></div>
+            
+            <div className="flex gap-1">
+              <button 
+                onClick={handleReset} 
+                className="px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-300 rounded transition-colors flex items-center gap-1.5"
+                title="Clear all"
+              >
+                <XMarkIcon className="h-4 w-4" />
+                Clear
+              </button>
+              <label className="px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-300 rounded transition-colors flex items-center gap-1.5 cursor-pointer" title="Load JSON file">
+                <ArrowUpTrayIcon className="h-4 w-4" />
+                Load
+                <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json,.txt" onChange={handleFileLoad} />
+              </label>
+            </div>
+          </div>
+
+          {/* Text Editor */}
+          <textarea
+            value={jsonInput}
+            onChange={(e) => setJsonInput(e.target.value)}
+            className="w-full h-[600px] p-4 border border-gray-300 rounded-b-md font-mono text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white text-gray-900"
+            placeholder="Paste your JSON here..."
+            spellCheck={false}
+            style={{ 
+              lineHeight: '1.5',
+              tabSize: 2
+            }}
+          />
+        </div>
+      )}
+
+      {/* Tree View - Postman Style */}
+      {activeTab === 'tree' && parsedJson && (
+        <div className="space-y-0">
+          {/* Search and Controls Bar */}
+          <div className="flex flex-col gap-2 p-3 bg-white border-x border-t border-gray-300">
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search keys and values (strings, numbers, booleans, null)..."
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-orange-500 focus:border-orange-500"
                 />
+                {/* Search Icon */}
+                <svg 
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                {/* Clear Search Button */}
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    title="Clear search"
+                  >
+                    <XMarkIcon className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              
+            </div>
+            
+            {/* Search Results Count */}
+            {searchTerm && (
+              <div className="text-xs text-gray-600 flex items-center gap-2 px-2">
+                <span className="inline-flex items-center gap-1">
+                  <svg className="h-3 w-3 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <strong>{countSearchResults(parsedJson, searchTerm)}</strong> match{countSearchResults(parsedJson, searchTerm) !== 1 ? 'es' : ''} found
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Two-panel layout: Tree view and Property Details */}
+          <div className="flex gap-0 border border-gray-300 rounded bg-white overflow-hidden">
+            {/* Left Panel - Tree View with collapsible sidebar */}
+            <div className="flex flex-1 overflow-hidden">
+              {/* Main Tree View */}
+              <div 
+                ref={treeContainerRef}
+                className="flex-1 p-4 overflow-auto max-h-[600px]"
+                onPaste={handlePasteInTree}
+                tabIndex={0}
+              >
+                {error ? (
+                  <div className="text-red-700 font-semibold whitespace-pre-wrap p-3 bg-red-50 rounded border-l-4 border-red-500">
+                    <p className="font-bold mb-2">Error</p>
+                    <p className="text-xs">{error}</p>
+                    <p className="text-xs mt-2 text-gray-600">Try switching to Text tab to fix the JSON syntax</p>
+                  </div>
+                ) : (
+                <>
+                  <JSONTree 
+                    data={filteredJson(parsedJson, searchTerm) || {}} 
+                    theme={jsonTreeTheme}
+                    invertTheme={false}
+                    hideRoot={false}
+                    shouldExpandNodeInitially={(keyPath, data, level) => {
+                      // When searching, expand all nodes to show results
+                      if (searchTerm) {
+                        return true;
+                      }
+                      // When expandAll is true, expand everything
+                      if (expandAll || treeCollapsed === false) {
+                        return true;
+                      }
+                      // Otherwise, expand only to specified level
+                      if (typeof treeCollapsed === 'number') {
+                        return level < treeCollapsed;
+                      }
+                      return false;
+                    }}
+                    getItemString={(type, data, itemType, itemString) => {
+                      return <span>{itemString}</span>;
+                    }}
+                    labelRenderer={(keyPath, nodeType, expanded, expandable) => {
+                      const key = keyPath[0];
+                      return (
+                        <strong 
+                          style={{ cursor: 'pointer', color: '#1e88e5' }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            
+                            console.log('Clicked key:', key);
+                            console.log('Full keyPath:', keyPath);
+                            
+                            // keyPath is in reverse order: [currentKey, parentKey, grandparentKey, ..., 'root']
+                            // Remove 'root' if it exists and reverse to get correct order
+                            const cleanPath = keyPath.filter(k => k !== 'root');
+                            const pathParts = [...cleanPath].reverse();
+                            
+                            console.log('Path parts (after clean & reverse):', pathParts);
+                            
+                            let fullPath = '';
+                            let node = parsedJson;
+                            
+                            // Navigate to the node
+                            for (let i = 0; i < pathParts.length; i++) {
+                              const part = pathParts[i];
+                              
+                              if (node && typeof node === 'object' && part in node) {
+                                node = node[part];
+                                
+                                // Build path string with dots between segments
+                                if (typeof part === 'number' || !isNaN(Number(part))) {
+                                  fullPath += `[${part}]`;
+                                } else {
+                                  // Add dot before property name if needed
+                                  if (fullPath && !fullPath.endsWith('.')) {
+                                    fullPath += '.';
+                                  }
+                                  fullPath += part;
+                                }
+                              }
+                            }
+                            
+                            setSelectedNode(node);
+                            setSelectedPath(fullPath || 'root');
+                            console.log('Final path:', fullPath);
+                            console.log('Final node:', node);
+                          }}
+                        >
+                          {key}
+                        </strong>
+                      );
+                    }}
+                    valueRenderer={(raw, value) => {
+                      return <span>{JSON.stringify(value)}</span>;
+                    }}
+                  />
+                </>
+              )}
+              </div>
+
+              {/* Icon-only Sidebar - Collapsed */}
+              <div className="w-14 bg-[#f7f7f7] border-l border-gray-300 flex flex-col items-center py-4 gap-3">
+                {/* Details Panel Toggle */}
+              
+
+                {/* Download Icon */}
+                <button
+                  onClick={handleDownload}
+                  className="p-2.5 hover:bg-gray-300 rounded-lg transition-colors group relative"
+                  title="Download JSON"
+                >
+                  <ArrowDownTrayIcon className="w-5 h-5 text-gray-600" />
+                  <span className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                    Download JSON
+                  </span>
+                </button>
+
+                {/* Copy Icon */}
+                <button
+                  onClick={() => {
+                    handleCopy(JSON.stringify(parsedJson, null, 2));
+                    // Show brief confirmation
+                  }}
+                  className="p-2.5 hover:bg-gray-300 rounded-lg transition-colors group relative"
+                  title="Copy JSON"
+                >
+                  <ClipboardIcon className={`w-5 h-5 ${copied ? 'text-green-600' : 'text-gray-600'}`} />
+                  <span className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                    {copied ? 'Copied!' : 'Copy JSON'}
+                  </span>
+                </button>
+
+                <div className="flex-1"></div>
+
+                {/* Validation Status Indicator */}
+                <div className="flex flex-col items-center gap-1">
+                  {isValid ? (
+                    <div className="w-3 h-3 bg-green-500 rounded-full" title="Valid JSON"></div>
+                  ) : (
+                    <div className="w-3 h-3 bg-red-500 rounded-full" title="Invalid JSON"></div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Panel - Property Details - Postman Style (Expandable) */}
+            {selectedNode !== null && (
+              <div className="w-80 p-4 bg-[#fafafa] border-l border-gray-300 overflow-auto max-h-[600px]">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Details</h3>
+                  <button
+                    onClick={() => setSelectedNode(null)}
+                    className="p-1 hover:bg-gray-300 rounded transition-colors"
+                    title="Close"
+                  >
+                    <XMarkIcon className="h-4 w-4 text-gray-600" />
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="text-xs">
+                    <span className="font-semibold text-gray-600 uppercase tracking-wide block mb-2">Path</span>
+                    <div className="p-2 bg-white border border-gray-300 rounded font-mono text-xs break-all text-gray-800">
+                      {selectedPath || 'root.'}
+                    </div>
+                  </div>
+                  
+                  <div className="border-t border-gray-300 pt-3">
+                    <div className="font-semibold text-gray-600 mb-2 text-xs uppercase tracking-wide">Properties</div>
+                    <div className="bg-white border border-gray-300 rounded overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead className="bg-[#f7f7f7] border-b border-gray-300">
+                          <tr>
+                            <th className="text-left p-2 font-semibold text-gray-700">Key</th>
+                            <th className="text-left p-2 font-semibold text-gray-700">Value</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {extractImmediateProperties(selectedNode).map(([key, value], index) => (
+                            <tr 
+                              key={index} 
+                              className="border-b border-gray-200 hover:bg-orange-50 cursor-pointer transition-colors"
+                              onClick={() => {
+                                // Remove trailing dot from selectedPath before building new path
+                                const basePath = selectedPath.endsWith('.') ? selectedPath.slice(0, -1) : selectedPath;
+                                const newPath = basePath 
+                                  ? `${basePath}.${key}` 
+                                  : key;
+                                handleSelectPath(newPath);
+                              }}
+                            >
+                              <td className="p-2 font-medium text-gray-800">{key}</td>
+                              <td className="p-2 text-gray-600 font-mono truncate max-w-[150px]" title={String(value)}>
+                                {typeof value === 'object' && value !== null 
+                                  ? Array.isArray(value) 
+                                    ? `Array(${value.length})` 
+                                    : `Object(${Object.keys(value).length})`
+                                  : String(value)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Error Display - Postman Style */}
+      {error && (
+        <div className="mt-3 p-3 bg-red-50 border-l-4 border-red-500 rounded">
+          <p className="text-red-700 font-semibold text-sm">Error</p>
+          <p className="text-red-600 text-xs mt-1">{error}</p>
+        </div>
+      )}
+
+      {/* Statistics Modal */}
+      {showStatsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowStatsModal(false)}>
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                JSON Statistics
+              </h3>
+              <button
+                onClick={() => setShowStatsModal(false)}
+                className="p-1 hover:bg-gray-100 rounded transition-colors"
+              >
+                <XMarkIcon className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              {/* General Stats */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-3 bg-blue-50 rounded border-l-4 border-blue-500">
+                  <span className="text-sm font-medium text-gray-700">Lines</span>
+                  <span className="text-lg font-bold text-blue-600">{jsonStats.lines}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-green-50 rounded border-l-4 border-green-500">
+                  <span className="text-sm font-medium text-gray-700">Characters</span>
+                  <span className="text-lg font-bold text-green-600">{jsonStats.chars.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-purple-50 rounded border-l-4 border-purple-500">
+                  <span className="text-sm font-medium text-gray-700">File Size</span>
+                  <span className="text-lg font-bold text-purple-600">{jsonStats.size}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-orange-50 rounded border-l-4 border-orange-500">
+                  <span className="text-sm font-medium text-gray-700">Status</span>
+                  <span className={`text-sm font-bold ${isValid ? 'text-green-600' : 'text-red-600'}`}>
+                    {isValid ? '✓ Valid JSON' : '✗ Invalid JSON'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Object Stats */}
+              {isValid && parsedJson && (
+                <div className="border-t border-gray-200 pt-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Structure Analysis</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-gray-50 rounded text-center">
+                      <div className="text-2xl font-bold text-gray-700">
+                        {Object.keys(parsedJson).length}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">Root Keys</div>
+                    </div>
+                    <div className="p-3 bg-gray-50 rounded text-center">
+                      <div className="text-2xl font-bold text-gray-700">
+                        {JSON.stringify(parsedJson).split(':').length - 1}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">Total Keys</div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
-          )}
+
+            {/* Modal Footer */}
+            <div className="flex justify-end gap-2 p-4 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => setShowStatsModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
