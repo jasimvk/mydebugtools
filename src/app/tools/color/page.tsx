@@ -131,11 +131,17 @@ const colorUtils = {
   },
 
   // Format values for display
-  formatRgb: (r: number, g: number, b: number): string => {
+  formatRgb: (r: number, g: number, b: number, a?: number): string => {
+    if (a !== undefined && a < 100) {
+      return `rgba(${r}, ${g}, ${b}, ${(a / 100).toFixed(2)})`;
+    }
     return `rgb(${r}, ${g}, ${b})`;
   },
   
-  formatHsl: (h: number, s: number, l: number): string => {
+  formatHsl: (h: number, s: number, l: number, a?: number): string => {
+    if (a !== undefined && a < 100) {
+      return `hsla(${h}, ${s}%, ${l}%, ${(a / 100).toFixed(2)})`;
+    }
     return `hsl(${h}, ${s}%, ${l}%)`;
   },
   
@@ -145,11 +151,18 @@ const colorUtils = {
   
   formatHsv: (h: number, s: number, v: number): string => {
     return `hsv(${h}, ${s}%, ${v}%)`;
+  },
+  
+  hexToRgba: (hex: string, alpha: number): string => {
+    const rgb = colorUtils.hexToRgb(hex);
+    if (!rgb) return hex;
+    return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${(alpha / 100).toFixed(2)})`;
   }
 };
 
 function ColorPickerContent() {
   const [color, setColor] = useState('#000000');
+  const [opacity, setOpacity] = useState(100);
   const [format, setFormat] = useState('hex');
   const [showHelp, setShowHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -176,7 +189,7 @@ function ColorPickerContent() {
   };
 
   // Get color in all formats for the advanced view
-  const getColorFormats = (hexColor: string) => {
+  const getColorFormats = (hexColor: string, opacity: number) => {
     const rgb = colorUtils.hexToRgb(hexColor);
     if (!rgb) return null;
     
@@ -187,12 +200,13 @@ function ColorPickerContent() {
     
     return {
       hex: hexColor,
-      rgb: colorUtils.formatRgb(r, g, b),
-      hsl: colorUtils.formatHsl(hsl.h, hsl.s, hsl.l),
+      rgb: colorUtils.formatRgb(r, g, b, opacity),
+      hsl: colorUtils.formatHsl(hsl.h, hsl.s, hsl.l, opacity),
       cmyk: colorUtils.formatCmyk(cmyk.c, cmyk.m, cmyk.y, cmyk.k),
       hsv: colorUtils.formatHsv(hsv.h, hsv.s, hsv.v),
+      rgba: opacity < 100 ? colorUtils.hexToRgba(hexColor, opacity) : undefined,
       values: {
-        rgb, hsl, cmyk, hsv
+        rgb, hsl, cmyk, hsv, opacity
       }
     };
   };
@@ -206,6 +220,7 @@ function ColorPickerContent() {
   // Reset color
   const resetColor = () => {
     setColor('#000000');
+    setOpacity(100);
     showNotification('Color reset', 'info');
   };
 
@@ -267,7 +282,7 @@ function ColorPickerContent() {
   }, [color, format]);
 
   // Get all color formats
-  const colorFormatsData = getColorFormats(color);
+  const colorFormatsData = getColorFormats(color, opacity);
 
   return (
     <div className="container mx-auto p-4">
@@ -322,6 +337,7 @@ function ColorPickerContent() {
                   <h4 className="font-medium mb-1">Basic Usage</h4>
                   <ol className="list-decimal list-inside space-y-1 text-sm">
                     <li>Use the color picker to select a color</li>
+                    <li>Adjust opacity using the slider (0-100%)</li>
                     <li>Choose a color format (HEX, RGB, HSL, etc.)</li>
                     <li>Copy the color value to clipboard</li>
                     <li>Save colors to your recent colors</li>
@@ -371,6 +387,32 @@ function ColorPickerContent() {
                   >
                     <ArrowPathIcon className="h-5 w-5" />
                   </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Opacity</label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={opacity}
+                    onChange={(e) => setOpacity(parseInt(e.target.value))}
+                    className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, transparent 0%, ${color} 100%)`
+                    }}
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={opacity}
+                    onChange={(e) => setOpacity(Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+                    className="w-16 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center"
+                  />
+                  <span className="text-sm text-gray-500 dark:text-gray-400">%</span>
                 </div>
               </div>
 
@@ -429,7 +471,7 @@ function ColorPickerContent() {
                     <h4 className="text-sm font-medium mb-1">Color Values</h4>
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(colorFormatsData).map(([key, value]) => {
-                        if (key === 'values') return null;
+                        if (key === 'values' || !value) return null;
                         return (
                           <button
                             key={key}
@@ -446,7 +488,7 @@ function ColorPickerContent() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs">
                     <div>
-                      <span className="font-medium">RGB</span>
+                      <span className="font-medium">RGB{opacity < 100 ? 'A' : ''}</span>
                       <div className="grid grid-cols-3 gap-1 mt-1">
                         <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
                           <span className="block text-gray-500 dark:text-gray-400">R</span>
@@ -461,9 +503,15 @@ function ColorPickerContent() {
                           <span className="font-semibold text-gray-900 dark:text-white">{colorFormatsData.values.rgb.b}</span>
                         </div>
                       </div>
+                      {opacity < 100 && (
+                        <div className="mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
+                          <span className="block text-gray-500 dark:text-gray-400">Alpha</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{(opacity / 100).toFixed(2)}</span>
+                        </div>
+                      )}
                     </div>
                     <div>
-                      <span className="font-medium">HSL</span>
+                      <span className="font-medium">HSL{opacity < 100 ? 'A' : ''}</span>
                       <div className="grid grid-cols-3 gap-1 mt-1">
                         <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
                           <span className="block text-gray-500 dark:text-gray-400">H</span>
@@ -478,6 +526,12 @@ function ColorPickerContent() {
                           <span className="font-semibold text-gray-900 dark:text-white">{colorFormatsData.values.hsl.l}%</span>
                         </div>
                       </div>
+                      {opacity < 100 && (
+                        <div className="mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-1 text-center">
+                          <span className="block text-gray-500 dark:text-gray-400">Alpha</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{(opacity / 100).toFixed(2)}</span>
+                        </div>
+                      )}
                     </div>
                     <div>
                       <span className="font-medium">CMYK</span>
@@ -525,10 +579,30 @@ function ColorPickerContent() {
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-medium mb-2">Color Preview</h3>
-                <div 
-                  className="w-full h-32 rounded-lg border border-gray-300 dark:border-gray-600"
-                  style={{ backgroundColor: color }}
-                />
+                <div className="relative w-full h-32 rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
+                  {/* Checkered background pattern for transparency */}
+                  <div 
+                    className="absolute inset-0"
+                    style={{
+                      backgroundImage: `
+                        linear-gradient(45deg, #ccc 25%, transparent 25%),
+                        linear-gradient(-45deg, #ccc 25%, transparent 25%),
+                        linear-gradient(45deg, transparent 75%, #ccc 75%),
+                        linear-gradient(-45deg, transparent 75%, #ccc 75%)
+                      `,
+                      backgroundSize: '20px 20px',
+                      backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
+                    }}
+                  />
+                  {/* Color overlay with opacity */}
+                  <div 
+                    className="absolute inset-0"
+                    style={{ 
+                      backgroundColor: color,
+                      opacity: opacity / 100
+                    }}
+                  />
+                </div>
               </div>
 
               <div>
