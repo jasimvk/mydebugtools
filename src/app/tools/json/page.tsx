@@ -41,7 +41,7 @@ type JsonValue = any;
   };
 
 export default function JSONTools() {
-  const [jsonInput, setJsonInput] = useState<string>('{\n  "success": true,\n  "message": "Your request has been processed successfully.",\n  "statusCode": 200,\n  "respData": [\n    {\n      "JPL_SEQ_NO": 1,\n      "JPL_DESC": "Building Insurance",\n      "JPL_CURR_CODE": "AED",\n      "JPL_FC_VAL": 27.703,\n      "Benefits": null\n    },\n    {\n      "JPL_SEQ_NO": 2,\n      "JPL_DESC": "Plan A",\n      "JPL_CURR_CODE": "AED",\n      "JPL_FC_VAL": 339,\n      "Benefits": [\n        {\n          "name": "Home Contents",\n          "cvgbenefits": [\n            {\n              "CvgDesc": "Home Contents Cover (Other than Jewellery and Valuables) ",\n              "Cvgcur": "AED",\n              "CvgLmt": "50000"\n            },\n            {\n              "CvgDesc": "Jewellery and Valuables including Mobile Phones, Laptops, Jewellery, and watches",\n              "Cvgcur": "AED",\n              "CvgLmt": "20000"\n            }\n          ]\n        }\n      ]\n    }\n  ],\n  "errCode": null\n}');
+  const [jsonInput, setJsonInput] = useState<string>('{}');
   const [parsedJson, setParsedJson] = useState<JsonValue>({});
   const [treeCollapsed, setTreeCollapsed] = useState<number | boolean>(2);
   const [expandAll, setExpandAll] = useState<boolean>(false);
