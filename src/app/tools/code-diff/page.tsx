@@ -495,8 +495,8 @@ ${modifiedCode}
           {showExportPanel && (
             <div className={`mb-4 p-4 rounded-lg border transition-colors duration-300 ${
               isDarkMode 
-                ? 'bg-gray-800 border-gray-700' 
-                : 'bg-gray-50 border-gray-200'
+                ? 'border-gray-700' 
+                : 'border-gray-200'
             }`}>
               <div className="flex items-center gap-2 mb-3">
                 <ArrowDownTrayIcon className="h-5 w-5 text-blue-500" />

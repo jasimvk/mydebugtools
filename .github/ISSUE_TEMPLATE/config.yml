@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 GitHub Discussions
+    url: https://github.com/jasimvk/mydebugtools/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 📚 Documentation
+    url: https://github.com/jasimvk/mydebugtools#readme
+    about: Read the documentation to learn more about MyDebugTools
+  - name: 🗺️ Roadmap
+    url: https://mydebugtools.com/roadmap
+    about: Check out our roadmap to see what's coming next

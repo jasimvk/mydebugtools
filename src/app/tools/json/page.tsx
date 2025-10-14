@@ -14,7 +14,7 @@ const ReactJson = dynamic(() => import('react-json-view'), { ssr: false });
 type JsonValue = any;
 
 export default function JSONTools() {
-  const [jsonInput, setJsonInput] = useState<string>('{}');
+  const [jsonInput, setJsonInput] = useState<string>('{\n  "name": "MyDebugTools",\n  "message": "Paste your JSON here or click Sample"\n}');
   const [parsedJson, setParsedJson] = useState<JsonValue>({});
   const [treeCollapsed, setTreeCollapsed] = useState<number | boolean>(2);
   const [searchTerm, setSearchTerm] = useState('');
@@ -57,7 +57,14 @@ export default function JSONTools() {
   // On initial load parse the default JSON input
   useEffect(() => {
     parseJsonInput();
-  }, []);
+  }, [parseJsonInput]);
+
+  // Auto-parse when switching to tree tab
+  useEffect(() => {
+    if (activeTab === 'tree') {
+      parseJsonInput();
+    }
+  }, [activeTab, parseJsonInput]);
 
   // Copy text to clipboard
   const handleCopy = (text: string) => {
@@ -184,112 +191,75 @@ export default function JSONTools() {
   // Highlight matching keys and values in react-json-view by overriding style
   // react-json-view does not support custom highlight natively, so we rely on filteredJson to reduce displayed nodes.
 
+  // Sample JSON for demo
+  const handleSample = () => {
+    const sample = {
+      name: "MyDebugTools JSON Example",
+      version: "2.0.0",
+      features: { formatting: true, validation: true, minification: true },
+      users: [
+        { id: 1, name: "John Developer", role: "Frontend Developer", active: true, skills: ["React", "TypeScript", "JSON"] },
+        { id: 2, name: "Sarah Designer", role: "UI/UX Designer", active: true, skills: ["Figma", "CSS", "Design Systems"] }
+      ],
+      metadata: { created: "2024-01-01T00:00:00Z", lastModified: new Date().toISOString(), environment: "production" }
+    };
+    setJsonInput(JSON.stringify(sample, null, 2));
+    setActiveTab('text');
+    setTimeout(() => parseJsonInput(), 0);
+  };
+
+  // Reset all
+  const handleReset = () => {
+    setJsonInput('{}');
+    setParsedJson({});
+    setError('');
+    setSearchTerm('');
+    setActiveTab('tree');
+    setTreeCollapsed(2);
+  };
+
+  // Handle paste in tree view area
+  const handlePasteInTree = async (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text');
+    if (text) {
+      setJsonInput(text);
+      setTimeout(() => {
+        parseJsonInput();
+      }, 0);
+    }
+  };
+
+  // Handle paste in text editor wrapper
+  const handlePasteInText = async (e: React.ClipboardEvent) => {
+    const text = e.clipboardData.getData('text');
+    if (text) {
+      setJsonInput(text);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col p-4 md:p-8">
       <h1 className="text-3xl font-bold mb-6 text-center md:text-left">JSON Viewer & Editor</h1>
+      
+      {/* Help Banner */}
+ 
 
-      {/* Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mb-4 gap-2">
-        <button
-          onClick={parseJsonInput}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition"
-          title="Parse JSON"
-          aria-label="Parse JSON"
-        >
-          Parse
-        </button>
-
-        <button
-          onClick={toggleExpandCollapse}
-          className="flex items-center gap-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-semibold transition"
-          title={treeCollapsed === false || treeCollapsed === 0 ? 'Collapse All' : 'Expand All'}
-          aria-label="Expand or Collapse All"
-        >
-          {treeCollapsed === false || treeCollapsed === 0 ? (
-            <>
-              Collapse All <ChevronUpIcon className="w-4 h-4" />
-            </>
-          ) : (
-            <>
-              Expand All <ChevronDownIcon className="w-4 h-4" />
-            </>
-          )}
-        </button>
-
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded font-semibold transition"
-          title="Load JSON from File"
-          aria-label="Load JSON from File"
-        >
-          <FolderOpenIcon className="w-5 h-5" />
-          Load File
-        </button>
-        <input
-          type="file"
-          ref={fileInputRef}
-          style={{ display: 'none' }}
-          accept=".json,.txt"
-          onChange={handleFileLoad}
-          aria-hidden="true"
-          tabIndex={-1}
-        />
-
+      {/* Sticky Toolbar */}
+      <div className="sticky top-0 z-10 bg-gray-50 pb-2 mb-4 shadow-sm flex flex-col md:flex-row md:items-center md:space-x-4 gap-2">
+        <button onClick={parseJsonInput} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold transition" title="Parse JSON and update tree" aria-label="Parse JSON">Parse</button>
+        <button onClick={toggleExpandCollapse} className="flex items-center gap-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded font-semibold transition" title={treeCollapsed === false || treeCollapsed === 0 ? 'Collapse All' : 'Expand All'} aria-label="Expand or Collapse All">{treeCollapsed === false || treeCollapsed === 0 ? (<><span>Collapse All</span> <ChevronUpIcon className="w-4 h-4" /></>) : (<><span>Expand All</span> <ChevronDownIcon className="w-4 h-4" /></>)}</button>
+        <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded font-semibold transition" title="Load JSON from file" aria-label="Load JSON from File"><FolderOpenIcon className="w-5 h-5" />Load File</button>
+        <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".json,.txt" onChange={handleFileLoad} aria-hidden="true" tabIndex={-1} />
+        <button onClick={handleSample} className="flex items-center gap-2 px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded font-semibold transition" title="Load sample JSON" aria-label="Load sample JSON">Sample</button>
+        <button onClick={handleReset} className="flex items-center gap-2 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded font-semibold transition" title="Reset all" aria-label="Reset">Reset</button>
         <div className="flex items-center gap-2 flex-grow max-w-xs">
-          <input
-            ref={urlInputRef}
-            type="url"
-            placeholder="Load JSON from URL"
-            className="flex-grow px-3 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            aria-label="Load JSON from URL"
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleLoadUrl();
-              }
-            }}
-            disabled={loadingUrl}
-          />
-          <button
-            onClick={handleLoadUrl}
-            className="flex items-center gap-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold transition"
-            disabled={loadingUrl}
-            aria-label="Load JSON from URL button"
-            title="Load JSON from URL"
-          >
-            <LinkIcon className="w-5 h-5" />
-            {loadingUrl ? 'Loading...' : 'Load'}
-          </button>
+          <input ref={urlInputRef} type="url" placeholder="Load JSON from URL" className="flex-grow px-3 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Load JSON from URL" onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleLoadUrl(); } }} disabled={loadingUrl} />
+          <button onClick={handleLoadUrl} className="flex items-center gap-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded font-semibold transition" disabled={loadingUrl} aria-label="Load JSON from URL button" title="Load JSON from URL"><LinkIcon className="w-5 h-5" />{loadingUrl ? 'Loading...' : 'Load'}</button>
         </div>
-
-        <button
-          onClick={() => handleCopy(jsonInput)}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-semibold transition"
-          title="Copy JSON to Clipboard"
-          aria-label="Copy JSON to Clipboard"
-        >
-          <ClipboardIcon className="w-5 h-5" />
-          {copied ? 'Copied' : 'Copy'}
-        </button>
-
-        <button
-          onClick={handleDownload}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-semibold transition"
-          title="Download JSON"
-          aria-label="Download JSON"
-        >
-          <ArrowDownTrayIcon className="w-5 h-5" />
-          Download
-        </button>
-
-        <button
-          onClick={togglePretty}
-          className="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded font-semibold transition whitespace-nowrap"
-          title="Toggle Pretty/Minify"
-          aria-label="Toggle Pretty or Minify JSON"
-        >
-          {isPretty ? 'Minify' : 'Pretty'}
-        </button>
+        <button onClick={() => handleCopy(jsonInput)} className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-semibold transition" title="Copy JSON to clipboard" aria-label="Copy JSON to Clipboard"><ClipboardIcon className="w-5 h-5" />{copied ? 'Copied' : 'Copy'}</button>
+        <button onClick={handleDownload} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-semibold transition" title="Download JSON" aria-label="Download JSON"><ArrowDownTrayIcon className="w-5 h-5" />Download</button>
+        <button onClick={togglePretty} className="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white rounded font-semibold transition whitespace-nowrap" title="Toggle pretty/minify" aria-label="Toggle Pretty or Minify JSON">{isPretty ? 'Minify' : 'Pretty'}</button>
       </div>
 
       {/* Search */}
@@ -318,7 +288,7 @@ export default function JSONTools() {
           id="tab-tree"
           aria-controls="tabpanel-tree"
         >
-          Tree
+          🌲 Tree View
         </button>
         <button
           onClick={() => setActiveTab('text')}
@@ -332,81 +302,85 @@ export default function JSONTools() {
           id="tab-text"
           aria-controls="tabpanel-text"
         >
-          Text
+          📝 Text Editor
         </button>
       </div>
 
-      {/* Content */}
-      <div
-        className="flex flex-col md:flex-row gap-4 flex-grow min-h-[400px]"
-        style={{ minHeight: 400 }}
-      >
-        {/* Left pane: JSON Input (Text Tab) or placeholder for Tree tab */}
-        <div className="flex flex-col flex-grow md:flex-[1_1_50%] border border-gray-300 rounded-lg overflow-hidden bg-white shadow">
+      {/* Single Content Area */}
+      <div className="flex flex-col flex-grow min-h-[600px]">
+        <div className="flex flex-col flex-grow border border-gray-300 rounded-lg overflow-hidden bg-white shadow">
           {activeTab === 'text' ? (
-            <AceEditor
-              mode="json"
-              theme="tomorrow"
-              name="json-text-editor"
-              value={jsonInput}
-              onChange={value => setJsonInput(value)}
-              width="100%"
-              height="100%"
-              fontSize={14}
-              showPrintMargin={false}
-              showGutter={true}
-              highlightActiveLine={true}
-              setOptions={{
-                showLineNumbers: true,
-                tabSize: 2,
-                useWorker: false,
-                wrap: true,
-              }}
-              aria-label="JSON text editor"
-            />
-          ) : (
-            <div className="p-4 text-gray-500 select-none flex items-center justify-center h-full">
-              Switch to Text tab to edit raw JSON
-            </div>
-          )}
-        </div>
-
-        {/* Right pane: JSON Viewer (Tree Tab) or placeholder for Text tab */}
-        <div className="flex flex-col flex-grow md:flex-[1_1_50%] border border-gray-300 rounded-lg overflow-auto bg-white shadow p-4 max-h-[80vh]">
-          {activeTab === 'tree' ? (
-            error ? (
-              <div className="text-red-500 font-semibold whitespace-pre-wrap">{error}</div>
-            ) : (
-              <ReactJson
-                src={filteredJson(parsedJson, searchTerm) || {}}
-                theme="rjv-default"
-                collapsed={treeCollapsed}
-                enableClipboard={false}
-                onEdit={handleTreeEdit}
-                onAdd={handleTreeEdit}
-                onDelete={handleTreeEdit}
-                style={{ fontSize: '1em', fontFamily: 'monospace', overflowWrap: 'break-word' }}
-                name={null}
-                quotesOnKeys={false}
-                collapseStringsAfterLength={50}
-                displayObjectSize={false}
-                displayDataTypes={false}
+            <div 
+              className="flex flex-col flex-grow"
+              onPaste={handlePasteInText}
+            >
+              <AceEditor
+                mode="json"
+                theme="tomorrow"
+                name="json-text-editor"
+                value={jsonInput}
+                onChange={value => setJsonInput(value)}
+                width="100%"
+                height="100%"
+                fontSize={14}
+                showPrintMargin={false}
+                showGutter={true}
+                highlightActiveLine={true}
+                setOptions={{
+                  showLineNumbers: true,
+                  tabSize: 2,
+                  useWorker: false,
+                  wrap: true,
+                  enableBasicAutocompletion: false,
+                  enableLiveAutocompletion: false,
+                  enableSnippets: false,
+                }}
+                editorProps={{ $blockScrolling: true }}
+                aria-label="JSON text editor"
+                commands={[
+                  {
+                    name: 'paste',
+                    bindKey: { win: 'Ctrl-V', mac: 'Cmd-V' },
+                    exec: (editor: any) => {
+                      // Ace will handle paste natively
+                    }
+                  }
+                ]}
               />
-            )
+            </div>
           ) : (
-            <div className="p-4 text-gray-500 select-none flex items-center justify-center h-full">
-              Switch to Tree tab to view and edit JSON tree
+            <div 
+              className="flex flex-col flex-grow overflow-auto p-4"
+              onPaste={handlePasteInTree}
+              tabIndex={0}
+            >
+              {error ? (
+                <div className="text-red-500 font-semibold whitespace-pre-wrap p-4 bg-red-50 rounded border border-red-200">
+                  <p className="font-bold mb-2">❌ JSON Parse Error:</p>
+                  <p className="text-sm">{error}</p>
+                  <p className="text-xs mt-2 text-gray-600">💡 Try switching to Text tab to fix the JSON syntax</p>
+                </div>
+              ) : (
+                <ReactJson
+                  src={filteredJson(parsedJson, searchTerm) || {}}
+                  theme="rjv-default"
+                  collapsed={treeCollapsed}
+                  enableClipboard={true}
+                  onEdit={handleTreeEdit}
+                  onAdd={handleTreeEdit}
+                  onDelete={handleTreeEdit}
+                  style={{ fontSize: '1.1em', fontFamily: 'monospace', overflowWrap: 'break-word', lineHeight: '1.6' }}
+                  name={null}
+                  quotesOnKeys={false}
+                  collapseStringsAfterLength={50}
+                  displayObjectSize={true}
+                  displayDataTypes={false}
+                />
+              )}
             </div>
           )}
         </div>
       </div>
-
-      {/* Error message below */}
-      {error && (
-        <div className="mt-4 text-red-600 font-semibold whitespace-pre-wrap" role="alert">
-          {error}
-        </div>
-      )}
     </div>
   );
 }

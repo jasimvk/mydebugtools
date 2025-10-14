@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - Improved layout for advanced color information view
   - Better responsiveness for mobile devices
   - Added empty state for recent colors
+  - **Added opacity/alpha selector with slider (0-100%)**
+  - **Added RGBA and HSLA color format support**
+  - **Added checkered background pattern to preview transparency**
+  - **Enhanced color preview to show real-time opacity changes**
 - **Icon Finder Tool**:
   - Optimized memory usage with on-demand loading of icon libraries
   - Changed default to load only one library at a time
