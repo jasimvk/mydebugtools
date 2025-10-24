@@ -424,7 +424,7 @@ ${modifiedCode}
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-4">
+      <div className="mx-auto p-4">
         {/* Notification */}
         {notification && (
           <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 flex items-center gap-2 ${

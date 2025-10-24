@@ -465,7 +465,7 @@ export default function HTMLValidatorPage() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-100">
       {/* Enhanced Header */}
       <div className="bg-gradient-to-r from-orange-600 to-red-700 text-white">
-        <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="mx-auto px-4 py-8">
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl font-bold mb-3 flex items-center justify-center">
               <GlobeAltIcon className="h-12 w-12 mr-3 text-orange-200" />
@@ -512,7 +512,7 @@ export default function HTMLValidatorPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-4">
+      <div className="mx-auto p-4">
         {/* Notification */}
         {notification && (
           <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 flex items-center gap-2 ${
