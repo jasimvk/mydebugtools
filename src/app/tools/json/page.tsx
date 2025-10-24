@@ -41,7 +41,34 @@ type JsonValue = any;
   };
 
 export default function JSONTools() {
-  const [jsonInput, setJsonInput] = useState<string>('{}');
+  const [jsonInput, setJsonInput] = useState<string>(`{
+  "name": "MyDebugTools",
+  "version": "1.0.0",
+  "description": "JSON Viewer Tool",
+  "features": {
+    "formatting": true,
+    "validation": true,
+    "search": true
+  },
+  "users": [
+    {
+      "id": 1,
+      "name": "John Developer",
+      "role": "Frontend Developer",
+      "active": true
+    },
+    {
+      "id": 2,
+      "name": "Sarah Designer",
+      "role": "UI/UX Designer",
+      "active": true
+    }
+  ],
+  "metadata": {
+    "created": "2024-01-01",
+    "environment": "production"
+  }
+}`);
   const [parsedJson, setParsedJson] = useState<JsonValue>({});
   const [treeCollapsed, setTreeCollapsed] = useState<number | boolean>(2);
   const [expandAll, setExpandAll] = useState<boolean>(false);
@@ -623,38 +650,53 @@ export default function JSONTools() {
 
   return (
     <div className="bg-[#fafafa] text-gray-900 flex flex-col">
-      <style jsx global>{`
-        /* Replace arrows with +/- symbols */
-        .rst__tree .rst__lineBlock::before,
-        .rst__tree .rst__lineBlock::after,
-        li[role="treeitem"]::before,
-        li[role="treeitem"] > div::before {
-          display: none !important;
+      <style dangerouslySetInnerHTML={{__html: `
+        /* Target and hide the red arrow by color */
+        ul[role="tree"] span[style*="color:#dc3545"],
+        ul[role="tree"] span[style*="color: #dc3545"],
+        ul[role="tree"] span[style*="color:rgb(220, 53, 69)"],
+        ul[role="tree"] span[style*="color: rgb(220, 53, 69)"] {
+          visibility: hidden !important;
+          width: 0 !important;
+          height: 0 !important;
+          font-size: 0 !important;
+          position: absolute !important;
         }
         
-        /* Style for collapsed/expanded indicators */
-        li[role="treeitem"] > div > span:first-child::before {
+        /* Hide first span in label */
+        ul[role="tree"] li > label > span:first-child {
+          color: transparent !important;
+          font-size: 0 !important;
+          width: 16px !important;
+          height: 16px !important;
+          overflow: hidden !important;
+          position: relative !important;
+        }
+        
+        /* Add our custom +/- */
+        ul[role="tree"] li > label > span:first-child::after {
           content: '+';
-          display: inline-block;
+          position: absolute;
+          top: 0;
+          left: 0;
+          font-size: 14px;
+          color: #666;
+          font-weight: bold;
           width: 16px;
           height: 16px;
-          line-height: 14px;
           text-align: center;
-          margin-right: 4px;
-          font-weight: bold;
-          font-size: 16px;
-          color: #666;
-          cursor: pointer;
+          line-height: 16px;
+          display: block;
         }
         
-        li[role="treeitem"][aria-expanded="true"] > div > span:first-child::before {
+        ul[role="tree"] li[aria-expanded="true"] > label > span:first-child::after {
           content: '−';
         }
         
-        li[role="treeitem"][aria-expanded="false"] > div > span:first-child::before {
+        ul[role="tree"] li[aria-expanded="false"] > label > span:first-child::after {
           content: '+';
         }
-      `}</style>
+      `}} />
       <h1 className="text-2xl font-semibold mb-6 text-gray-800 px-6 pt-6">JSON Viewer</h1>
       
       
@@ -801,6 +843,31 @@ export default function JSONTools() {
                 )}
               </div>
               
+              {/* Expand/Collapse All Buttons */}
+              <div className="flex gap-1">
+                <button
+                  onClick={() => {
+                    setExpandAll(true);
+                    setTreeCollapsed(false);
+                  }}
+                  className="px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded transition-colors flex items-center gap-1"
+                  title="Expand All"
+                >
+                  <span className="text-sm">+</span>
+                  Expand All
+                </button>
+                <button
+                  onClick={() => {
+                    setExpandAll(false);
+                    setTreeCollapsed(1);
+                  }}
+                  className="px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded transition-colors flex items-center gap-1"
+                  title="Collapse All"
+                >
+                  <span className="text-sm">−</span>
+                  Collapse All
+                </button>
+              </div>
             </div>
             
             {/* Search Results Count */}
@@ -836,8 +903,25 @@ export default function JSONTools() {
                 ) : (
                 <>
                   <JSONTree 
+                    key={`json-tree-${expandAll}-${treeCollapsed}`}
                     data={filteredJson(parsedJson, searchTerm) || {}} 
-                    theme={jsonTreeTheme}
+                    theme={{
+                      ...jsonTreeTheme,
+                      tree: {
+                        border: 0,
+                        padding: 0,
+                        marginTop: '0.5em',
+                        marginBottom: '0.5em',
+                        marginLeft: '0.125em',
+                        marginRight: 0,
+                        listStyle: 'none',
+                        MozUserSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        backgroundColor: jsonTreeTheme.base00,
+                      },
+                      arrowSign: { color: '#666' },
+                      arrowSignCollapsed: { color: '#666' },
+                    }}
                     invertTheme={false}
                     hideRoot={false}
                     shouldExpandNodeInitially={(keyPath, data, level) => {
@@ -856,6 +940,14 @@ export default function JSONTools() {
                       return false;
                     }}
                     getItemString={(type, data, itemType, itemString) => {
+                      if (type === 'Object') {
+                        const keys = Object.keys(data as object);
+                        return <span style={{ color: '#666' }}>{`{ } ${keys.length} ${keys.length === 1 ? 'key' : 'keys'}`}</span>;
+                      }
+                      if (type === 'Array') {
+                        const length = (data as any[]).length;
+                        return <span style={{ color: '#666' }}>{`[ ] ${length} ${length === 1 ? 'item' : 'items'}`}</span>;
+                      }
                       return <span>{itemString}</span>;
                     }}
                     labelRenderer={(keyPath, nodeType, expanded, expandable) => {
