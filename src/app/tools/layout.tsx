@@ -198,11 +198,10 @@ export default function ToolsLayout({
               <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-gray-600">
                 <Link href="/privacy-policy" className="hover:text-gray-900">Privacy</Link>
                 <Link href="/terms-of-service" className="hover:text-gray-900">Terms</Link>
-                <Link href="/cookie-policy" className="hover:text-gray-900">Cookies</Link>
                 <Link href="/contact" className="hover:text-gray-900">Contact</Link>
               </div>
               <div className="text-sm text-gray-600">
-                Made by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-gray-900 hover:text-[#FF6C37] font-medium">Jasim</a>
+                Developed & Maintained by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-gray-900 hover:text-[#FF6C37] font-medium">Jasim</a>
               </div>
             </div>
           </div>

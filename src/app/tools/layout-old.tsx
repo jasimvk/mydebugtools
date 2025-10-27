@@ -457,7 +457,7 @@ export default function ToolsLayout({
             <Link href="/contact" className="hover:text-[#FF6C37] transition-colors">Contact</Link>
           </div>
           <div className="text-sm text-gray-600 mt-2">
-            Made by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-[#FF6C37] hover:underline font-medium">Jasim</a>
+            Developed & Maintained by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-[#FF6C37] hover:underline font-medium">Jasim</a>
           </div>
         </footer>
       </main>

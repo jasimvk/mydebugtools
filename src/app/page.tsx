@@ -159,6 +159,7 @@ export default function Home() {
               MIT License
             </a>
             <Link href="/privacy-policy" className="hover:text-[#FF6C37] transition-colors">Privacy</Link>
+            <Link href="/terms-of-service" className="hover:text-[#FF6C37] transition-colors">Terms</Link>
             <Link href="/contact" className="hover:text-[#FF6C37] transition-colors">Contact</Link>
           </div>
           <div className="text-xs text-gray-500 text-center">
