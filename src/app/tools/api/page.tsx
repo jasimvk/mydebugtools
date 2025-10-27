@@ -257,10 +257,12 @@ export default function APITester() {
   const [detectedTokenPath, setDetectedTokenPath] = useState<string>('');
   const [showTokenDetection, setShowTokenDetection] = useState(false);
   const [showBearerSetupWizard, setShowBearerSetupWizard] = useState(false);
+  const [showTokenSetupConfirm, setShowTokenSetupConfirm] = useState(false);
+  const [clickedTokenValue, setClickedTokenValue] = useState<string>('');
+  const [clickedTokenPath, setClickedTokenPath] = useState<string>('');
   const [bearerSetupStep, setBearerSetupStep] = useState(1);
   const [wizardLoginUrl, setWizardLoginUrl] = useState('');
-  const [wizardUsername, setWizardUsername] = useState('');
-  const [wizardPassword, setWizardPassword] = useState('');
+  const [wizardRequestPayload, setWizardRequestPayload] = useState('{\n  "username": "",\n  "password": ""\n}');
   const [wizardTokenPath, setWizardTokenPath] = useState('access_token');
   
   const [showAuthConfig, setShowAuthConfig] = useState(false);
@@ -708,11 +710,20 @@ export default function APITester() {
       }
       setBearerSetupStep(2);
     } else if (bearerSetupStep === 2) {
-      // Validate credentials
-      if (!wizardUsername.trim() || !wizardPassword.trim()) {
-        alert('Please enter username and password');
+      // Validate payload
+      if (!wizardRequestPayload.trim()) {
+        alert('Please enter a request payload');
         return;
       }
+      
+      // Validate JSON
+      try {
+        JSON.parse(wizardRequestPayload);
+      } catch (error) {
+        alert('Invalid JSON payload. Please check your syntax.');
+        return;
+      }
+      
       setBearerSetupStep(3);
     } else if (bearerSetupStep === 3) {
       // Test login and extract token
@@ -720,11 +731,7 @@ export default function APITester() {
         const response = await fetch(wizardLoginUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            username: wizardUsername,
-            password: wizardPassword,
-            email: wizardUsername, // Some APIs use email
-          })
+          body: wizardRequestPayload
         });
 
         if (!response.ok) {
@@ -746,13 +753,19 @@ export default function APITester() {
         }
 
         if (extractedToken) {
+          // Parse the payload to extract credentials if present
+          let parsedPayload: any = {};
+          try {
+            parsedPayload = JSON.parse(wizardRequestPayload);
+          } catch {}
+
           // Configure auth with extracted token
           setAuthConfig({
             type: 'bearer',
             token: extractedToken,
             loginUrl: wizardLoginUrl,
-            loginUsername: wizardUsername,
-            loginPassword: wizardPassword,
+            loginUsername: parsedPayload.username || parsedPayload.email || '',
+            loginPassword: parsedPayload.password || '',
             tokenPath: wizardTokenPath,
             autoLogin: true,
             tokenExpiry: decodeJWT(extractedToken)?.exp
@@ -764,15 +777,87 @@ export default function APITester() {
           setShowBearerSetupWizard(false);
           setBearerSetupStep(1);
           setWizardLoginUrl('');
-          setWizardUsername('');
-          setWizardPassword('');
+          setWizardRequestPayload('{\n  "username": "",\n  "password": ""\n}');
           setWizardTokenPath('access_token');
         } else {
-          throw new Error(`Token not found at path: ${wizardTokenPath}`);
+          // Show the response structure to help debug
+          console.error('Token extraction failed. Response structure:', data);
+          throw new Error(
+            `Token not found at path: ${wizardTokenPath}\n\n` +
+            `Response structure: ${JSON.stringify(data, null, 2).substring(0, 200)}...\n\n` +
+            `Try using auto-detection or check the response structure in the console.`
+          );
         }
       } catch (error) {
-        alert(`Failed to setup bearer token: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        alert(`❌ Bearer Token Wizard Failed:\n\n${error instanceof Error ? error.message : 'Unknown error'}\n\nTip: Try clicking the token field directly in the response instead!`);
+        console.error('Wizard setup error:', error);
       }
+    }
+  };
+
+  // Handle clicking on token fields in response
+  const handleTokenClick = (tokenValue: string, tokenPath: string) => {
+    console.log('Token clicked:', { tokenPath, tokenValue: tokenValue.substring(0, 50) + '...' });
+    setClickedTokenValue(tokenValue);
+    setClickedTokenPath(tokenPath);
+    setShowTokenSetupConfirm(true);
+  };
+
+  // Confirm and setup bearer token from clicked field
+  const confirmTokenSetup = () => {
+    if (!clickedTokenValue) {
+      alert('❌ No token value found');
+      return;
+    }
+
+    try {
+      // Parse login payload from current request body if it exists
+      let loginUsername = '';
+      let loginPassword = '';
+      
+      try {
+        const payload = JSON.parse(currentTab.body || '{}');
+        loginUsername = payload.username || payload.email || '';
+        loginPassword = payload.password || '';
+      } catch {
+        // Ignore JSON parse errors, use empty credentials
+      }
+
+      // Configure auth with clicked token
+      const newAuthConfig = {
+        type: 'bearer' as const,
+        token: clickedTokenValue,
+        loginUrl: currentTab.url || '',
+        loginUsername,
+        loginPassword,
+        tokenPath: clickedTokenPath || 'access_token',
+        autoLogin: true,
+        tokenExpiry: decodeJWT(clickedTokenValue)?.exp
+      };
+
+      setAuthConfig(newAuthConfig);
+
+      // Update current tab with auth config
+      const updatedTabs = [...tabs];
+      updatedTabs[activeTabIndex] = {
+        ...currentTab,
+        authConfig: newAuthConfig
+      };
+      setTabs(updatedTabs);
+
+      // Show success and close dialog
+      alert(`✅ Bearer token configured successfully!\n\n` +
+            `Token Field: ${clickedTokenPath}\n` +
+            `Token Preview: ${clickedTokenValue.substring(0, 20)}...\n` +
+            `Auto-login URL: ${currentTab.url || 'Not set'}\n\n` +
+            `The current request will be used to refresh the token when it expires.`);
+      
+      setShowTokenSetupConfirm(false);
+      setClickedTokenValue('');
+      setClickedTokenPath('');
+    } catch (error) {
+      alert(`❌ Failed to configure bearer token: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Token setup error:', error);
     }
   };
 
@@ -1284,6 +1369,63 @@ print(response.json())`,
     return codeTemplates[language] || '';
   };
 
+  // Render JSON with clickable token fields
+  const renderClickableJSON = (data: any, path: string = '') => {
+    if (typeof data !== 'object' || data === null) {
+      return <span className="text-gray-700">{JSON.stringify(data)}</span>;
+    }
+
+    const tokenFields = ['token', 'access_token', 'accessToken', 'auth_token', 'authToken', 
+                        'jwt', 'bearer', 'id_token', 'idToken', 'refresh_token', 'refreshToken'];
+
+    if (Array.isArray(data)) {
+      return (
+        <div className="ml-4">
+          {'['}
+          {data.map((item, index) => (
+            <div key={index} className="ml-4">
+              {renderClickableJSON(item, `${path}[${index}]`)}{index < data.length - 1 ? ',' : ''}
+            </div>
+          ))}
+          {']'}
+        </div>
+      );
+    }
+
+    return (
+      <div className="ml-4">
+        {'{'}
+        {Object.entries(data).map(([key, value], index, arr) => {
+          const currentPath = path ? `${path}.${key}` : key;
+          const isTokenField = tokenFields.includes(key.toLowerCase());
+          const isStringValue = typeof value === 'string';
+          
+          return (
+            <div key={key} className="ml-4 flex items-start">
+              <span className="text-[#FF6C37] font-medium">"{key}"</span>
+              <span className="text-gray-500 mx-2">:</span>
+              {isTokenField && isStringValue ? (
+                <button
+                  onClick={() => handleTokenClick(value as string, currentPath)}
+                  className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded transition-all text-left break-all"
+                  title="Click to use this as bearer token"
+                >
+                  "{value}"
+                </button>
+              ) : typeof value === 'object' && value !== null ? (
+                renderClickableJSON(value, currentPath)
+              ) : (
+                <span className="text-gray-700">{JSON.stringify(value)}</span>
+              )}
+              {index < arr.length - 1 ? ',' : ''}
+            </div>
+          );
+        })}
+        {'}'}
+      </div>
+    );
+  };
+
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">
       {/* Left Sidebar - Collections (Postman-style) */}
@@ -1728,30 +1870,23 @@ print(response.json())`,
               </div>
             )}
 
-            {/* Step 2: Credentials */}
+            {/* Step 2: Login Payload */}
             {bearerSetupStep === 2 && (
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Step 2: Enter Login Credentials
+                    Step 2: Enter Login Payload (JSON)
                   </label>
-                  <input
-                    type="text"
-                    value={wizardUsername}
-                    onChange={(e) => setWizardUsername(e.target.value)}
-                    placeholder="Username or Email"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF6C37] focus:border-[#FF6C37] mb-3"
+                  <textarea
+                    value={wizardRequestPayload}
+                    onChange={(e) => setWizardRequestPayload(e.target.value)}
+                    placeholder='{"username": "your_username", "password": "your_password"}'
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF6C37] focus:border-[#FF6C37] font-mono text-sm"
+                    rows={8}
                     autoFocus
                   />
-                  <input
-                    type="password"
-                    value={wizardPassword}
-                    onChange={(e) => setWizardPassword(e.target.value)}
-                    placeholder="Password"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF6C37] focus:border-[#FF6C37]"
-                  />
                   <p className="text-sm text-gray-500 mt-2">
-                    These credentials will be saved for auto-login when token expires
+                    This JSON payload will be sent in the login request body. It will be saved for auto-login when token expires.
                   </p>
                 </div>
               </div>
@@ -1803,6 +1938,79 @@ print(response.json())`,
               >
                 {bearerSetupStep === 3 ? 'Test & Configure' : 'Next'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Token Setup Confirmation Dialog */}
+      {showTokenSetupConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">🔐 Setup Bearer Token</h3>
+              <button
+                onClick={() => {
+                  setShowTokenSetupConfirm(false);
+                  setClickedTokenValue('');
+                  setClickedTokenPath('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Token Field
+                </label>
+                <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg font-mono text-sm text-blue-600">
+                  {clickedTokenPath}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Token Value
+                </label>
+                <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs text-gray-700 break-all">
+                  {clickedTokenValue && clickedTokenValue.length > 100 
+                    ? `${clickedTokenValue.substring(0, 50)}...${clickedTokenValue.substring(clickedTokenValue.length - 50)}`
+                    : clickedTokenValue}
+                </div>
+              </div>
+
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800 mb-2">
+                  <strong>Auto-Login Configuration:</strong>
+                </p>
+                <ul className="text-xs text-blue-700 space-y-1">
+                  <li>✓ Login URL: <code className="bg-blue-100 px-1 py-0.5 rounded">{currentTab.url || 'Current URL'}</code></li>
+                  <li>✓ Login Payload: Current request body will be saved</li>
+                  <li>✓ Token will auto-refresh when expired</li>
+                </ul>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowTokenSetupConfirm(false);
+                    setClickedTokenValue('');
+                    setClickedTokenPath('');
+                  }}
+                  className="flex-1 px-4 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmTokenSetup}
+                  className="flex-1 px-4 py-3 text-sm font-bold bg-[#FF6C37] text-white rounded-lg hover:bg-[#ff5722] transition-colors shadow-sm hover:shadow-md"
+                >
+                  Configure Bearer Auth
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1994,17 +2202,21 @@ print(response.json())`,
               )}
             </button>
             <button
-              onClick={() => setActiveTab('body')}
+              onClick={() => method !== 'GET' && setActiveTab('body')}
               className={`px-4 py-3 text-sm font-medium transition-colors relative ${
                 activeTab === 'body' && method !== 'GET'
                   ? 'text-[#FF6C37]'
                   : method === 'GET'
-                  ? 'text-gray-400 cursor-not-allowed'
+                  ? 'text-gray-400 cursor-not-allowed opacity-60'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
               disabled={method === 'GET'}
+              title={method === 'GET' ? 'GET requests cannot have a request body' : 'Request body content'}
             >
               Body
+              {method === 'GET' && (
+                <span className="ml-1 text-xs">🚫</span>
+              )}
               {activeTab === 'body' && method !== 'GET' && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF6C37]"></div>
               )}
@@ -2190,6 +2402,33 @@ print(response.json())`,
           )}
 
           {/* Body Tab */}
+          {activeTab === 'body' && method === 'GET' && (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+              <svg className="h-16 w-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+              <p className="text-lg font-medium mb-2">Body Not Available for GET Requests</p>
+              <p className="text-sm text-center max-w-md">
+                GET requests cannot have a request body according to HTTP standards. 
+                Use POST, PUT, PATCH, or DELETE to send data in the request body.
+              </p>
+              <div className="mt-6 flex gap-2">
+                <button
+                  onClick={() => setMethod('POST')}
+                  className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                >
+                  Switch to POST
+                </button>
+                <button
+                  onClick={() => setActiveTab('params')}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                >
+                  Use Query Params Instead
+                </button>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'body' && method !== 'GET' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -2450,28 +2689,21 @@ print(response.json())`,
                       </button>
                     </div>
                   </div>
-                  {isEditorMounted && (
-                    <div className="border border-gray-200 rounded-md overflow-hidden">
-                      <Editor
-                        height="450px"
-                        defaultLanguage="json"
-                        value={response ? formatJSON(response.data) : ''}
-                        theme="light"
-                        options={{
-                          readOnly: true,
-                          minimap: { enabled: false },
-                          fontSize: 13,
-                          lineNumbers: 'on',
-                          folding: true,
-                          wordWrap: 'on',
-                          automaticLayout: true,
-                          scrollBeyondLastLine: false,
-                          renderWhitespace: 'selection',
-                          tabSize: 2
-                        }}
-                      />
+                  
+                  {/* Clickable JSON View */}
+                  <div className="border border-gray-200 rounded-md p-4 bg-gray-50 overflow-auto max-h-[450px]">
+                    <div className="text-xs mb-3 text-gray-500 flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Click token fields to setup bearer auth
+                      </span>
                     </div>
-                  )}
+                    <div className="font-mono text-sm">
+                      {response && renderClickableJSON(response.data)}
+                    </div>
+                  </div>
                 </div>
               )}
 
