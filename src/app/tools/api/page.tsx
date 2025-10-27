@@ -213,7 +213,17 @@ export default function APITester() {
   
   const authConfig = currentTab?.authConfig || { type: 'none' };
   const setAuthConfig = (newAuthConfig: AuthConfig) => {
-    updateCurrentTab({ authConfig: newAuthConfig, hasUnsavedChanges: true });
+    // Automatically apply auth config to all tabs
+    setTabs(prevTabs => {
+      return prevTabs.map((tab, index) => {
+        // Update all tabs with the new auth config
+        return {
+          ...tab,
+          authConfig: newAuthConfig,
+          hasUnsavedChanges: index === activeTabIndex ? true : tab.hasUnsavedChanges
+        };
+      });
+    });
   };
   
   // Helper function to update current tab
@@ -278,6 +288,7 @@ export default function APITester() {
   const [showSettings, setShowSettings] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
   const [showTesting, setShowTesting] = useState(false);
+  const [tokenCountdownTrigger, setTokenCountdownTrigger] = useState(0); // Force re-render for countdown
   const [showMonitoring, setShowMonitoring] = useState(false);
   const [showCollaboration, setShowCollaboration] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
@@ -370,6 +381,13 @@ export default function APITester() {
 
   // Tab management functions
   const createNewTab = () => {
+    // Inherit auth config from current tab if it's not 'none'
+    const inheritedAuthConfig = currentTab?.authConfig && currentTab.authConfig.type !== 'none' 
+      ? currentTab.authConfig 
+      : { type: 'none' as const };
+    
+    const hasInheritedAuth = inheritedAuthConfig.type !== 'none';
+    
     const newTab: RequestTab = {
       id: Date.now().toString(),
       name: `API ${tabs.length + 1}`,
@@ -378,13 +396,29 @@ export default function APITester() {
       headers: [{ key: '', value: '', enabled: true }],
       body: '',
       contentType: 'application/json',
-      authConfig: { type: 'none' },
+      authConfig: inheritedAuthConfig,
       response: null,
       responseMetrics: null,
       hasUnsavedChanges: false
     };
     setTabs([...tabs, newTab]);
     setActiveTabIndex(tabs.length);
+    
+    // Show notification if auth was inherited
+    if (hasInheritedAuth) {
+      setTimeout(() => {
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2';
+        notification.innerHTML = `
+          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span>Auth config inherited from previous tab</span>
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => document.body.removeChild(notification), 3000);
+      }, 100);
+    }
   };
 
   const closeTab = (index: number) => {
@@ -738,7 +772,14 @@ export default function APITester() {
           throw new Error(`Login failed: ${response.statusText}`);
         }
 
-        const data = await response.json();
+        // Parse response safely
+        const responseText = await response.text();
+        let data: any;
+        try {
+          data = responseText ? JSON.parse(responseText) : {};
+        } catch (error) {
+          throw new Error(`Invalid JSON response from login endpoint: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
         
         // Try to extract token using the specified path
         let extractedToken = getNestedProperty(data, wizardTokenPath);
@@ -823,7 +864,7 @@ export default function APITester() {
         // Ignore JSON parse errors, use empty credentials
       }
 
-      // Configure auth with clicked token
+      // Configure auth with clicked token - this will automatically apply to all tabs
       const newAuthConfig = {
         type: 'bearer' as const,
         token: clickedTokenValue,
@@ -835,22 +876,15 @@ export default function APITester() {
         tokenExpiry: decodeJWT(clickedTokenValue)?.exp
       };
 
+      // setAuthConfig now automatically applies to all tabs
       setAuthConfig(newAuthConfig);
 
-      // Update current tab with auth config
-      const updatedTabs = [...tabs];
-      updatedTabs[activeTabIndex] = {
-        ...currentTab,
-        authConfig: newAuthConfig
-      };
-      setTabs(updatedTabs);
-
       // Show success and close dialog
-      alert(`✅ Bearer token configured successfully!\n\n` +
+      alert(`✅ Bearer token configured for all tabs!\n\n` +
             `Token Field: ${clickedTokenPath}\n` +
             `Token Preview: ${clickedTokenValue.substring(0, 20)}...\n` +
             `Auto-login URL: ${currentTab.url || 'Not set'}\n\n` +
-            `The current request will be used to refresh the token when it expires.`);
+            `Applied to ${tabs.length} tab${tabs.length > 1 ? 's' : ''} automatically.`);
       
       setShowTokenSetupConfirm(false);
       setClickedTokenValue('');
@@ -900,6 +934,17 @@ export default function APITester() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeTabIndex, tabs.length]);
 
+  // Token expiry countdown updater - updates every second
+  useEffect(() => {
+    if (authConfig.type === 'bearer' && authConfig.token && authConfig.tokenExpiry) {
+      const interval = setInterval(() => {
+        setTokenCountdownTrigger(prev => prev + 1); // Force re-render to update countdown
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [authConfig.type, authConfig.token, authConfig.tokenExpiry]);
+
   // JWT Token utilities
   const decodeJWT = (token: string): { exp?: number; iat?: number } | null => {
     try {
@@ -941,7 +986,15 @@ export default function APITester() {
         throw new Error('Failed to refresh token');
       }
 
-      const data = await response.json();
+      // Parse response safely
+      const responseText = await response.text();
+      let data: any;
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (error) {
+        throw new Error(`Invalid JSON response from refresh endpoint: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+      
       const newToken = data.access_token || data.token;
       
       if (newToken) {
@@ -991,7 +1044,14 @@ export default function APITester() {
         throw new Error(`Login failed with status: ${response.status}`);
       }
 
-      const data = await response.json();
+      // Parse response safely
+      const responseText = await response.text();
+      let data: any;
+      try {
+        data = responseText ? JSON.parse(responseText) : {};
+      } catch (error) {
+        throw new Error(`Invalid JSON response from login endpoint: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
       
       // Extract token using the configured path or try common paths
       const tokenPath = authConfig.tokenPath || 'access_token';
@@ -1202,7 +1262,23 @@ export default function APITester() {
         body: method !== 'GET' ? body : undefined,
       });
 
-      let data = await response.json();
+      // Parse response data safely
+      let data: any;
+      const responseContentType = response.headers.get('content-type');
+      const responseText = await response.text();
+      
+      try {
+        // Try to parse as JSON if content-type is JSON or if response text looks like JSON
+        if (responseContentType?.includes('application/json') || (responseText && (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')))) {
+          data = responseText ? JSON.parse(responseText) : null;
+        } else {
+          // Not JSON, return as text
+          data = responseText || null;
+        }
+      } catch (error) {
+        console.warn('Failed to parse response as JSON, returning as text:', error);
+        data = responseText || null;
+      }
       
       // Check if token expired and auto-login is enabled
       if (authConfig.autoLogin && isTokenExpiredResponse(response.status, data)) {
@@ -1251,7 +1327,20 @@ export default function APITester() {
             body: method !== 'GET' ? body : undefined,
           });
           
-          data = await response.json();
+          // Parse retry response safely
+          const retryResponseText = await response.text();
+          try {
+            const retryContentType = response.headers.get('content-type');
+            if (retryContentType?.includes('application/json') || (retryResponseText && (retryResponseText.trim().startsWith('{') || retryResponseText.trim().startsWith('[')))) {
+              data = retryResponseText ? JSON.parse(retryResponseText) : null;
+            } else {
+              data = retryResponseText || null;
+            }
+          } catch (error) {
+            console.warn('Failed to parse retry response as JSON, returning as text:', error);
+            data = retryResponseText || null;
+          }
+          
           const retryEndTime = Date.now();
           const duration = retryEndTime - retryStartTime;
           
@@ -1337,6 +1426,32 @@ export default function APITester() {
     } catch {
       return json;
     }
+  };
+
+  const getStatusText = (status: number): string => {
+    const statusTexts: Record<number, string> = {
+      200: 'OK',
+      201: 'Created',
+      202: 'Accepted',
+      204: 'No Content',
+      301: 'Moved Permanently',
+      302: 'Found',
+      304: 'Not Modified',
+      400: 'Bad Request',
+      401: 'Unauthorized',
+      403: 'Forbidden',
+      404: 'Not Found',
+      405: 'Method Not Allowed',
+      408: 'Request Timeout',
+      409: 'Conflict',
+      422: 'Unprocessable Entity',
+      429: 'Too Many Requests',
+      500: 'Internal Server Error',
+      502: 'Bad Gateway',
+      503: 'Service Unavailable',
+      504: 'Gateway Timeout'
+    };
+    return statusTexts[status] || 'Unknown Status';
   };
 
   const generateCode = (language: string) => {
@@ -1593,7 +1708,8 @@ print(response.json())`,
           <div className="grid md:grid-cols-3 gap-6 text-sm text-blue-800">
             <div className="space-y-2">
               <p className="font-semibold flex items-center gap-2">
-                <span className="text-lg">🚀</span> Getting Started
+                <WrenchIcon className="h-5 w-5" />
+                <span>Getting Started</span>
               </p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>Enter API URL and select method (GET, POST, etc.)</li>
@@ -1613,7 +1729,8 @@ print(response.json())`,
             </div>
             <div className="space-y-2">
               <p className="font-semibold flex items-center gap-2">
-                <span className="text-lg">⚙️</span> Variables
+                <CogIcon className="h-5 w-5" />
+                <span>Variables</span>
               </p>
               <ul className="list-disc pl-5 space-y-1">
                 <li>Click "Variables" button to manage environment variables</li>
@@ -1624,7 +1741,8 @@ print(response.json())`,
           </div>
           <div className="mt-4 pt-4 border-t border-blue-200">
             <p className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-              <span className="text-lg">⌨️</span> Keyboard Shortcuts
+              <CommandLineIcon className="h-5 w-5" />
+              <span>Keyboard Shortcuts</span>
             </p>
             <div className="grid md:grid-cols-2 gap-2 text-xs text-blue-800">
               <div><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Ctrl/Cmd + T</kbd> New tab</div>
@@ -1816,7 +1934,10 @@ print(response.json())`,
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 shadow-2xl">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">🚀 Bearer Token Quick Setup</h3>
+              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <LightBulbIcon className="h-6 w-6 text-indigo-600" />
+                Bearer Token Quick Setup
+              </h3>
               <button
                 onClick={() => {
                   setShowBearerSetupWizard(false);
@@ -1910,8 +2031,9 @@ print(response.json())`,
                     Where is the token in the response? Examples: <code className="bg-gray-100 px-1.5 py-0.5 rounded">access_token</code>, <code className="bg-gray-100 px-1.5 py-0.5 rounded">data.token</code>, <code className="bg-gray-100 px-1.5 py-0.5 rounded">result.jwt</code>
                   </p>
                   <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800">
-                      💡 <strong>Auto-detection:</strong> If not found at this path, we'll automatically search common token fields
+                    <p className="text-sm text-blue-800 flex items-start gap-2">
+                      <LightBulbIcon className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                      <span><strong>Auto-detection:</strong> If not found at this path, we'll automatically search common token fields</span>
                     </p>
                   </div>
                 </div>
@@ -1987,9 +2109,18 @@ print(response.json())`,
                   <strong>Auto-Login Configuration:</strong>
                 </p>
                 <ul className="text-xs text-blue-700 space-y-1">
-                  <li>✓ Login URL: <code className="bg-blue-100 px-1 py-0.5 rounded">{currentTab.url || 'Current URL'}</code></li>
-                  <li>✓ Login Payload: Current request body will be saved</li>
-                  <li>✓ Token will auto-refresh when expired</li>
+                  <li className="flex items-start gap-1.5">
+                    <CheckIcon className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                    <span>Login URL: <code className="bg-blue-100 px-1 py-0.5 rounded">{currentTab.url || 'Current URL'}</code></span>
+                  </li>
+                  <li className="flex items-start gap-1.5">
+                    <CheckIcon className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                    <span>Login Payload: Current request body will be saved</span>
+                  </li>
+                  <li className="flex items-start gap-1.5">
+                    <CheckIcon className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+                    <span>Token will auto-refresh when expired</span>
+                  </li>
                 </ul>
               </div>
 
@@ -2060,6 +2191,13 @@ print(response.json())`,
                 {tab.hasUnsavedChanges && (
                   <span className="w-1.5 h-1.5 rounded-full bg-[#FF6C37]" title="Unsaved changes" />
                 )}
+                {tab.authConfig && tab.authConfig.type !== 'none' && (
+                  <span title={`Auth: ${tab.authConfig.type}`}>
+                    <svg className="h-3 w-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </span>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -2090,17 +2228,17 @@ print(response.json())`,
       {/* Main Request Section */}
       <div className="bg-white rounded-lg shadow-sm">
         {/* URL Bar - Postman Style */}
-        <div className="p-4">
-          <div className="flex gap-2">
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex gap-2 items-center">
             <select
               value={method}
               onChange={(e) => setMethod(e.target.value as HttpMethod)}
-              className={`px-4 py-2.5 border-2 rounded font-bold text-sm focus:outline-none focus:ring-2 focus:ring-[#FF6C37] ${
-                method === 'GET' ? 'text-green-600 border-green-200 bg-green-50' :
-                method === 'POST' ? 'text-blue-600 border-blue-200 bg-blue-50' :
-                method === 'PUT' ? 'text-yellow-600 border-yellow-200 bg-yellow-50' :
-                method === 'DELETE' ? 'text-red-600 border-red-200 bg-red-50' :
-                'text-gray-600 border-gray-200 bg-gray-50'
+              className={`px-3 py-2 border border-gray-300 rounded font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[100px] ${
+                method === 'GET' ? 'text-green-600' :
+                method === 'POST' ? 'text-orange-600' :
+                method === 'PUT' ? 'text-yellow-600' :
+                method === 'DELETE' ? 'text-red-600' :
+                'text-gray-600'
               }`}
               title="Select HTTP method"
             >
@@ -2118,29 +2256,36 @@ print(response.json())`,
                     handleSubmit();
                   }
                 }}
-                placeholder="https://api.example.com/endpoint"
-                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#FF6C37] focus:border-[#FF6C37]"
+                placeholder="Enter URL or paste text"
+                className="w-full px-4 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
             <button
               onClick={handleSubmit}
               disabled={loading || !url.trim()}
-              className="px-8 py-2.5 bg-[#FF6C37] hover:bg-[#ff5722] text-white text-sm font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md flex items-center gap-2"
+              className="px-6 py-2 bg-[#6366F1] hover:bg-[#5558E3] text-white text-sm font-semibold rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
             >
               {loading ? (
                 <>
-                  <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                  <ArrowPathIcon className="h-4 w-4 animate-spin" />
                   Sending...
                 </>
               ) : (
                 'Send'
               )}
             </button>
+            <button
+              onClick={() => setShowSaveDialog(true)}
+              className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium rounded transition-all flex items-center gap-1"
+            >
+              <DocumentDuplicateIcon className="h-4 w-4" />
+              Save
+            </button>
           </div>
           
           {/* Error Display */}
           {error && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded text-red-800 text-sm">
+            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-red-800 text-sm">
               <div className="flex items-start gap-2">
                 <XMarkIcon className="h-5 w-5 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
@@ -2158,56 +2303,46 @@ print(response.json())`,
           )}
         </div>
 
-        {/* Tabs for Request Configuration */}
+        {/* Tabs for Request Configuration - Postman Style */}
         <div className="border-b border-gray-200 bg-white">
-          <div className="flex gap-1 px-4">
+          <div className="flex px-6">
             <button
               onClick={() => setActiveTab('params')}
               className={`px-4 py-3 text-sm font-medium transition-colors relative ${
                 activeTab === 'params'
-                  ? 'text-[#FF6C37]'
+                  ? 'text-gray-900 border-b-2 border-orange-500'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Params
-              {activeTab === 'params' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF6C37]"></div>
-              )}
+              Parameters
             </button>
             <button
               onClick={() => setActiveTab('authorization')}
               className={`px-4 py-3 text-sm font-medium transition-colors relative ${
                 activeTab === 'authorization'
-                  ? 'text-[#FF6C37]'
+                  ? 'text-gray-900 border-b-2 border-orange-500'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               Authorization
-              {activeTab === 'authorization' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF6C37]"></div>
-              )}
             </button>
             <button
               onClick={() => setActiveTab('headers')}
               className={`px-4 py-3 text-sm font-medium transition-colors relative ${
                 activeTab === 'headers'
-                  ? 'text-[#FF6C37]'
+                  ? 'text-gray-900 border-b-2 border-orange-500'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
               Headers
-              <span className="ml-1.5 text-xs text-gray-400">({headers.filter(h => h.enabled).length})</span>
-              {activeTab === 'headers' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF6C37]"></div>
-              )}
             </button>
             <button
               onClick={() => method !== 'GET' && setActiveTab('body')}
               className={`px-4 py-3 text-sm font-medium transition-colors relative ${
                 activeTab === 'body' && method !== 'GET'
-                  ? 'text-[#FF6C37]'
+                  ? 'text-gray-900 border-b-2 border-orange-500'
                   : method === 'GET'
-                  ? 'text-gray-400 cursor-not-allowed opacity-60'
+                  ? 'text-gray-400 cursor-not-allowed'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
               disabled={method === 'GET'}
@@ -2215,10 +2350,7 @@ print(response.json())`,
             >
               Body
               {method === 'GET' && (
-                <span className="ml-1 text-xs">🚫</span>
-              )}
-              {activeTab === 'body' && method !== 'GET' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF6C37]"></div>
+                <XMarkIcon className="h-3 w-3 inline-block ml-1" />
               )}
             </button>
           </div>
@@ -2243,7 +2375,7 @@ print(response.json())`,
           {activeTab === 'authorization' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-gray-600">Configure authentication for your request</p>
+                <p className="text-sm text-gray-600">Configure authentication for your request (applies to all tabs automatically)</p>
                 <button
                   onClick={() => setShowBearerSetupWizard(true)}
                   className="px-4 py-2 text-sm font-medium bg-[#FF6C37] text-white rounded hover:bg-[#ff5722] transition-colors flex items-center gap-2"
@@ -2299,16 +2431,67 @@ print(response.json())`,
                                 const now = new Date();
                                 const isExpired = expiryDate < now;
                                 const minutesUntilExpiry = Math.floor((expiryDate.getTime() - now.getTime()) / 60000);
+                                const secondsUntilExpiry = Math.floor((expiryDate.getTime() - now.getTime()) / 1000);
                                 
                                 return (
-                                  <div className="flex items-center gap-2">
-                                    {isExpired ? (
-                                      <span className="text-red-600 font-medium">⚠️ Token expired</span>
-                                    ) : minutesUntilExpiry < 5 ? (
-                                      <span className="text-orange-600 font-medium">⚠️ Expires in {minutesUntilExpiry} minutes</span>
-                                    ) : (
-                                      <span className="text-green-600 font-medium">✓ Valid until {expiryDate.toLocaleString()}</span>
-                                    )}
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        {isExpired ? (
+                                          <span className="text-red-600 font-medium flex items-center gap-1.5">
+                                            <XMarkIcon className="h-4 w-4" />
+                                            Token expired
+                                          </span>
+                                        ) : minutesUntilExpiry < 5 ? (
+                                          <span className="text-orange-600 font-medium flex items-center gap-1.5">
+                                            <ClockIcon className="h-4 w-4" />
+                                            Expires in {minutesUntilExpiry}m {secondsUntilExpiry % 60}s
+                                          </span>
+                                        ) : (
+                                          <span className="text-green-600 font-medium flex items-center gap-1.5">
+                                            <CheckIcon className="h-4 w-4" />
+                                            Valid until {expiryDate.toLocaleString()}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span className="text-gray-500 text-[10px]">
+                                        {isExpired ? 'EXPIRED' : `${minutesUntilExpiry}m ${secondsUntilExpiry % 60}s left`}
+                                      </span>
+                                    </div>
+                                    
+                                    {/* Testing Tools */}
+                                    <div className="border-t border-gray-200 pt-2 mt-2">
+                                      <p className="text-[10px] text-gray-500 mb-1.5 font-semibold uppercase tracking-wide">🧪 Testing Tools</p>
+                                      <button
+                                        onClick={() => {
+                                          // Force expire the token by setting expiry to past
+                                          const pastTimestamp = Math.floor(Date.now() / 1000) - 60;
+                                          setAuthConfig({ 
+                                            ...authConfig, 
+                                            tokenExpiry: pastTimestamp
+                                          });
+                                          alert('✅ Token manually expired!\n\nOn your next request, the system will:\n1. Detect the expired token\n2. Automatically call your login endpoint\n3. Extract and use the new token\n\nMake a request to test the auto-refresh!');
+                                        }}
+                                        className="px-3 py-1.5 text-[10px] font-medium bg-red-100 text-red-700 hover:bg-red-200 rounded transition-colors mr-2"
+                                      >
+                                        🔴 Force Expire Token
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          // Set token to expire in 30 seconds for quick testing
+                                          const shortExpiry = Math.floor(Date.now() / 1000) + 30;
+                                          setAuthConfig({ 
+                                            ...authConfig, 
+                                            tokenExpiry: shortExpiry
+                                          });
+                                          alert('Token expiry set to 30 seconds!\n\nWatch the countdown timer above.\nMake a request after 30 seconds to test auto-refresh.');
+                                        }}
+                                        className="px-3 py-1.5 text-[10px] font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 rounded transition-colors flex items-center gap-1"
+                                      >
+                                        <ClockIcon className="h-3 w-3" />
+                                        Expire in 30s
+                                      </button>
+                                    </div>
                                   </div>
                                 );
                               }
@@ -2459,8 +2642,9 @@ print(response.json())`,
               </div>
               
               {!body && (
-                <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded border border-blue-100">
-                  💡 <strong>Tip:</strong> Paste your JSON here. It will be automatically validated and formatted.
+                <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded border border-blue-100 flex items-start gap-2">
+                  <LightBulbIcon className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <span><strong>Tip:</strong> Paste your JSON here. It will be automatically validated and formatted.</span>
                 </div>
               )}
               
@@ -2600,24 +2784,25 @@ print(response.json())`,
             <div className="flex items-center gap-4">
               <h2 className="text-base font-semibold text-gray-900">Response</h2>
               {responseMetrics && (
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500">Status:</span>
-                    <span className={`font-medium ${
-                      responseMetrics.status >= 200 && responseMetrics.status < 300
-                        ? 'text-green-600'
-                        : 'text-red-600'
-                    }`}>
-                      {responseMetrics.status}
-                    </span>
+                <div className="flex items-center gap-3 text-sm">
+                  <span className={`font-medium ${
+                    responseMetrics.status >= 200 && responseMetrics.status < 300
+                      ? 'text-green-600'
+                      : responseMetrics.status >= 400 && responseMetrics.status < 500
+                      ? 'text-orange-600'
+                      : 'text-red-600'
+                  }`}>
+                    {responseMetrics.status} • {getStatusText(responseMetrics.status)}
+                  </span>
+                  <span className="text-gray-400">•</span>
+                  <div className="flex items-center gap-1.5 text-gray-600">
+                    <ClockIcon className="h-4 w-4" />
+                    <span>{responseMetrics.time}ms</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500">Time:</span>
-                    <span className="font-medium text-gray-900">{responseMetrics.time}ms</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-500">Size:</span>
-                    <span className="font-medium text-gray-900">{(responseMetrics.size / 1024).toFixed(2)} KB</span>
+                  <span className="text-gray-400">•</span>
+                  <div className="flex items-center gap-1.5 text-gray-600">
+                    <DocumentTextIcon className="h-4 w-4" />
+                    <span>{(responseMetrics.size / 1024).toFixed(2)} KB</span>
                   </div>
                 </div>
               )}
@@ -2635,35 +2820,29 @@ print(response.json())`,
         {response && (
           <>
             <div className="border-b border-gray-200 bg-white">
-              <div className="flex gap-1 px-6">
+              <div className="flex px-6">
                 <button
                   onClick={() => setShowResponseBody(true)}
-                  className={`px-4 py-3 text-sm font-medium transition-colors relative ${
+                  className={`px-4 py-3 text-sm font-medium transition-colors ${
                     showResponseBody
-                      ? 'text-[#FF6C37]'
+                      ? 'text-orange-600 border-b-2 border-orange-500'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   Body
-                  {showResponseBody && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF6C37]"></div>
-                  )}
                 </button>
                 <button
                   onClick={() => {
                     setShowResponseBody(false);
                     setShowResponseHeaders(true);
                   }}
-                  className={`px-4 py-3 text-sm font-medium transition-colors relative ${
+                  className={`px-4 py-3 text-sm font-medium transition-colors ${
                     showResponseHeaders && !showResponseBody
-                      ? 'text-[#FF6C37]'
+                      ? 'text-orange-600 border-b-2 border-orange-500'
                       : 'text-gray-600 hover:text-gray-900'
                   }`}
                 >
                   Headers
-                  {showResponseHeaders && !showResponseBody && (
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#FF6C37]"></div>
-                  )}
                 </button>
               </div>
             </div>
@@ -2813,11 +2992,20 @@ print(response.json())`,
                         return (
                           <div className="flex items-center gap-2">
                             {isExpired ? (
-                              <span className="text-red-600 font-medium">⚠️ Token expired</span>
+                              <span className="text-red-600 font-medium flex items-center gap-1.5">
+                                <XMarkIcon className="h-4 w-4" />
+                                Token expired
+                              </span>
                             ) : minutesUntilExpiry < 5 ? (
-                              <span className="text-orange-600 font-medium">⚠️ Expires in {minutesUntilExpiry} minutes</span>
+                              <span className="text-orange-600 font-medium flex items-center gap-1.5">
+                                <ClockIcon className="h-4 w-4" />
+                                Expires in {minutesUntilExpiry} minutes
+                              </span>
                             ) : (
-                              <span className="text-green-600 font-medium">✓ Valid until {expiryDate.toLocaleString()}</span>
+                              <span className="text-green-600 font-medium flex items-center gap-1.5">
+                                <CheckIcon className="h-4 w-4" />
+                                Valid until {expiryDate.toLocaleString()}
+                              </span>
                             )}
                           </div>
                         );
@@ -2912,7 +3100,10 @@ print(response.json())`,
                         className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm font-mono"
                       />
                       <div className="text-xs text-blue-700 mt-2">
-                        <p className="font-medium mb-1">💡 Common token paths:</p>
+                        <p className="font-medium mb-1 flex items-center gap-1.5">
+                          <LightBulbIcon className="h-4 w-4" />
+                          Common token paths:
+                        </p>
                         <ul className="list-disc ml-4 space-y-1">
                           <li><code className="bg-blue-100 px-1 rounded">access_token</code> - Root level</li>
                           <li><code className="bg-blue-100 px-1 rounded">token</code> - Root level</li>
