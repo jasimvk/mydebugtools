@@ -8,7 +8,7 @@ import {
   SparklesIcon,
   DocumentCheckIcon,
   KeyIcon,
-  SwatchIcon
+  BeakerIcon
 } from '@heroicons/react/24/outline';
 import AdSlot from './components/AdSlot';
 import { Terminal, CurlyBraces } from 'lucide-react';
@@ -103,6 +103,15 @@ export default function Home() {
             </div>
           </Link>
           
+          <Link href="/tools/api" className="group bg-white rounded-lg border border-gray-200 hover:border-[#FF6C37] transition-all p-4">
+            <div className="flex flex-col items-center text-center">
+              <div className="p-2 rounded-lg bg-[#FFF5F2] group-hover:bg-[#FF6C37] transition-colors mb-2">
+                <BeakerIcon className="h-5 w-5 text-[#FF6C37] group-hover:text-white transition-colors" />
+              </div>
+              <h3 className="text-sm font-semibold text-gray-900">API Tester</h3>
+            </div>
+          </Link>
+          
           <Link href="/tools/base64" className="group bg-white rounded-lg border border-gray-200 hover:border-[#FF6C37] transition-all p-4">
             <div className="flex flex-col items-center text-center">
               <div className="p-2 rounded-lg bg-[#FFF5F2] group-hover:bg-[#FF6C37] transition-colors mb-2">
@@ -118,15 +127,6 @@ export default function Home() {
                 <CodeBracketIcon className="h-5 w-5 text-[#FF6C37] group-hover:text-white transition-colors" />
               </div>
               <h3 className="text-sm font-semibold text-gray-900">Code Diff</h3>
-            </div>
-          </Link>
-          
-          <Link href="/tools/color" className="group bg-white rounded-lg border border-gray-200 hover:border-[#FF6C37] transition-all p-4">
-            <div className="flex flex-col items-center text-center">
-              <div className="p-2 rounded-lg bg-[#FFF5F2] group-hover:bg-[#FF6C37] transition-colors mb-2">
-                <SwatchIcon className="h-5 w-5 text-[#FF6C37] group-hover:text-white transition-colors" />
-              </div>
-              <h3 className="text-sm font-semibold text-gray-900">Color</h3>
             </div>
           </Link>
           

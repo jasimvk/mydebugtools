@@ -5,10 +5,10 @@ import { usePathname } from 'next/navigation';
 import { 
   KeyIcon,
   ArrowsRightLeftIcon,
-  SwatchIcon,
   DocumentTextIcon,
   DocumentCheckIcon,
   GlobeAltIcon,
+  BeakerIcon,
 } from '@heroicons/react/24/outline';
 import { CurlyBracesIcon, Terminal, Github } from 'lucide-react';
 import { useState } from 'react';
@@ -29,6 +29,12 @@ const tools = [
     icon: KeyIcon
   },
   {
+    name: 'API Tester',
+    description: 'Test and debug REST APIs',
+    path: '/tools/api',
+    icon: BeakerIcon
+  },
+  {
     name: 'HTTP Status',
     description: 'HTTP status codes reference',
     path: '/tools/http-status',
@@ -45,12 +51,6 @@ const tools = [
     description: 'Encode and decode Base64',
     path: '/tools/base64',
     icon: DocumentCheckIcon
-  },
-  {
-    name: 'Color Picker',
-    description: 'Pick and convert colors',
-    path: '/tools/color',
-    icon: SwatchIcon
   },
   {
     name: 'SVG Optimizer',
