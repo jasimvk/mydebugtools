@@ -71,15 +71,15 @@ export default function ToolsLayout({
   const isActive = (path: string) => pathname === path;
 
   return (
-    <div className="flex flex-col min-h-screen bg-white" style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
+    <div className="flex flex-col min-h-screen bg-gray-50" style={{ fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
       {/* Clean Professional Navbar */}
       <nav className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center justify-between h-14">
+        <div className="w-full px-6 py-6">
+          <div className="flex items-center justify-between max-w-[1600px] mx-auto">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
               <Terminal className="h-5 w-5 text-[#FF6C37]" strokeWidth={2.5} />
-              <span className="text-base font-semibold text-gray-900">MyDebugTools</span>
+              <span className="text-xl font-semibold text-gray-900">MyDebugTools</span>
             </Link>
 
             {/* Desktop Navigation */}
@@ -91,7 +91,7 @@ export default function ToolsLayout({
                   <Link
                     key={tool.name}
                     href={tool.path}
-                    className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded ${
+                    className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded transition-colors ${
                       active
                         ? 'bg-[#FF6C37] text-white'
                         : 'text-gray-700 hover:bg-gray-100'
@@ -160,7 +160,7 @@ export default function ToolsLayout({
                 href="https://github.com/jasimvk/mydebugtools"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded"
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded transition-colors"
               >
                 <Github className="h-4 w-4" strokeWidth={2} />
                 <span>GitHub</span>
@@ -171,17 +171,22 @@ export default function ToolsLayout({
       </nav>
 
       {/* Main content */}
-      <main className="flex-1 bg-gray-50">
-        {children}
+      <main className="flex-1">
+        <div className="w-full px-6 py-6">
+          {children}
+        </div>
         
         {/* Ad placement above footer */}
-        <div className="container mx-auto px-4 md:px-6 py-4">
-          <AdSlot adSlot="8212501976" />
+        <div className="w-full px-6 py-4">
+          <div className="max-w-[1600px] mx-auto">
+            <AdSlot adSlot="8212501976" />
+          </div>
         </div>
         
         <footer className="border-t border-gray-200 bg-white mt-12">
-          <div className="max-w-7xl mx-auto px-6 py-8">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="w-full px-6 py-8">
+            <div className="max-w-[1600px] mx-auto">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <a
                   href="https://github.com/jasimvk/mydebugtools"
@@ -203,6 +208,7 @@ export default function ToolsLayout({
               <div className="text-sm text-gray-600">
                 Developed & Maintained by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-gray-900 hover:text-[#FF6C37] font-medium">Jasim</a>
               </div>
+            </div>
             </div>
           </div>
         </footer>

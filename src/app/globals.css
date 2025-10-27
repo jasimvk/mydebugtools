@@ -3,24 +3,102 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
+  --background: #fafafa;
   --foreground: #171717;
   --font-sans: var(--font-inter);
+  --primary: #FF6C37;
+  --primary-hover: #ff5722;
+  --border: #e5e7eb;
+  --card-bg: #ffffff;
 }
 
 @layer base {
   html {
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   
   body {
     @apply transition-colors duration-200;
     font-family: var(--font-sans);
+    background: var(--background);
+    color: var(--foreground);
+  }
+
+  /* Consistent button styles */
+  .btn-primary {
+    @apply px-4 py-2 bg-[#FF6C37] hover:bg-[#ff5722] text-white font-medium rounded-lg transition-colors;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border border-gray-300 transition-colors;
+  }
+
+  /* Consistent input styles */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="url"],
+  textarea,
+  select {
+    @apply border-gray-300 rounded-md focus:ring-2 focus:ring-[#FF6C37] focus:border-transparent;
+  }
+
+  /* Consistent card styles */
+  .card {
+    @apply bg-white border border-gray-200 rounded-lg shadow-sm;
+  }
+
+  /* Consistent heading styles */
+  h1 {
+    @apply text-3xl font-bold text-gray-900;
+  }
+
+  h2 {
+    @apply text-2xl font-semibold text-gray-900;
+  }
+
+  h3 {
+    @apply text-xl font-semibold text-gray-900;
+  }
+
+  /* Link styles */
+  a {
+    @apply text-[#FF6C37] hover:text-[#ff5722] transition-colors;
+  }
+
+  /* Code blocks */
+  code {
+    @apply bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono;
+  }
+
+  pre {
+    @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
