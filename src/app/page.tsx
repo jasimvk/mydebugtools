@@ -162,7 +162,7 @@ export default function Home() {
             <Link href="/contact" className="hover:text-[#FF6C37] transition-colors">Contact</Link>
           </div>
           <div className="text-xs text-gray-500 text-center">
-            Made by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-[#FF6C37] hover:underline">Jasim</a>
+            Developed & Maintained by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-[#FF6C37] hover:underline">Jasim</a>
           </div>
         </div>
       </div>
