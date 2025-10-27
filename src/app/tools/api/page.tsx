@@ -13,6 +13,7 @@ import {
   TrashIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  ChevronRightIcon,
   CheckIcon,
   XMarkIcon,
   DocumentTextIcon,
@@ -98,6 +99,44 @@ interface AuthConfig {
   tokenPath?: string; // Path to extract token from login response (e.g., "data.token" or "access_token")
 }
 
+interface RequestTab {
+  id: string;
+  name: string;
+  method: HttpMethod;
+  url: string;
+  headers: Header[];
+  body: string;
+  contentType: ContentType;
+  authConfig: AuthConfig;
+  response: any;
+  responseMetrics: ResponseMetrics | null;
+  hasUnsavedChanges: boolean;
+}
+
+interface SavedRequest {
+  id: string;
+  name: string;
+  method: HttpMethod;
+  url: string;
+  headers: Header[];
+  body: string;
+  contentType: ContentType;
+  authConfig: AuthConfig;
+  description?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+interface Collection {
+  id: string;
+  name: string;
+  description?: string;
+  requests: SavedRequest[];
+  createdAt: number;
+  updatedAt: number;
+  color?: string;
+}
+
 interface ResponseMetrics {
   size: number;
   time: number;
@@ -117,11 +156,75 @@ const RATE_LIMIT = 10; // requests per minute
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 
 export default function APITester() {
-  const [url, setUrl] = useState('');
-  const [method, setMethod] = useState<HttpMethod>('GET');
-  const [headers, setHeaders] = useState<Header[]>([{ key: '', value: '', enabled: true }]);
-  const [body, setBody] = useState('');
-  const [response, setResponse] = useState<any>(null);
+  // Tab management
+  const [tabs, setTabs] = useState<RequestTab[]>([{
+    id: '1',
+    name: 'API 1',
+    method: 'GET',
+    url: '',
+    headers: [{ key: '', value: '', enabled: true }],
+    body: '',
+    contentType: 'application/json',
+    authConfig: { type: 'none' },
+    response: null,
+    responseMetrics: null,
+    hasUnsavedChanges: false
+  }]);
+  const [activeTabIndex, setActiveTabIndex] = useState(0);
+  
+  // Get current tab
+  const currentTab = tabs[activeTabIndex];
+  
+  // Legacy state for backward compatibility (now derived from currentTab)
+  const url = currentTab?.url || '';
+  const setUrl = (newUrl: string) => {
+    updateCurrentTab({ url: newUrl, hasUnsavedChanges: true });
+  };
+  
+  const method = currentTab?.method || 'GET';
+  const setMethod = (newMethod: HttpMethod) => {
+    updateCurrentTab({ method: newMethod, hasUnsavedChanges: true });
+  };
+  
+  const headers = currentTab?.headers || [{ key: '', value: '', enabled: true }];
+  const setHeaders = (newHeaders: Header[]) => {
+    updateCurrentTab({ headers: newHeaders, hasUnsavedChanges: true });
+  };
+  
+  const body = currentTab?.body || '';
+  const setBody = (newBody: string) => {
+    updateCurrentTab({ body: newBody, hasUnsavedChanges: true });
+  };
+  
+  const response = currentTab?.response || null;
+  const setResponse = (newResponse: any) => {
+    updateCurrentTab({ response: newResponse });
+  };
+  
+  const contentType = currentTab?.contentType || 'application/json';
+  const setContentType = (newContentType: ContentType) => {
+    updateCurrentTab({ contentType: newContentType, hasUnsavedChanges: true });
+  };
+  
+  const responseMetrics = currentTab?.responseMetrics || null;
+  const setResponseMetrics = (newMetrics: ResponseMetrics | null) => {
+    updateCurrentTab({ responseMetrics: newMetrics });
+  };
+  
+  const authConfig = currentTab?.authConfig || { type: 'none' };
+  const setAuthConfig = (newAuthConfig: AuthConfig) => {
+    updateCurrentTab({ authConfig: newAuthConfig, hasUnsavedChanges: true });
+  };
+  
+  // Helper function to update current tab
+  const updateCurrentTab = (updates: Partial<RequestTab>) => {
+    setTabs(prevTabs => {
+      const newTabs = [...prevTabs];
+      newTabs[activeTabIndex] = { ...newTabs[activeTabIndex], ...updates };
+      return newTabs;
+    });
+  };
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'params' | 'authorization' | 'headers' | 'body'>('params');
@@ -135,10 +238,31 @@ export default function APITester() {
   ]);
   const [activeEnvironment, setActiveEnvironment] = useState('Development');
   const [presets, setPresets] = useState<RequestPreset[]>([]);
-  const [contentType, setContentType] = useState<ContentType>('application/json');
   const [responseTime, setResponseTime] = useState<number>(0);
-  const [responseMetrics, setResponseMetrics] = useState<ResponseMetrics | null>(null);
-  const [authConfig, setAuthConfig] = useState<AuthConfig>({ type: 'none' });
+  
+  // Collections state
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [showCollections, setShowCollections] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [saveRequestName, setSaveRequestName] = useState('');
+  const [saveRequestDescription, setSaveRequestDescription] = useState('');
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
+  const [showNewCollectionDialog, setShowNewCollectionDialog] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [newCollectionDescription, setNewCollectionDescription] = useState('');
+  const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set());
+  
+  // Token detection state
+  const [detectedToken, setDetectedToken] = useState<string | null>(null);
+  const [detectedTokenPath, setDetectedTokenPath] = useState<string>('');
+  const [showTokenDetection, setShowTokenDetection] = useState(false);
+  const [showBearerSetupWizard, setShowBearerSetupWizard] = useState(false);
+  const [bearerSetupStep, setBearerSetupStep] = useState(1);
+  const [wizardLoginUrl, setWizardLoginUrl] = useState('');
+  const [wizardUsername, setWizardUsername] = useState('');
+  const [wizardPassword, setWizardPassword] = useState('');
+  const [wizardTokenPath, setWizardTokenPath] = useState('access_token');
+  
   const [showAuthConfig, setShowAuthConfig] = useState(false);
   const [isEditorMounted, setIsEditorMounted] = useState(false);
   const [showResponseHeaders, setShowResponseHeaders] = useState(false);
@@ -180,6 +304,9 @@ export default function APITester() {
     const savedPresets = localStorage.getItem('presets');
     const savedActiveEnv = localStorage.getItem('activeEnvironment');
     const savedSettings = localStorage.getItem('settings');
+    const savedTabs = localStorage.getItem('apiTesterTabs');
+    const savedActiveTabIndex = localStorage.getItem('apiTesterActiveTabIndex');
+    const savedCollections = localStorage.getItem('apiTesterCollections');
 
     if (savedHistory) setRequestHistory(JSON.parse(savedHistory));
     if (savedEnvironments) setEnvironments(JSON.parse(savedEnvironments));
@@ -190,6 +317,32 @@ export default function APITester() {
       setAutoFormat(settings.autoFormat);
       setAutoSave(settings.autoSave);
       setShowVariables(settings.showVariables);
+    }
+    if (savedTabs) {
+      try {
+        const parsedTabs = JSON.parse(savedTabs);
+        if (Array.isArray(parsedTabs) && parsedTabs.length > 0) {
+          setTabs(parsedTabs);
+        }
+      } catch (e) {
+        console.error('Failed to load saved tabs:', e);
+      }
+    }
+    if (savedActiveTabIndex) {
+      const index = parseInt(savedActiveTabIndex, 10);
+      if (!isNaN(index)) {
+        setActiveTabIndex(index);
+      }
+    }
+    if (savedCollections) {
+      try {
+        const parsedCollections = JSON.parse(savedCollections);
+        if (Array.isArray(parsedCollections)) {
+          setCollections(parsedCollections);
+        }
+      } catch (e) {
+        console.error('Failed to load saved collections:', e);
+      }
     }
   };
 
@@ -208,7 +361,459 @@ export default function APITester() {
       autoSave,
       showVariables
     }));
+    localStorage.setItem('apiTesterTabs', JSON.stringify(tabs));
+    localStorage.setItem('apiTesterActiveTabIndex', activeTabIndex.toString());
+    localStorage.setItem('apiTesterCollections', JSON.stringify(collections));
   };
+
+  // Tab management functions
+  const createNewTab = () => {
+    const newTab: RequestTab = {
+      id: Date.now().toString(),
+      name: `API ${tabs.length + 1}`,
+      method: 'GET',
+      url: '',
+      headers: [{ key: '', value: '', enabled: true }],
+      body: '',
+      contentType: 'application/json',
+      authConfig: { type: 'none' },
+      response: null,
+      responseMetrics: null,
+      hasUnsavedChanges: false
+    };
+    setTabs([...tabs, newTab]);
+    setActiveTabIndex(tabs.length);
+  };
+
+  const closeTab = (index: number) => {
+    if (tabs.length === 1) {
+      // Don't allow closing the last tab, instead reset it
+      setTabs([{
+        id: Date.now().toString(),
+        name: 'API 1',
+        method: 'GET',
+        url: '',
+        headers: [{ key: '', value: '', enabled: true }],
+        body: '',
+        contentType: 'application/json',
+        authConfig: { type: 'none' },
+        response: null,
+        responseMetrics: null,
+        hasUnsavedChanges: false
+      }]);
+      setActiveTabIndex(0);
+      return;
+    }
+
+    const newTabs = tabs.filter((_, i) => i !== index);
+    setTabs(newTabs);
+    
+    // Adjust active tab index if necessary
+    if (activeTabIndex >= index && activeTabIndex > 0) {
+      setActiveTabIndex(activeTabIndex - 1);
+    } else if (activeTabIndex >= newTabs.length) {
+      setActiveTabIndex(newTabs.length - 1);
+    }
+  };
+
+  const duplicateTab = (index: number) => {
+    const tabToDuplicate = tabs[index];
+    const newTab: RequestTab = {
+      ...tabToDuplicate,
+      id: Date.now().toString(),
+      name: `${tabToDuplicate.name} (Copy)`,
+      response: null,
+      responseMetrics: null,
+      hasUnsavedChanges: false
+    };
+    const newTabs = [...tabs];
+    newTabs.splice(index + 1, 0, newTab);
+    setTabs(newTabs);
+    setActiveTabIndex(index + 1);
+  };
+
+  const renameTab = (index: number, newName: string) => {
+    const newTabs = [...tabs];
+    newTabs[index] = { ...newTabs[index], name: newName, hasUnsavedChanges: true };
+    setTabs(newTabs);
+  };
+
+  // State for tab rename
+  const [renamingTabIndex, setRenamingTabIndex] = useState<number | null>(null);
+  const [tempTabName, setTempTabName] = useState('');
+
+  const startRenaming = (index: number) => {
+    setRenamingTabIndex(index);
+    setTempTabName(tabs[index].name);
+  };
+
+  const finishRenaming = () => {
+    if (renamingTabIndex !== null && tempTabName.trim()) {
+      renameTab(renamingTabIndex, tempTabName.trim());
+    }
+    setRenamingTabIndex(null);
+    setTempTabName('');
+  };
+
+  // Save tabs whenever they change
+  useEffect(() => {
+    if (tabs.length > 0) {
+      saveData();
+    }
+  }, [tabs, activeTabIndex]);
+
+  // Save collections whenever they change
+  useEffect(() => {
+    if (collections.length >= 0) {
+      localStorage.setItem('apiTesterCollections', JSON.stringify(collections));
+    }
+  }, [collections]);
+
+  // Collection management functions
+  const createCollection = () => {
+    if (!newCollectionName.trim()) return;
+    
+    const newCollection: Collection = {
+      id: Date.now().toString(),
+      name: newCollectionName.trim(),
+      description: newCollectionDescription.trim(),
+      requests: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      color: `#${Math.floor(Math.random()*16777215).toString(16)}`
+    };
+    
+    setCollections([...collections, newCollection]);
+    setNewCollectionName('');
+    setNewCollectionDescription('');
+    setShowNewCollectionDialog(false);
+  };
+
+  const deleteCollection = (collectionId: string) => {
+    if (confirm('Are you sure you want to delete this collection?')) {
+      setCollections(collections.filter(c => c.id !== collectionId));
+    }
+  };
+
+  const renameCollection = (collectionId: string, newName: string) => {
+    setCollections(collections.map(c => 
+      c.id === collectionId 
+        ? { ...c, name: newName, updatedAt: Date.now() } 
+        : c
+    ));
+  };
+
+  const saveCurrentRequestToCollection = () => {
+    if (!selectedCollectionId || !saveRequestName.trim()) return;
+    
+    const savedRequest: SavedRequest = {
+      id: Date.now().toString(),
+      name: saveRequestName.trim(),
+      method: currentTab.method,
+      url: currentTab.url,
+      headers: currentTab.headers,
+      body: currentTab.body,
+      contentType: currentTab.contentType,
+      authConfig: currentTab.authConfig,
+      description: saveRequestDescription.trim(),
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    setCollections(collections.map(c => {
+      if (c.id === selectedCollectionId) {
+        return {
+          ...c,
+          requests: [...c.requests, savedRequest],
+          updatedAt: Date.now()
+        };
+      }
+      return c;
+    }));
+
+    // Clear form
+    setSaveRequestName('');
+    setSaveRequestDescription('');
+    setShowSaveDialog(false);
+    
+    // Mark tab as saved
+    updateCurrentTab({ hasUnsavedChanges: false });
+  };
+
+  const loadRequestFromCollection = (request: SavedRequest) => {
+    // Create a new tab with the saved request data
+    const newTab: RequestTab = {
+      id: Date.now().toString(),
+      name: request.name,
+      method: request.method,
+      url: request.url,
+      headers: request.headers,
+      body: request.body,
+      contentType: request.contentType,
+      authConfig: request.authConfig,
+      response: null,
+      responseMetrics: null,
+      hasUnsavedChanges: false
+    };
+    
+    setTabs([...tabs, newTab]);
+    setActiveTabIndex(tabs.length);
+  };
+
+  const deleteRequestFromCollection = (collectionId: string, requestId: string) => {
+    if (confirm('Are you sure you want to delete this request?')) {
+      setCollections(collections.map(c => {
+        if (c.id === collectionId) {
+          return {
+            ...c,
+            requests: c.requests.filter(r => r.id !== requestId),
+            updatedAt: Date.now()
+          };
+        }
+        return c;
+      }));
+    }
+  };
+
+  const exportCollection = (collection: Collection) => {
+    const dataStr = JSON.stringify(collection, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `${collection.name.replace(/\s+/g, '_')}_collection.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+  };
+
+  const importCollection = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importedCollection = JSON.parse(e.target?.result as string);
+        // Generate new ID to avoid conflicts
+        importedCollection.id = Date.now().toString();
+        importedCollection.createdAt = Date.now();
+        importedCollection.updatedAt = Date.now();
+        
+        setCollections([...collections, importedCollection]);
+      } catch (error) {
+        alert('Failed to import collection. Please check the file format.');
+        console.error('Import error:', error);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const toggleCollectionExpanded = (collectionId: string) => {
+    const newExpanded = new Set(expandedCollections);
+    if (newExpanded.has(collectionId)) {
+      newExpanded.delete(collectionId);
+    } else {
+      newExpanded.add(collectionId);
+    }
+    setExpandedCollections(newExpanded);
+  };
+
+  // Token detection and automation
+  const detectTokenInResponse = (data: any): { token: string; path: string } | null => {
+    // Common token field names
+    const tokenFields = [
+      'access_token',
+      'accessToken',
+      'token',
+      'jwt',
+      'bearer',
+      'auth_token',
+      'authToken',
+      'id_token',
+      'idToken',
+      'session_token',
+      'sessionToken'
+    ];
+
+    // Check top level
+    for (const field of tokenFields) {
+      if (data[field] && typeof data[field] === 'string') {
+        return { token: data[field], path: field };
+      }
+    }
+
+    // Check nested data object
+    if (data.data && typeof data.data === 'object') {
+      for (const field of tokenFields) {
+        if (data.data[field] && typeof data.data[field] === 'string') {
+          return { token: data.data[field], path: `data.${field}` };
+        }
+      }
+    }
+
+    // Check result object
+    if (data.result && typeof data.result === 'object') {
+      for (const field of tokenFields) {
+        if (data.result[field] && typeof data.result[field] === 'string') {
+          return { token: data.result[field], path: `result.${field}` };
+        }
+      }
+    }
+
+    // Check user object (common in auth responses)
+    if (data.user && typeof data.user === 'object') {
+      for (const field of tokenFields) {
+        if (data.user[field] && typeof data.user[field] === 'string') {
+          return { token: data.user[field], path: `user.${field}` };
+        }
+      }
+    }
+
+    return null;
+  };
+
+  const applyDetectedToken = () => {
+    if (detectedToken) {
+      setAuthConfig({
+        ...authConfig,
+        type: 'bearer',
+        token: detectedToken,
+        tokenPath: detectedTokenPath,
+        tokenExpiry: decodeJWT(detectedToken)?.exp
+      });
+      setShowTokenDetection(false);
+      setDetectedToken(null);
+      
+      // Show success notification
+      const notification = document.createElement('div');
+      notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2';
+      notification.innerHTML = `
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        <span>Bearer token saved successfully!</span>
+      `;
+      document.body.appendChild(notification);
+      setTimeout(() => document.body.removeChild(notification), 3000);
+    }
+  };
+
+  const setupBearerTokenWizard = async () => {
+    if (bearerSetupStep === 1) {
+      // Validate URL
+      if (!wizardLoginUrl.trim()) {
+        alert('Please enter a login URL');
+        return;
+      }
+      setBearerSetupStep(2);
+    } else if (bearerSetupStep === 2) {
+      // Validate credentials
+      if (!wizardUsername.trim() || !wizardPassword.trim()) {
+        alert('Please enter username and password');
+        return;
+      }
+      setBearerSetupStep(3);
+    } else if (bearerSetupStep === 3) {
+      // Test login and extract token
+      try {
+        const response = await fetch(wizardLoginUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: wizardUsername,
+            password: wizardPassword,
+            email: wizardUsername, // Some APIs use email
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Login failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        // Try to extract token using the specified path
+        let extractedToken = getNestedProperty(data, wizardTokenPath);
+        
+        // If not found, try auto-detection
+        if (!extractedToken) {
+          const detected = detectTokenInResponse(data);
+          if (detected) {
+            extractedToken = detected.token;
+            setWizardTokenPath(detected.path);
+          }
+        }
+
+        if (extractedToken) {
+          // Configure auth with extracted token
+          setAuthConfig({
+            type: 'bearer',
+            token: extractedToken,
+            loginUrl: wizardLoginUrl,
+            loginUsername: wizardUsername,
+            loginPassword: wizardPassword,
+            tokenPath: wizardTokenPath,
+            autoLogin: true,
+            tokenExpiry: decodeJWT(extractedToken)?.exp
+          });
+
+          // Show success and close wizard
+          alert(`✅ Bearer token configured successfully!\n\nToken extracted from: ${wizardTokenPath}\nAuto-login enabled for seamless re-authentication.`);
+          
+          setShowBearerSetupWizard(false);
+          setBearerSetupStep(1);
+          setWizardLoginUrl('');
+          setWizardUsername('');
+          setWizardPassword('');
+          setWizardTokenPath('access_token');
+        } else {
+          throw new Error(`Token not found at path: ${wizardTokenPath}`);
+        }
+      } catch (error) {
+        alert(`Failed to setup bearer token: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + T: New tab
+      if ((e.ctrlKey || e.metaKey) && e.key === 't') {
+        e.preventDefault();
+        createNewTab();
+      }
+      // Ctrl/Cmd + W: Close current tab
+      else if ((e.ctrlKey || e.metaKey) && e.key === 'w') {
+        e.preventDefault();
+        closeTab(activeTabIndex);
+      }
+      // Ctrl/Cmd + Tab: Next tab
+      else if ((e.ctrlKey || e.metaKey) && e.key === 'Tab') {
+        e.preventDefault();
+        setActiveTabIndex((activeTabIndex + 1) % tabs.length);
+      }
+      // Ctrl/Cmd + Shift + Tab: Previous tab
+      else if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Tab') {
+        e.preventDefault();
+        setActiveTabIndex((activeTabIndex - 1 + tabs.length) % tabs.length);
+      }
+      // Ctrl/Cmd + D: Duplicate tab
+      else if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault();
+        duplicateTab(activeTabIndex);
+      }
+      // Ctrl/Cmd + R: Rename tab
+      else if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+        e.preventDefault();
+        startRenaming(activeTabIndex);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTabIndex, tabs.length]);
 
   // JWT Token utilities
   const decodeJWT = (token: string): { exp?: number; iat?: number } | null => {
@@ -256,11 +861,11 @@ export default function APITester() {
       
       if (newToken) {
         const decoded = decodeJWT(newToken);
-        setAuthConfig(prev => ({
-          ...prev,
+        setAuthConfig({
+          ...authConfig,
           token: newToken,
           tokenExpiry: decoded?.exp
-        }));
+        });
         return true;
       }
       return false;
@@ -314,11 +919,11 @@ export default function APITester() {
       
       if (newToken) {
         const decoded = decodeJWT(newToken);
-        setAuthConfig(prev => ({
-          ...prev,
+        setAuthConfig({
+          ...authConfig,
           token: newToken,
           tokenExpiry: decoded?.exp
-        }));
+        });
         console.log('Auto-login successful, new token acquired');
         return newToken;
       } else {
@@ -574,6 +1179,16 @@ export default function APITester() {
       const endTime = Date.now();
       const duration = endTime - startTime;
 
+      // Auto-detect token in response
+      if (response.status >= 200 && response.status < 300) {
+        const detected = detectTokenInResponse(data);
+        if (detected && detected.token !== authConfig.token) {
+          setDetectedToken(detected.token);
+          setDetectedTokenPath(detected.path);
+          setShowTokenDetection(true);
+        }
+      }
+
       // Update rate limit timestamps
       setRequestTimestamps(prev => [...prev, now].filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW));
 
@@ -670,38 +1285,161 @@ print(response.json())`,
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="w-full px-6 py-6">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6 max-w-[1600px] mx-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">API Tester</h1>
-          <div className="flex items-center gap-2">
+    <div className="flex h-screen bg-gray-100 overflow-hidden">
+      {/* Left Sidebar - Collections (Postman-style) */}
+      <div className="w-80 bg-white border-r border-gray-300 flex flex-col">
+        {/* Sidebar Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-[#FF6C37]">
+          <h2 className="text-white font-semibold text-sm">Collections</h2>
+          <div className="flex items-center gap-1">
             <button
-              onClick={() => setShowVariables(!showVariables)}
-              className={`px-4 py-2 text-sm font-medium rounded transition-colors ${
-                showVariables 
-                  ? 'bg-[#FF6C37] text-white' 
-                  : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-              }`}
-              title="Toggle Environment Variables"
+              onClick={() => setShowNewCollectionDialog(true)}
+              className="p-1.5 text-white hover:bg-[#ff5722] rounded transition-colors"
+              title="New Collection"
             >
-              <CodeBracketIcon className="h-5 w-5 inline mr-1" />
-              Variables
+              <PlusIcon className="h-4 w-4" />
             </button>
-            <button
-              onClick={() => setShowHelp(!showHelp)}
-              className="p-2 text-gray-600 hover:bg-gray-100 rounded"
-              title="Help"
-            >
-              <QuestionMarkCircleIcon className="h-5 w-5" />
-            </button>
-             
+            <label className="p-1.5 text-white hover:bg-[#ff5722] rounded cursor-pointer transition-colors">
+              <ArrowDownTrayIcon className="h-4 w-4" />
+              <input
+                type="file"
+                accept=".json"
+                onChange={importCollection}
+                className="hidden"
+              />
+            </label>
           </div>
         </div>
 
+        {/* Collections List */}
+        <div className="flex-1 overflow-y-auto">
+          {collections.length === 0 ? (
+            <div className="p-6 text-center text-gray-500">
+              <TableCellsIcon className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+              <p className="text-sm font-medium mb-1">No Collections</p>
+              <p className="text-xs">Create a collection to organize requests</p>
+            </div>
+          ) : (
+            <div className="py-2">
+              {collections.map((collection) => (
+                <div key={collection.id} className="mb-1">
+                  <div 
+                    className="flex items-center justify-between px-3 py-2 mx-2 hover:bg-gray-100 rounded cursor-pointer group"
+                    onClick={() => toggleCollectionExpanded(collection.id)}
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {expandedCollections.has(collection.id) ? (
+                        <ChevronDownIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                      ) : (
+                        <ChevronRightIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
+                      )}
+                      <TableCellsIcon className="h-4 w-4 text-[#FF6C37] flex-shrink-0" />
+                      <span className="text-sm font-medium text-gray-900 truncate">{collection.name}</span>
+                      <span className="text-xs text-gray-500 flex-shrink-0">({collection.requests.length})</span>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          exportCollection(collection);
+                        }}
+                        className="p-1 text-gray-600 hover:bg-gray-200 rounded"
+                        title="Export"
+                      >
+                        <CloudArrowUpIcon className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteCollection(collection.id);
+                        }}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded"
+                        title="Delete"
+                      >
+                        <TrashIcon className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {expandedCollections.has(collection.id) && (
+                    <div className="ml-6 mr-2">
+                      {collection.requests.map((request) => (
+                        <div
+                          key={request.id}
+                          className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded cursor-pointer group"
+                          onClick={() => loadRequestFromCollection(request)}
+                        >
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                            request.method === 'GET' ? 'bg-green-100 text-green-700' :
+                            request.method === 'POST' ? 'bg-blue-100 text-blue-700' :
+                            request.method === 'PUT' ? 'bg-yellow-100 text-yellow-700' :
+                            request.method === 'DELETE' ? 'bg-red-100 text-red-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {request.method}
+                          </span>
+                          <span className="text-sm text-gray-700 truncate flex-1">{request.name}</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteRequestFromCollection(collection.id, request.id);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 text-red-600 hover:bg-red-50 rounded"
+                          >
+                            <TrashIcon className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar Footer */}
+        <div className="border-t border-gray-200 p-3 space-y-2">
+          <button
+            onClick={() => setShowVariables(!showVariables)}
+            className="w-full px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors flex items-center gap-2"
+          >
+            <CodeBracketIcon className="h-4 w-4" />
+            Environment Variables
+          </button>
+          <button
+            onClick={() => setShowHelp(!showHelp)}
+            className="w-full px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors flex items-center gap-2"
+          >
+            <QuestionMarkCircleIcon className="h-4 w-4" />
+            Help & Shortcuts
+          </button>
+        </div>
+      </div>
+
+      {/* Right Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Navigation Bar */}
+        <div className="bg-white border-b border-gray-300 px-4 py-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-bold text-gray-900">My Workspace</h1>
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">API Tester</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSaveDialog(true)}
+              className="px-3 py-1.5 text-sm font-medium bg-[#FF6C37] text-white rounded hover:bg-[#ff5722] transition-colors flex items-center gap-1.5"
+            >
+              <DocumentDuplicateIcon className="h-4 w-4" />
+              Save
+            </button>
+          </div>
+        </div>
+
+      {/* Help Panel */}
       {showHelp && (
-        <div className="bg-blue-50 p-6 rounded-lg border border-blue-200 mb-6 max-w-[1600px] mx-auto">
-          <div className="flex items-start justify-between mb-4">
+        <div className="bg-blue-50 border-b border-blue-200 px-4 py-4">
+          <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2">
               <QuestionMarkCircleIcon className="h-6 w-6 text-blue-600" />
               <h3 className="text-lg font-semibold text-blue-900">Quick Start Guide</h3>
@@ -742,18 +1480,420 @@ print(response.json())`,
               </ul>
             </div>
           </div>
+          <div className="mt-4 pt-4 border-t border-blue-200">
+            <p className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+              <span className="text-lg">⌨️</span> Keyboard Shortcuts
+            </p>
+            <div className="grid md:grid-cols-2 gap-2 text-xs text-blue-800">
+              <div><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Ctrl/Cmd + T</kbd> New tab</div>
+              <div><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Ctrl/Cmd + W</kbd> Close tab</div>
+              <div><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Ctrl/Cmd + D</kbd> Duplicate tab</div>
+              <div><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Ctrl/Cmd + R</kbd> Rename tab</div>
+              <div><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Double-click</kbd> Rename tab</div>
+              <div><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Ctrl/Cmd + Tab</kbd> Next tab</div>
+            </div>
+          </div>
         </div>
       )}
 
+      {/* Save Request Dialog */}
+      {showSaveDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Save Request to Collection</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Request Name</label>
+                <input
+                  type="text"
+                  value={saveRequestName}
+                  onChange={(e) => setSaveRequestName(e.target.value)}
+                  placeholder="e.g., Get User Profile"
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#FF6C37]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+                <textarea
+                  value={saveRequestDescription}
+                  onChange={(e) => setSaveRequestDescription(e.target.value)}
+                  placeholder="Describe what this request does..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#FF6C37]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Collection</label>
+                <select
+                  value={selectedCollectionId}
+                  onChange={(e) => setSelectedCollectionId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#FF6C37]"
+                >
+                  <option value="">Select a collection</option>
+                  {collections.map((collection) => (
+                    <option key={collection.id} value={collection.id}>
+                      {collection.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {collections.length === 0 && (
+                <p className="text-sm text-yellow-600 bg-yellow-50 p-3 rounded">
+                  No collections available. Create one first!
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => {
+                  setShowSaveDialog(false);
+                  setSaveRequestName('');
+                  setSaveRequestDescription('');
+                  setSelectedCollectionId('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveCurrentRequestToCollection}
+                disabled={!saveRequestName.trim() || !selectedCollectionId}
+                className="px-4 py-2 text-sm font-medium bg-[#FF6C37] text-white rounded hover:bg-[#ff5722] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              >
+                Save Request
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Collection Dialog */}
+      {showNewCollectionDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Collection</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Collection Name</label>
+                <input
+                  type="text"
+                  value={newCollectionName}
+                  onChange={(e) => setNewCollectionName(e.target.value)}
+                  placeholder="e.g., User API, Payment Endpoints"
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#FF6C37]"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+                <textarea
+                  value={newCollectionDescription}
+                  onChange={(e) => setNewCollectionDescription(e.target.value)}
+                  placeholder="Describe this collection..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#FF6C37]"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 mt-6">
+              <button
+                onClick={() => {
+                  setShowNewCollectionDialog(false);
+                  setNewCollectionName('');
+                  setNewCollectionDescription('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createCollection}
+                disabled={!newCollectionName.trim()}
+                className="px-4 py-2 text-sm font-medium bg-[#FF6C37] text-white rounded hover:bg-[#ff5722] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              >
+                Create Collection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Token Detection Notification */}
+      {showTokenDetection && detectedToken && (
+        <div className="fixed top-20 right-4 bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-4 rounded-lg shadow-2xl z-50 max-w-md">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 mt-0.5">
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h4 className="font-bold text-sm mb-1">🎉 Token Detected!</h4>
+              <p className="text-sm mb-3 opacity-90">Found a bearer token in the response at: <code className="bg-white/20 px-1.5 py-0.5 rounded">{detectedTokenPath}</code></p>
+              <div className="flex gap-2">
+                <button
+                  onClick={applyDetectedToken}
+                  className="px-4 py-2 bg-white text-green-600 font-medium text-sm rounded hover:bg-green-50 transition-colors"
+                >
+                  Use as Bearer Token
+                </button>
+                <button
+                  onClick={() => {
+                    setShowTokenDetection(false);
+                    setDetectedToken(null);
+                  }}
+                  className="px-4 py-2 bg-white/20 hover:bg-white/30 font-medium text-sm rounded transition-colors"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setShowTokenDetection(false);
+                setDetectedToken(null);
+              }}
+              className="flex-shrink-0 text-white/80 hover:text-white"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bearer Token Setup Wizard */}
+      {showBearerSetupWizard && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-900">🚀 Bearer Token Quick Setup</h3>
+              <button
+                onClick={() => {
+                  setShowBearerSetupWizard(false);
+                  setBearerSetupStep(1);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Progress Steps */}
+            <div className="flex items-center justify-between mb-8">
+              {[1, 2, 3].map((step) => (
+                <div key={step} className="flex items-center flex-1">
+                  <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold ${
+                    bearerSetupStep >= step
+                      ? 'bg-[#FF6C37] text-white'
+                      : 'bg-gray-200 text-gray-500'
+                  }`}>
+                    {step}
+                  </div>
+                  {step < 3 && (
+                    <div className={`flex-1 h-1 mx-2 ${
+                      bearerSetupStep > step ? 'bg-[#FF6C37]' : 'bg-gray-200'
+                    }`} />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Step 1: Login URL */}
+            {bearerSetupStep === 1 && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Step 1: Enter Login API Endpoint
+                  </label>
+                  <input
+                    type="text"
+                    value={wizardLoginUrl}
+                    onChange={(e) => setWizardLoginUrl(e.target.value)}
+                    placeholder="https://api.example.com/auth/login"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF6C37] focus:border-[#FF6C37]"
+                    autoFocus
+                  />
+                  <p className="text-sm text-gray-500 mt-2">
+                    Enter the URL of your login/authentication endpoint
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Credentials */}
+            {bearerSetupStep === 2 && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Step 2: Enter Login Credentials
+                  </label>
+                  <input
+                    type="text"
+                    value={wizardUsername}
+                    onChange={(e) => setWizardUsername(e.target.value)}
+                    placeholder="Username or Email"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF6C37] focus:border-[#FF6C37] mb-3"
+                    autoFocus
+                  />
+                  <input
+                    type="password"
+                    value={wizardPassword}
+                    onChange={(e) => setWizardPassword(e.target.value)}
+                    placeholder="Password"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF6C37] focus:border-[#FF6C37]"
+                  />
+                  <p className="text-sm text-gray-500 mt-2">
+                    These credentials will be saved for auto-login when token expires
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Token Path */}
+            {bearerSetupStep === 3 && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Step 3: Token Field Name
+                  </label>
+                  <input
+                    type="text"
+                    value={wizardTokenPath}
+                    onChange={(e) => setWizardTokenPath(e.target.value)}
+                    placeholder="access_token"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FF6C37] focus:border-[#FF6C37]"
+                  />
+                  <p className="text-sm text-gray-500 mt-2">
+                    Where is the token in the response? Examples: <code className="bg-gray-100 px-1.5 py-0.5 rounded">access_token</code>, <code className="bg-gray-100 px-1.5 py-0.5 rounded">data.token</code>, <code className="bg-gray-100 px-1.5 py-0.5 rounded">result.jwt</code>
+                  </p>
+                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      💡 <strong>Auto-detection:</strong> If not found at this path, we'll automatically search common token fields
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-between mt-8">
+              <button
+                onClick={() => {
+                  if (bearerSetupStep > 1) {
+                    setBearerSetupStep(bearerSetupStep - 1);
+                  } else {
+                    setShowBearerSetupWizard(false);
+                  }
+                }}
+                className="px-6 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                {bearerSetupStep === 1 ? 'Cancel' : 'Back'}
+              </button>
+              <button
+                onClick={setupBearerTokenWizard}
+                className="px-6 py-3 text-sm font-bold bg-[#FF6C37] text-white rounded-lg hover:bg-[#ff5722] transition-colors shadow-sm hover:shadow-md"
+              >
+                {bearerSetupStep === 3 ? 'Test & Configure' : 'Next'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Request Tabs */}
+      <div className="bg-white border-b border-gray-300">
+        <div className="flex items-center overflow-x-auto">
+          <div className="flex flex-1 min-w-0">
+            {tabs.map((tab, index) => (
+              <div
+                key={tab.id}
+                className={`group flex items-center gap-2 px-4 py-2.5 border-r border-gray-200 cursor-pointer transition-colors min-w-fit ${
+                  activeTabIndex === index
+                    ? 'bg-white border-b-2 border-b-[#FF6C37]'
+                    : 'bg-gray-50 hover:bg-gray-100'
+                }`}
+                onClick={() => setActiveTabIndex(index)}
+                onDoubleClick={() => startRenaming(index)}
+              >
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                  activeTabIndex === index ? 'bg-[#FF6C37] text-white' : 'bg-gray-300 text-gray-700'
+                }`}>
+                  {tab.method}
+                </span>
+                {renamingTabIndex === index ? (
+                  <input
+                    type="text"
+                    value={tempTabName}
+                    onChange={(e) => setTempTabName(e.target.value)}
+                    onBlur={finishRenaming}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') finishRenaming();
+                      if (e.key === 'Escape') setRenamingTabIndex(null);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-32 px-2 py-0.5 text-sm border border-[#FF6C37] rounded focus:outline-none"
+                    autoFocus
+                  />
+                ) : (
+                  <span className={`text-sm truncate max-w-[150px] ${
+                    activeTabIndex === index ? 'text-gray-900 font-medium' : 'text-gray-600'
+                  }`} title={tab.name}>
+                    {tab.name}
+                  </span>
+                )}
+                {tab.hasUnsavedChanges && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FF6C37]" title="Unsaved changes" />
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeTab(index);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-gray-200 rounded transition-opacity"
+                  title="Close tab"
+                >
+                  <XMarkIcon className="h-3.5 w-3.5 text-gray-500" />
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={createNewTab}
+            className="flex-shrink-0 px-3 py-2.5 hover:bg-gray-100 border-l border-gray-200 transition-colors"
+            title="New request tab (Ctrl+T)"
+          >
+            <PlusIcon className="h-4 w-4 text-gray-600" />
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content Area with Scroll */}
+      <div className="flex-1 overflow-auto bg-gray-50">
+        <div className="p-4">
+
       {/* Main Request Section */}
-      <div className="bg-white border border-gray-200 rounded max-w-[1600px] mx-auto shadow-sm">
-        {/* URL Bar */}
-        <div className="p-4 border-b border-gray-200 bg-gray-50">
-          <div className="flex gap-2 flex-col sm:flex-row">
+      <div className="bg-white rounded-lg shadow-sm">
+        {/* URL Bar - Postman Style */}
+        <div className="p-4">
+          <div className="flex gap-2">
             <select
               value={method}
               onChange={(e) => setMethod(e.target.value as HttpMethod)}
-              className="w-full sm:w-32 px-4 py-2.5 bg-white border border-gray-300 rounded text-sm font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#FF6C37] focus:border-transparent"
+              className={`px-4 py-2.5 border-2 rounded font-bold text-sm focus:outline-none focus:ring-2 focus:ring-[#FF6C37] ${
+                method === 'GET' ? 'text-green-600 border-green-200 bg-green-50' :
+                method === 'POST' ? 'text-blue-600 border-blue-200 bg-blue-50' :
+                method === 'PUT' ? 'text-yellow-600 border-yellow-200 bg-yellow-50' :
+                method === 'DELETE' ? 'text-red-600 border-red-200 bg-red-50' :
+                'text-gray-600 border-gray-200 bg-gray-50'
+              }`}
               title="Select HTTP method"
             >
               {['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'].map((m) => (
@@ -765,25 +1905,23 @@ print(response.json())`,
                 type="text"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="Enter request URL (e.g., https://api.example.com/users)"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#FF6C37] focus:border-transparent"
-                title="Enter the full API endpoint URL"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && url.trim() && !loading) {
+                    handleSubmit();
+                  }
+                }}
+                placeholder="https://api.example.com/endpoint"
+                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#FF6C37] focus:border-[#FF6C37]"
               />
-              {!url && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">
-                  Press Enter to send
-                </div>
-              )}
             </div>
             <button
               onClick={handleSubmit}
               disabled={loading || !url.trim()}
-              className="w-full sm:w-auto px-8 py-2.5 bg-[#FF6C37] hover:bg-[#ff5722] text-white text-sm font-semibold rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-              title={!url.trim() ? 'Enter a URL first' : 'Send request'}
+              className="px-8 py-2.5 bg-[#FF6C37] hover:bg-[#ff5722] text-white text-sm font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md flex items-center gap-2"
             >
               {loading ? (
                 <>
-                  <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                  <ArrowPathIcon className="h-5 w-5 animate-spin" />
                   Sending...
                 </>
               ) : (
@@ -894,6 +2032,13 @@ print(response.json())`,
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-gray-600">Configure authentication for your request</p>
+                <button
+                  onClick={() => setShowBearerSetupWizard(true)}
+                  className="px-4 py-2 text-sm font-medium bg-[#FF6C37] text-white rounded hover:bg-[#ff5722] transition-colors flex items-center gap-2"
+                >
+                  <WrenchIcon className="h-4 w-4" />
+                  Quick Setup Bearer Token
+                </button>
               </div>
               <div className="space-y-4">
                 <div>
@@ -1631,7 +2776,9 @@ print(response.json())`,
           </div>
         </div>
       )}
-    </div>
+        </div>
+      </div>
+      </div>
     </div>
   );
 } 
