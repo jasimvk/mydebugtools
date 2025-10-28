@@ -3,33 +3,34 @@
 export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback } from 'react';
+import ProtectedRoute from '@/app/components/ProtectedRoute';
+import { useSession, signOut, signIn } from 'next-auth/react';
+import { useCollections } from './hooks/useCollections';
 import { 
   WrenchIcon, 
-  ArrowPathIcon, 
   ClipboardIcon,
   ClockIcon,
   CogIcon,
   PlusIcon,
+  MinusIcon,
   TrashIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  ChevronRightIcon,
+  FolderIcon,
   CheckIcon,
   XMarkIcon,
   DocumentTextIcon,
   DocumentDuplicateIcon,
-  ArrowDownTrayIcon,
+  ArrowDownOnSquareIcon,
+  ArrowUpOnSquareIcon,
   QuestionMarkCircleIcon,
   LightBulbIcon,
-  CloudArrowUpIcon,
   CodeBracketIcon,
   TableCellsIcon,
   MagnifyingGlassIcon,
   ShareIcon,
   ArrowsRightLeftIcon,
+  ArrowPathIcon,
   CommandLineIcon,
   DocumentCheckIcon,
-  MinusIcon,
   AdjustmentsHorizontalIcon,
   EyeIcon,
   EyeSlashIcon,
@@ -155,7 +156,9 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 const RATE_LIMIT = 10; // requests per minute
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 
-export default function APITester() {
+function APITesterContent() {
+  const { data: session } = useSession();
+  
   // Tab management
   const [tabs, setTabs] = useState<RequestTab[]>([{
     id: '1',
@@ -250,10 +253,23 @@ export default function APITester() {
   const [presets, setPresets] = useState<RequestPreset[]>([]);
   const [responseTime, setResponseTime] = useState<number>(0);
   
-  // Collections state
-  const [collections, setCollections] = useState<Collection[]>([]);
+  // Collections state - now using Supabase hook
+  const {
+    collections,
+    isLoading: collectionsLoading,
+    error: collectionsError,
+    loadCollections,
+    createCollection: createCollectionAPI,
+    deleteCollection: deleteCollectionAPI,
+    saveRequest: saveRequestAPI,
+    deleteRequest: deleteRequestAPI,
+    renameCollection: renameCollectionAPI,
+  } = useCollections();
+  
   const [showCollections, setShowCollections] = useState(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [syncingCollections, setSyncingCollections] = useState(false);
   const [saveRequestName, setSaveRequestName] = useState('');
   const [saveRequestDescription, setSaveRequestDescription] = useState('');
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
@@ -347,16 +363,7 @@ export default function APITester() {
         setActiveTabIndex(index);
       }
     }
-    if (savedCollections) {
-      try {
-        const parsedCollections = JSON.parse(savedCollections);
-        if (Array.isArray(parsedCollections)) {
-          setCollections(parsedCollections);
-        }
-      } catch (e) {
-        console.error('Failed to load saved collections:', e);
-      }
-    }
+    // Collections are now loaded from Supabase via useCollections hook
   };
 
   useEffect(() => {
@@ -376,7 +383,7 @@ export default function APITester() {
     }));
     localStorage.setItem('apiTesterTabs', JSON.stringify(tabs));
     localStorage.setItem('apiTesterActiveTabIndex', activeTabIndex.toString());
-    localStorage.setItem('apiTesterCollections', JSON.stringify(collections));
+    // Collections are now saved to Supabase automatically via API calls
   };
 
   // Tab management functions
@@ -506,44 +513,33 @@ export default function APITester() {
   }, [collections]);
 
   // Collection management functions
-  const createCollection = () => {
+  const createCollection = async () => {
     if (!newCollectionName.trim()) return;
     
-    const newCollection: Collection = {
-      id: Date.now().toString(),
-      name: newCollectionName.trim(),
-      description: newCollectionDescription.trim(),
-      requests: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      color: `#${Math.floor(Math.random()*16777215).toString(16)}`
-    };
+    await createCollectionAPI(
+      newCollectionName.trim(),
+      newCollectionDescription.trim()
+    );
     
-    setCollections([...collections, newCollection]);
     setNewCollectionName('');
     setNewCollectionDescription('');
     setShowNewCollectionDialog(false);
   };
 
-  const deleteCollection = (collectionId: string) => {
+  const deleteCollection = async (collectionId: string) => {
     if (confirm('Are you sure you want to delete this collection?')) {
-      setCollections(collections.filter(c => c.id !== collectionId));
+      await deleteCollectionAPI(collectionId);
     }
   };
 
   const renameCollection = (collectionId: string, newName: string) => {
-    setCollections(collections.map(c => 
-      c.id === collectionId 
-        ? { ...c, name: newName, updatedAt: Date.now() } 
-        : c
-    ));
+    renameCollectionAPI(collectionId, newName);
   };
 
-  const saveCurrentRequestToCollection = () => {
+  const saveCurrentRequestToCollection = async () => {
     if (!selectedCollectionId || !saveRequestName.trim()) return;
     
-    const savedRequest: SavedRequest = {
-      id: Date.now().toString(),
+    await saveRequestAPI(selectedCollectionId, {
       name: saveRequestName.trim(),
       method: currentTab.method,
       url: currentTab.url,
@@ -552,20 +548,7 @@ export default function APITester() {
       contentType: currentTab.contentType,
       authConfig: currentTab.authConfig,
       description: saveRequestDescription.trim(),
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
-
-    setCollections(collections.map(c => {
-      if (c.id === selectedCollectionId) {
-        return {
-          ...c,
-          requests: [...c.requests, savedRequest],
-          updatedAt: Date.now()
-        };
-      }
-      return c;
-    }));
+    });
 
     // Clear form
     setSaveRequestName('');
@@ -596,18 +579,9 @@ export default function APITester() {
     setActiveTabIndex(tabs.length);
   };
 
-  const deleteRequestFromCollection = (collectionId: string, requestId: string) => {
+  const deleteRequestFromCollection = async (collectionId: string, requestId: string) => {
     if (confirm('Are you sure you want to delete this request?')) {
-      setCollections(collections.map(c => {
-        if (c.id === collectionId) {
-          return {
-            ...c,
-            requests: c.requests.filter(r => r.id !== requestId),
-            updatedAt: Date.now()
-          };
-        }
-        return c;
-      }));
+      await deleteRequestAPI(collectionId, requestId);
     }
   };
 
@@ -623,20 +597,42 @@ export default function APITester() {
     linkElement.click();
   };
 
-  const importCollection = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const importCollection = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const importedCollection = JSON.parse(e.target?.result as string);
-        // Generate new ID to avoid conflicts
-        importedCollection.id = Date.now().toString();
-        importedCollection.createdAt = Date.now();
-        importedCollection.updatedAt = Date.now();
         
-        setCollections([...collections, importedCollection]);
+        // Create the collection via API
+        const newCollection = await createCollectionAPI(
+          importedCollection.name,
+          importedCollection.description || '',
+          importedCollection.color
+        );
+        
+        if (!newCollection) {
+          alert('Failed to import collection.');
+          return;
+        }
+        
+        // Import all requests
+        for (const request of importedCollection.requests || []) {
+          await saveRequestAPI(newCollection.id, {
+            name: request.name,
+            method: request.method,
+            url: request.url,
+            headers: request.headers || [],
+            body: request.body || '',
+            contentType: request.contentType || 'application/json',
+            authConfig: request.authConfig || { type: 'none' },
+            description: request.description || '',
+          });
+        }
+        
+        alert(`Successfully imported collection "${importedCollection.name}" with ${importedCollection.requests?.length || 0} requests!`);
       } catch (error) {
         alert('Failed to import collection. Please check the file format.');
         console.error('Import error:', error);
@@ -1556,8 +1552,8 @@ print(response.json())`,
             >
               <PlusIcon className="h-4 w-4" />
             </button>
-            <label className="p-1.5 text-white hover:bg-[#ff5722] rounded cursor-pointer transition-colors">
-              <ArrowDownTrayIcon className="h-4 w-4" />
+            <label className="p-1.5 text-white hover:bg-[#ff5722] rounded cursor-pointer transition-colors" title="Import Collection">
+              <ArrowDownOnSquareIcon className="h-4 w-4" />
               <input
                 type="file"
                 accept=".json"
@@ -1565,6 +1561,21 @@ print(response.json())`,
                 className="hidden"
               />
             </label>
+            {session && (
+              <button
+                onClick={async () => {
+                  setSyncingCollections(true);
+                  console.log('🔄 Manually syncing collections...');
+                  await loadCollections();
+                  setTimeout(() => setSyncingCollections(false), 1000);
+                }}
+                disabled={syncingCollections}
+                className="p-1.5 text-white hover:bg-[#ff5722] rounded transition-colors disabled:opacity-50"
+                title="Sync Collections"
+              >
+                <ArrowPathIcon className={`h-4 w-4 ${syncingCollections ? 'animate-spin' : ''}`} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -1585,12 +1596,20 @@ print(response.json())`,
                     onClick={() => toggleCollectionExpanded(collection.id)}
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {expandedCollections.has(collection.id) ? (
-                        <ChevronDownIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                      ) : (
-                        <ChevronRightIcon className="h-4 w-4 text-gray-500 flex-shrink-0" />
-                      )}
-                      <TableCellsIcon className="h-4 w-4 text-[#FF6C37] flex-shrink-0" />
+                      <button 
+                        className="flex-shrink-0 w-4 h-4 flex items-center justify-center text-gray-600 hover:bg-gray-200 rounded"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleCollectionExpanded(collection.id);
+                        }}
+                      >
+                        {expandedCollections.has(collection.id) ? (
+                          <MinusIcon className="h-3 w-3" />
+                        ) : (
+                          <PlusIcon className="h-3 w-3" />
+                        )}
+                      </button>
+                      <FolderIcon className="h-4 w-4 text-[#FF6C37] flex-shrink-0" />
                       <span className="text-sm font-medium text-gray-900 truncate">{collection.name}</span>
                       <span className="text-xs text-gray-500 flex-shrink-0">({collection.requests.length})</span>
                     </div>
@@ -1601,9 +1620,9 @@ print(response.json())`,
                           exportCollection(collection);
                         }}
                         className="p-1 text-gray-600 hover:bg-gray-200 rounded"
-                        title="Export"
+                        title="Export Collection"
                       >
-                        <CloudArrowUpIcon className="h-3.5 w-3.5" />
+                        <ArrowUpOnSquareIcon className="h-3.5 w-3.5" />
                       </button>
                       <button
                         onClick={(e) => {
@@ -1626,6 +1645,7 @@ print(response.json())`,
                           className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 rounded cursor-pointer group"
                           onClick={() => loadRequestFromCollection(request)}
                         >
+                          <DocumentTextIcon className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
                             request.method === 'GET' ? 'bg-green-100 text-green-700' :
                             request.method === 'POST' ? 'bg-blue-100 text-blue-700' :
@@ -1683,13 +1703,36 @@ print(response.json())`,
             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">API Tester</span>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowSaveDialog(true)}
-              className="px-3 py-1.5 text-sm font-medium bg-[#FF6C37] text-white rounded hover:bg-[#ff5722] transition-colors flex items-center gap-1.5"
-            >
-              <DocumentDuplicateIcon className="h-4 w-4" />
-              Save
-            </button>
+            {session && (
+              <>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded text-xs">
+                  <CheckIcon className="h-3 w-3 text-green-600" />
+                  <span className="text-green-700 font-medium">{session.user?.email}</span>
+                </div>
+                <button
+                  onClick={() => signOut({ callbackUrl: '/tools/api' })}
+                  className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Sign Out
+                </button>
+                <button
+                  onClick={() => setShowSaveDialog(true)}
+                  className="px-3 py-1.5 text-sm font-medium bg-[#FF6C37] text-white rounded hover:bg-[#ff5722] transition-colors flex items-center gap-1.5"
+                >
+                  <DocumentDuplicateIcon className="h-4 w-4" />
+                  Save
+                </button>
+              </>
+            )}
+            {!session && (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="px-4 py-1.5 text-sm font-medium bg-white text-[#FF6C37] border-2 border-[#FF6C37] rounded hover:bg-[#FF6C37] hover:text-white transition-colors"
+                title="Sync collections across devices"
+              >
+                Save My Workspace
+              </button>
+            )}
           </div>
         </div>
 
@@ -1778,42 +1821,42 @@ print(response.json())`,
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
                 <textarea
                   value={saveRequestDescription}
-                  onChange={(e) => setSaveRequestDescription(e.target.value)}
-                  placeholder="Describe what this request does..."
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#FF6C37]"
-                />
-              </div>
+                      onChange={(e) => setSaveRequestDescription(e.target.value)}
+                      placeholder="Describe what this request does..."
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#FF6C37]"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Collection</label>
-                <select
-                  value={selectedCollectionId}
-                  onChange={(e) => setSelectedCollectionId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#FF6C37]"
-                >
-                  <option value="">Select a collection</option>
-                  {collections.map((collection) => (
-                    <option key={collection.id} value={collection.id}>
-                      {collection.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Collection</label>
+                    <select
+                      value={selectedCollectionId}
+                      onChange={(e) => setSelectedCollectionId(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#FF6C37]"
+                    >
+                      <option value="">Select a collection</option>
+                      {collections.map((collection) => (
+                        <option key={collection.id} value={collection.id}>
+                          {collection.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              {collections.length === 0 && (
-                <p className="text-sm text-yellow-600 bg-yellow-50 p-3 rounded">
-                  No collections available. Create one first!
-                </p>
-              )}
-            </div>
+                  {collections.length === 0 && (
+                    <p className="text-sm text-yellow-600 bg-yellow-50 p-3 rounded">
+                      No collections available. Create one first!
+                    </p>
+                  )}
+                </div>
 
-            <div className="flex justify-end gap-2 mt-6">
-              <button
-                onClick={() => {
-                  setShowSaveDialog(false);
-                  setSaveRequestName('');
-                  setSaveRequestDescription('');
+                <div className="flex justify-end gap-2 mt-6">
+                  <button
+                    onClick={() => {
+                      setShowSaveDialog(false);
+                      setSaveRequestName('');
+                      setSaveRequestDescription('');
                   setSelectedCollectionId('');
                 }}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
@@ -2267,7 +2310,10 @@ print(response.json())`,
             >
               {loading ? (
                 <>
-                  <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
                   Sending...
                 </>
               ) : (
@@ -2809,7 +2855,10 @@ print(response.json())`,
             </div>
             {loading && (
               <div className="flex items-center gap-2 text-sm text-gray-600">
-                <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
                 <span>Loading...</span>
               </div>
             )}
@@ -3199,9 +3248,97 @@ print(response.json())`,
           </div>
         </div>
       )}
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Save Your Workspace</h3>
+              <button
+                onClick={() => setShowAuthModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <p className="text-gray-600 mb-6 text-sm">
+              Connect with your Google account to sync your API collections across all devices
+            </p>
+
+            {/* Benefits */}
+            <div className="mb-6 space-y-2.5">
+              <div className="flex items-start gap-2.5">
+                <CheckIcon className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-gray-700">Save and organize API requests in collections</p>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <CheckIcon className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-gray-700">Sync your data across all devices</p>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <CheckIcon className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-gray-700">Access your collections from anywhere</p>
+              </div>
+            </div>
+
+            {/* Google Sign In Button */}
+            <button
+              onClick={() => signIn('google', { callbackUrl: window.location.pathname })}
+              className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                />
+              </svg>
+              <span className="font-semibold text-gray-700">Continue with Google</span>
+            </button>
+
+            {/* Info Note */}
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+              <p className="text-xs text-blue-800">
+                <span className="font-semibold">Note:</span> You can continue using the API Tester without connecting. Your collections will be saved locally in your browser.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <p className="mt-4 text-center text-xs text-gray-500">
+              By connecting, you agree to our{' '}
+              <a href="/terms-of-service" className="text-[#FF6C37] hover:underline">
+                Terms of Service
+              </a>
+              {' '}and{' '}
+              <a href="/privacy-policy" className="text-[#FF6C37] hover:underline">
+                Privacy Policy
+              </a>
+            </p>
+          </div>
         </div>
+      )}
+      </div>
       </div>
       </div>
     </div>
   );
 } 
+
+// Export without authentication requirement
+// Users can use API Tester freely, but need to connect to save collections
+export default function APITester() {
+  return <APITesterContent />;
+}

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import GoogleAnalytics from "./components/GoogleAnalytics";
 import AnalyticsProvider from "./components/AnalyticsProvider";
+import AuthProvider from "./components/AuthProvider";
 import Providers from "./providers";
 import StructuredData from "@/components/StructuredData";
 import Script from "next/script";
@@ -85,11 +86,13 @@ export default function RootLayout({
           <GoogleAnalytics measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
         )}
         <StructuredData /> 
-        <AnalyticsProvider>
-          <Providers>
-            {children}
-          </Providers>
-        </AnalyticsProvider>
+        <AuthProvider>
+          <AnalyticsProvider>
+            <Providers>
+              {children}
+            </Providers>
+          </AnalyticsProvider>
+        </AuthProvider>
       </body>
     </html>
   );
