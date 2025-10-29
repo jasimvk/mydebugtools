@@ -18,27 +18,27 @@ import {
 
 type JsonValue = any;
 
-// Theme for JSONTree - Postman style with red keys and black values
-  const jsonTreeTheme = {
-    scheme: 'postman-light',
-    author: 'custom',
-    base00: '#ffffff',      // Background
-    base01: '#f6f6f6',      // Lighter Background
-    base02: '#efefef',      // Selection Background
-    base03: '#999999',      // Comments, Invisibles
-    base04: '#8e8e8e',      // Dark Foreground
-    base05: '#000000',      // Default Foreground - BLACK for values
-    base06: '#2e2e2e',      // Light Foreground
-    base07: '#1a1a1a',      // Light Background
-    base08: '#e53935',      // Variables, XML Tags
-    base09: '#000000',      // Integers, Boolean, Constants - BLACK
-    base0A: '#dc3545',      // Classes, Markup Bold - RED for keys
-    base0B: '#000000',      // Strings, Markup Code - BLACK
-    base0C: '#00acc1',      // Support, Regular Expressions
-    base0D: '#dc3545',      // Functions, Methods - RED for keys
-    base0E: '#9c27b0',      // Keywords, Storage
-    base0F: '#8d6e63',      // Deprecated
-  };
+// Theme for JSONTree - Modern, consistent style
+const jsonTreeTheme = {
+  scheme: 'mydebugtools',
+  author: 'custom',
+  base00: '#ffffff',      // Background - Pure white
+  base01: '#f8f9fa',      // Lighter Background
+  base02: '#fff3e0',      // Selection Background - Light orange
+  base03: '#6c757d',      // Comments, Invisibles - Gray
+  base04: '#495057',      // Dark Foreground
+  base05: '#212529',      // Default Foreground - Dark gray for values
+  base06: '#343a40',      // Light Foreground
+  base07: '#212529',      // Light Background
+  base08: '#FF6C37',      // Variables, XML Tags - Orange (brand color)
+  base09: '#0066cc',      // Integers, Boolean, Constants - Blue
+  base0A: '#FF6C37',      // Classes, Markup Bold - Orange for keys
+  base0B: '#28a745',      // Strings, Markup Code - Green
+  base0C: '#17a2b8',      // Support, Regular Expressions - Cyan
+  base0D: '#FF6C37',      // Functions, Methods - Orange for keys
+  base0E: '#6f42c1',      // Keywords, Storage - Purple
+  base0F: '#dc3545',      // Deprecated - Red
+};
 
 export default function JSONTools() {
   const [jsonInput, setJsonInput] = useState<string>(`{
@@ -909,18 +909,96 @@ export default function JSONTools() {
                       ...jsonTreeTheme,
                       tree: {
                         border: 0,
-                        padding: 0,
-                        marginTop: '0.5em',
-                        marginBottom: '0.5em',
-                        marginLeft: '0.125em',
+                        padding: '8px',
+                        marginTop: 0,
+                        marginBottom: 0,
+                        marginLeft: 0,
                         marginRight: 0,
                         listStyle: 'none',
-                        MozUserSelect: 'none',
-                        WebkitUserSelect: 'none',
+                        MozUserSelect: 'text',
+                        WebkitUserSelect: 'text',
                         backgroundColor: jsonTreeTheme.base00,
+                        fontFamily: '"SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace',
+                        fontSize: '13px',
+                        lineHeight: '1.6',
                       },
-                      arrowSign: { color: '#666' },
-                      arrowSignCollapsed: { color: '#666' },
+                      arrowSign: { 
+                        color: '#6c757d',
+                        fontSize: '12px',
+                        marginRight: '6px',
+                      },
+                      arrowSignCollapsed: { 
+                        color: '#6c757d',
+                        fontSize: '12px',
+                        marginRight: '6px',
+                      },
+                      nestedNodeLabel: ({ style }, keyPath, nodeType, expanded) => ({
+                        style: {
+                          ...style,
+                          fontWeight: 500,
+                          color: '#FF6C37',
+                        }
+                      }),
+                      nestedNodeItemString: ({ style }, keyPath, nodeType, expanded) => ({
+                        style: {
+                          ...style,
+                          color: '#6c757d',
+                          fontSize: '12px',
+                          marginLeft: '6px',
+                        }
+                      }),
+                      value: ({ style }, nodeType, keyPath) => {
+                        const baseStyle = {
+                          ...style,
+                          paddingLeft: '4px',
+                          paddingRight: '4px',
+                        };
+                        
+                        // Style based on value type
+                        if (nodeType === 'String') {
+                          return {
+                            style: {
+                              ...baseStyle,
+                              color: '#28a745',
+                            }
+                          };
+                        }
+                        if (nodeType === 'Number') {
+                          return {
+                            style: {
+                              ...baseStyle,
+                              color: '#0066cc',
+                              fontWeight: 500,
+                            }
+                          };
+                        }
+                        if (nodeType === 'Boolean') {
+                          return {
+                            style: {
+                              ...baseStyle,
+                              color: '#6f42c1',
+                              fontWeight: 600,
+                            }
+                          };
+                        }
+                        if (nodeType === 'Null') {
+                          return {
+                            style: {
+                              ...baseStyle,
+                              color: '#dc3545',
+                              fontStyle: 'italic',
+                            }
+                          };
+                        }
+                        return { style: baseStyle };
+                      },
+                      label: ({ style }, nodeType, expanded) => ({
+                        style: {
+                          ...style,
+                          color: '#FF6C37',
+                          fontWeight: 500,
+                        }
+                      }),
                     }}
                     invertTheme={false}
                     hideRoot={false}
@@ -942,11 +1020,11 @@ export default function JSONTools() {
                     getItemString={(type, data, itemType, itemString) => {
                       if (type === 'Object') {
                         const keys = Object.keys(data as object);
-                        return <span style={{ color: '#666' }}>{`{ } ${keys.length} ${keys.length === 1 ? 'key' : 'keys'}`}</span>;
+                        return <span style={{ color: '#6c757d', fontSize: '12px', fontWeight: 400 }}>{`{...} ${keys.length} ${keys.length === 1 ? 'key' : 'keys'}`}</span>;
                       }
                       if (type === 'Array') {
                         const length = (data as any[]).length;
-                        return <span style={{ color: '#666' }}>{`[ ] ${length} ${length === 1 ? 'item' : 'items'}`}</span>;
+                        return <span style={{ color: '#6c757d', fontSize: '12px', fontWeight: 400 }}>{`[...] ${length} ${length === 1 ? 'item' : 'items'}`}</span>;
                       }
                       return <span>{itemString}</span>;
                     }}

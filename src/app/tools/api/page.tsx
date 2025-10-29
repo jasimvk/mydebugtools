@@ -1278,72 +1278,44 @@ function APITesterContent() {
       
       // Check if token expired and auto-login is enabled
       if (authConfig.autoLogin && isTokenExpiredResponse(response.status, data)) {
-        console.log('Token expired, attempting auto-login...');
-        
-        // Show notification to user
-        const loginNotification = document.createElement('div');
-        loginNotification.className = 'fixed top-4 right-4 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2';
-        loginNotification.innerHTML = `
-          <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span>Token expired. Auto-logging in...</span>
-        `;
-        document.body.appendChild(loginNotification);
+        console.log('Token expired, attempting auto-login and token refresh...');
         
         const newToken = await performAutoLogin();
         
-        // Remove notification
-        document.body.removeChild(loginNotification);
-        
         if (newToken) {
-          // Show success notification
-          const successNotification = document.createElement('div');
-          successNotification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2';
-          successNotification.innerHTML = `
-            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-            </svg>
-            <span>Login successful! Retrying request...</span>
-          `;
-          document.body.appendChild(successNotification);
-          setTimeout(() => document.body.removeChild(successNotification), 3000);
-          
-          // Retry the request with new token
-          console.log('Retrying request with new token...');
-          if (authConfig.type === 'bearer') {
-            requestHeaders['Authorization'] = `Bearer ${newToken}`;
-          }
-          
-          const retryStartTime = Date.now();
-          response = await fetch(processedUrl, {
-            method,
-            headers: requestHeaders,
-            body: method !== 'GET' ? body : undefined,
+          // Automatically update the bearer token in auth config
+          setAuthConfig({ 
+            ...authConfig,
+            token: newToken,
+            tokenExpiry: undefined // Will be recalculated
           });
           
-          // Parse retry response safely
-          const retryResponseText = await response.text();
-          try {
-            const retryContentType = response.headers.get('content-type');
-            if (retryContentType?.includes('application/json') || (retryResponseText && (retryResponseText.trim().startsWith('{') || retryResponseText.trim().startsWith('[')))) {
-              data = retryResponseText ? JSON.parse(retryResponseText) : null;
-            } else {
-              data = retryResponseText || null;
+          // Show brief success notification
+          const successNotification = document.createElement('div');
+          successNotification.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2 text-sm';
+          successNotification.innerHTML = `
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Token refreshed automatically</span>
+          `;
+          document.body.appendChild(successNotification);
+          setTimeout(() => {
+            if (document.body.contains(successNotification)) {
+              document.body.removeChild(successNotification);
             }
-          } catch (error) {
-            console.warn('Failed to parse retry response as JSON, returning as text:', error);
-            data = retryResponseText || null;
-          }
+          }, 2000);
           
-          const retryEndTime = Date.now();
-          const duration = retryEndTime - retryStartTime;
-          
-          console.log('Request retried successfully with new token');
+          // Retry the request with new token by calling handleSubmit again
+          console.log('Retrying request with refreshed token...');
+          // Wait a bit for state to update, then retry
+          setTimeout(() => handleSubmit(), 100);
+          return;
         } else {
-          throw new Error('Failed to auto-login. Please check your credentials.');  
+          setError('Token expired and auto-refresh failed. Please login manually.');
         }
+        
+        return; // Exit early since we're retrying
       }
       
       const endTime = Date.now();
@@ -2484,10 +2456,20 @@ print(response.json())`,
                                     <div className="flex items-center justify-between">
                                       <div className="flex items-center gap-2">
                                         {isExpired ? (
-                                          <span className="text-red-600 font-medium flex items-center gap-1.5">
-                                            <XMarkIcon className="h-4 w-4" />
-                                            Token expired
-                                          </span>
+                                          authConfig.autoRefresh || authConfig.autoLogin ? (
+                                            <span className="text-blue-600 font-medium flex items-center gap-1.5">
+                                              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                              </svg>
+                                              Token refreshing...
+                                            </span>
+                                          ) : (
+                                            <span className="text-red-600 font-medium flex items-center gap-1.5">
+                                              <XMarkIcon className="h-4 w-4" />
+                                              Token expired
+                                            </span>
+                                          )
                                         ) : minutesUntilExpiry < 5 ? (
                                           <span className="text-orange-600 font-medium flex items-center gap-1.5">
                                             <ClockIcon className="h-4 w-4" />

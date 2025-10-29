@@ -5,9 +5,12 @@
 ### Step 1: Configure Google Cloud Console
 Go to: https://console.cloud.google.com/apis/credentials
 
-Add **both** redirect URIs to your OAuth client:
+Add **ALL THREE** redirect URIs to your OAuth client:
 - ✅ Development: `http://localhost:3000/api/auth/callback/google`
-- ✅ Production: `https://mydebugtools.com/api/auth/callback/google`
+- ✅ Production (non-www): `https://mydebugtools.com/api/auth/callback/google`
+- ✅ Production (www): `https://www.mydebugtools.com/api/auth/callback/google`
+
+**Important**: You need BOTH www and non-www versions because users can access your site either way!
 
 ### Step 2: Environment Variables
 
