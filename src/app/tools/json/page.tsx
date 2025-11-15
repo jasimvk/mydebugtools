@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { JSONTree } from 'react-json-tree';
 import { 
   ClipboardIcon, 
   ArrowDownTrayIcon, 
@@ -18,26 +17,219 @@ import {
 
 type JsonValue = any;
 
-// Theme for JSONTree - Modern, consistent style
-const jsonTreeTheme = {
-  scheme: 'mydebugtools',
-  author: 'custom',
-  base00: '#ffffff',      // Background - Pure white
-  base01: '#f8f9fa',      // Lighter Background
-  base02: '#fff3e0',      // Selection Background - Light orange
-  base03: '#6c757d',      // Comments, Invisibles - Gray
-  base04: '#495057',      // Dark Foreground
-  base05: '#212529',      // Default Foreground - Dark gray for values
-  base06: '#343a40',      // Light Foreground
-  base07: '#212529',      // Light Background
-  base08: '#FF6C37',      // Variables, XML Tags - Orange (brand color)
-  base09: '#0066cc',      // Integers, Boolean, Constants - Blue
-  base0A: '#FF6C37',      // Classes, Markup Bold - Orange for keys
-  base0B: '#28a745',      // Strings, Markup Code - Green
-  base0C: '#17a2b8',      // Support, Regular Expressions - Cyan
-  base0D: '#FF6C37',      // Functions, Methods - Orange for keys
-  base0E: '#6f42c1',      // Keywords, Storage - Purple
-  base0F: '#dc3545',      // Deprecated - Red
+// Simple Minimal JSON Tree Component
+interface JSONTreeNodeProps {
+  data: any;
+  name?: string;
+  path?: string;
+  level?: number;
+  searchTerm?: string;
+  onSelect?: (path: string, node: any) => void;
+  expandAll?: boolean;
+}
+
+const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({ 
+  data, 
+  name, 
+  path = '', 
+  level = 0, 
+  searchTerm = '',
+  onSelect,
+  expandAll = false
+}) => {
+  const [isExpanded, setIsExpanded] = useState(expandAll || level === 0);
+  const isExpandable = data !== null && typeof data === 'object';
+  const isArray = Array.isArray(data);
+  
+  // Update expansion when expandAll prop changes
+  useEffect(() => {
+    if (expandAll !== undefined) {
+      setIsExpanded(expandAll);
+    }
+  }, [expandAll]);
+  
+  const getValueColor = (value: any): string => {
+    if (value === null) return '#999';
+    if (typeof value === 'string') return '#059669';
+    if (typeof value === 'number') return '#2563eb';
+    if (typeof value === 'boolean') return '#7c3aed';
+    return '#333';
+  };
+
+  const getValueDisplay = (value: any): string => {
+    if (value === null) return 'null';
+    if (typeof value === 'string') return `"${value}"`;
+    if (typeof value === 'boolean') return value ? 'true' : 'false';
+    return String(value);
+  };
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsExpanded(!isExpanded);
+  };
+
+  const handleClick = () => {
+    if (onSelect && path) {
+      onSelect(path, data);
+    }
+  };
+
+  // Check if this node matches search
+  const matchesSearch = (obj: any, term: string): boolean => {
+    if (!term) return true;
+    const termLower = term.toLowerCase();
+    
+    const checkValue = (val: any): boolean => {
+      if (val === null && 'null'.includes(termLower)) return true;
+      if (typeof val === 'string' && val.toLowerCase().includes(termLower)) return true;
+      if (typeof val === 'number' && val.toString().includes(termLower)) return true;
+      if (typeof val === 'boolean' && val.toString().includes(termLower)) return true;
+      
+      if (typeof val === 'object' && val !== null) {
+        if (Array.isArray(val)) {
+          return val.some(checkValue);
+        }
+        return Object.entries(val).some(([k, v]) => 
+          k.toLowerCase().includes(termLower) || checkValue(v)
+        );
+      }
+      return false;
+    };
+    
+    return checkValue(obj);
+  };
+
+  const shouldShow = !searchTerm || matchesSearch(data, searchTerm) || (name && name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  if (!shouldShow) {
+    return null;
+  }
+
+  // Expand automatically if searching
+  useEffect(() => {
+    if (searchTerm && isExpandable) {
+      setIsExpanded(true);
+    }
+  }, [searchTerm, isExpandable]);
+
+  // Highlight search matches
+  const highlightMatch = (text: string, term: string) => {
+    if (!term) return text;
+    const index = text.toLowerCase().indexOf(term.toLowerCase());
+    if (index === -1) return text;
+    
+    return (
+      <>
+        {text.substring(0, index)}
+        <mark className="bg-yellow-200 text-gray-900 px-0.5 rounded">{text.substring(index, index + term.length)}</mark>
+        {text.substring(index + term.length)}
+      </>
+    );
+  };
+
+  // Leaf node (primitive value)
+  if (!isExpandable) {
+    const nameMatches = searchTerm && name && name.toLowerCase().includes(searchTerm.toLowerCase());
+    const valueStr = getValueDisplay(data);
+    const valueMatches = searchTerm && valueStr.toLowerCase().includes(searchTerm.toLowerCase());
+
+    return (
+      <div 
+        className="flex items-center font-mono text-sm py-0.5 hover:bg-gray-50 cursor-pointer"
+        onClick={handleClick}
+      >
+        <span className="w-4"></span>
+        {name && (
+          <>
+            <span className="text-blue-600 font-medium mr-1">
+              {nameMatches ? highlightMatch(name, searchTerm) : name}
+            </span>
+            <span className="text-gray-400 mr-1">:</span>
+          </>
+        )}
+        <span style={{ color: getValueColor(data) }}>
+          {valueMatches ? highlightMatch(valueStr, searchTerm) : valueStr}
+        </span>
+      </div>
+    );
+  }
+
+  const entries = isArray 
+    ? (data as any[]).map((item, index) => [index, item])
+    : Object.entries(data);
+
+  const nameMatches = searchTerm && name && name.toLowerCase().includes(searchTerm.toLowerCase());
+
+  return (
+    <div className="font-mono text-sm">
+      <div 
+        className="flex items-center py-0.5 hover:bg-gray-50 cursor-pointer"
+        onClick={handleToggle}
+      >
+        {/* Simple Plus/Minus Button */}
+        <button
+          onClick={handleToggle}
+          className="flex-shrink-0 w-4 h-4 flex items-center justify-center text-gray-500 hover:text-gray-700 mr-1.5 text-xs font-bold"
+          title={isExpanded ? 'Collapse' : 'Expand'}
+        >
+          {isExpanded ? '−' : '+'}
+        </button>
+
+        {/* Key Name */}
+        {name && (
+          <>
+            <span className="text-blue-600 font-medium mr-1">
+              {nameMatches ? highlightMatch(name, searchTerm) : name}
+            </span>
+            <span className="text-gray-400 mr-1">:</span>
+          </>
+        )}
+
+        {/* Opening Bracket */}
+        <span className="text-gray-600">{isArray ? '[' : '{'}</span>
+        
+        {/* Item count when collapsed */}
+        {!isExpanded && entries.length > 0 && (
+          <span className="text-gray-400 text-xs ml-1">
+            {entries.length}
+          </span>
+        )}
+        
+        {/* Closing bracket when collapsed */}
+        {!isExpanded && (
+          <span className="text-gray-600 ml-1">{isArray ? ']' : '}'}</span>
+        )}
+      </div>
+
+      {/* Expanded Content */}
+      {isExpanded && (
+        <>
+          <div className="ml-5 border-l border-gray-300 pl-2">
+            {entries.length === 0 ? (
+              <div className="text-gray-400 text-xs py-1">empty</div>
+            ) : (
+              entries.map(([key, value], index) => {
+                const childPath = path ? `${path}.${key}` : String(key);
+                return (
+                  <JSONTreeNode
+                    key={index}
+                    data={value}
+                    name={String(key)}
+                    path={childPath}
+                    level={level + 1}
+                    searchTerm={searchTerm}
+                    onSelect={onSelect}
+                    expandAll={expandAll}
+                  />
+                );
+              })
+            )}
+          </div>
+          <div className="text-gray-600">{isArray ? ']' : '}'}</div>
+        </>
+      )}
+    </div>
+  );
 };
 
 export default function JSONTools() {
@@ -75,7 +267,7 @@ export default function JSONTools() {
   const [searchTerm, setSearchTerm] = useState('');
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'tree' | 'text'>('tree');
+  const [activeTab, setActiveTab] = useState<'tree' | 'text'>('text');
   const [isPretty, setIsPretty] = useState(true);
   const [loadingUrl, setLoadingUrl] = useState(false);
   const [selectedPath, setSelectedPath] = useState<string>('');
@@ -650,53 +842,6 @@ export default function JSONTools() {
 
   return (
     <div className="bg-[#fafafa] text-gray-900 flex flex-col">
-      <style dangerouslySetInnerHTML={{__html: `
-        /* Target and hide the red arrow by color */
-        ul[role="tree"] span[style*="color:#dc3545"],
-        ul[role="tree"] span[style*="color: #dc3545"],
-        ul[role="tree"] span[style*="color:rgb(220, 53, 69)"],
-        ul[role="tree"] span[style*="color: rgb(220, 53, 69)"] {
-          visibility: hidden !important;
-          width: 0 !important;
-          height: 0 !important;
-          font-size: 0 !important;
-          position: absolute !important;
-        }
-        
-        /* Hide first span in label */
-        ul[role="tree"] li > label > span:first-child {
-          color: transparent !important;
-          font-size: 0 !important;
-          width: 16px !important;
-          height: 16px !important;
-          overflow: hidden !important;
-          position: relative !important;
-        }
-        
-        /* Add our custom +/- */
-        ul[role="tree"] li > label > span:first-child::after {
-          content: '+';
-          position: absolute;
-          top: 0;
-          left: 0;
-          font-size: 14px;
-          color: #666;
-          font-weight: bold;
-          width: 16px;
-          height: 16px;
-          text-align: center;
-          line-height: 16px;
-          display: block;
-        }
-        
-        ul[role="tree"] li[aria-expanded="true"] > label > span:first-child::after {
-          content: '−';
-        }
-        
-        ul[role="tree"] li[aria-expanded="false"] > label > span:first-child::after {
-          content: '+';
-        }
-      `}} />
       <h1 className="text-2xl font-semibold mb-6 text-gray-800 px-6 pt-6">JSON Viewer</h1>
       
       
@@ -850,10 +995,10 @@ export default function JSONTools() {
                     setExpandAll(true);
                     setTreeCollapsed(false);
                   }}
-                  className="px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded transition-colors flex items-center gap-1"
+                  className="px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded transition-colors flex items-center gap-1.5"
                   title="Expand All"
                 >
-                  <span className="text-sm">+</span>
+                  <span className="text-base font-bold">−</span>
                   Expand All
                 </button>
                 <button
@@ -861,10 +1006,10 @@ export default function JSONTools() {
                     setExpandAll(false);
                     setTreeCollapsed(1);
                   }}
-                  className="px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded transition-colors flex items-center gap-1"
+                  className="px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded transition-colors flex items-center gap-1.5"
                   title="Collapse All"
                 >
-                  <span className="text-sm">−</span>
+                  <span className="text-base font-bold">+</span>
                   Collapse All
                 </button>
               </div>
@@ -883,318 +1028,163 @@ export default function JSONTools() {
             )}
           </div>
 
-          {/* Two-panel layout: Tree view and Property Details */}
-          <div className="flex gap-0 border border-gray-300 rounded bg-white overflow-hidden">
-            {/* Left Panel - Tree View with collapsible sidebar */}
-            <div className="flex flex-1 overflow-hidden">
-              {/* Main Tree View */}
-              <div 
-                ref={treeContainerRef}
-                className="flex-1 p-4 overflow-auto max-h-[600px]"
-                onPaste={handlePasteInTree}
-                tabIndex={0}
-              >
-                {error ? (
-                  <div className="text-red-700 font-semibold whitespace-pre-wrap p-3 bg-red-50 rounded border-l-4 border-red-500">
-                    <p className="font-bold mb-2">Error</p>
-                    <p className="text-xs">{error}</p>
-                    <p className="text-xs mt-2 text-gray-600">Try switching to Text tab to fix the JSON syntax</p>
-                  </div>
-                ) : (
-                <>
-                  <JSONTree 
-                    key={`json-tree-${expandAll}-${treeCollapsed}`}
-                    data={filteredJson(parsedJson, searchTerm) || {}} 
-                    theme={{
-                      ...jsonTreeTheme,
-                      tree: {
-                        border: 0,
-                        padding: '8px',
-                        marginTop: 0,
-                        marginBottom: 0,
-                        marginLeft: 0,
-                        marginRight: 0,
-                        listStyle: 'none',
-                        MozUserSelect: 'text',
-                        WebkitUserSelect: 'text',
-                        backgroundColor: jsonTreeTheme.base00,
-                        fontFamily: '"SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace',
-                        fontSize: '13px',
-                        lineHeight: '1.6',
-                      },
-                      arrowSign: { 
-                        color: '#6c757d',
-                        fontSize: '12px',
-                        marginRight: '6px',
-                      },
-                      arrowSignCollapsed: { 
-                        color: '#6c757d',
-                        fontSize: '12px',
-                        marginRight: '6px',
-                      },
-                      nestedNodeLabel: ({ style }, keyPath, nodeType, expanded) => ({
-                        style: {
-                          ...style,
-                          fontWeight: 500,
-                          color: '#FF6C37',
-                        }
-                      }),
-                      nestedNodeItemString: ({ style }, keyPath, nodeType, expanded) => ({
-                        style: {
-                          ...style,
-                          color: '#6c757d',
-                          fontSize: '12px',
-                          marginLeft: '6px',
-                        }
-                      }),
-                      value: ({ style }, nodeType, keyPath) => {
-                        const baseStyle = {
-                          ...style,
-                          paddingLeft: '4px',
-                          paddingRight: '4px',
-                        };
-                        
-                        // Style based on value type
-                        if (nodeType === 'String') {
-                          return {
-                            style: {
-                              ...baseStyle,
-                              color: '#28a745',
-                            }
-                          };
-                        }
-                        if (nodeType === 'Number') {
-                          return {
-                            style: {
-                              ...baseStyle,
-                              color: '#0066cc',
-                              fontWeight: 500,
-                            }
-                          };
-                        }
-                        if (nodeType === 'Boolean') {
-                          return {
-                            style: {
-                              ...baseStyle,
-                              color: '#6f42c1',
-                              fontWeight: 600,
-                            }
-                          };
-                        }
-                        if (nodeType === 'Null') {
-                          return {
-                            style: {
-                              ...baseStyle,
-                              color: '#dc3545',
-                              fontStyle: 'italic',
-                            }
-                          };
-                        }
-                        return { style: baseStyle };
-                      },
-                      label: ({ style }, nodeType, expanded) => ({
-                        style: {
-                          ...style,
-                          color: '#FF6C37',
-                          fontWeight: 500,
-                        }
-                      }),
-                    }}
-                    invertTheme={false}
-                    hideRoot={false}
-                    shouldExpandNodeInitially={(keyPath, data, level) => {
-                      // When searching, expand all nodes to show results
-                      if (searchTerm) {
-                        return true;
-                      }
-                      // When expandAll is true, expand everything
-                      if (expandAll || treeCollapsed === false) {
-                        return true;
-                      }
-                      // Otherwise, expand only to specified level
-                      if (typeof treeCollapsed === 'number') {
-                        return level < treeCollapsed;
-                      }
-                      return false;
-                    }}
-                    getItemString={(type, data, itemType, itemString) => {
-                      if (type === 'Object') {
-                        const keys = Object.keys(data as object);
-                        return <span style={{ color: '#6c757d', fontSize: '12px', fontWeight: 400 }}>{`{...} ${keys.length} ${keys.length === 1 ? 'key' : 'keys'}`}</span>;
-                      }
-                      if (type === 'Array') {
-                        const length = (data as any[]).length;
-                        return <span style={{ color: '#6c757d', fontSize: '12px', fontWeight: 400 }}>{`[...] ${length} ${length === 1 ? 'item' : 'items'}`}</span>;
-                      }
-                      return <span>{itemString}</span>;
-                    }}
-                    labelRenderer={(keyPath, nodeType, expanded, expandable) => {
-                      const key = keyPath[0];
-                      return (
-                        <strong 
-                          style={{ cursor: 'pointer', color: '#1e88e5' }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            
-                            console.log('Clicked key:', key);
-                            console.log('Full keyPath:', keyPath);
-                            
-                            // keyPath is in reverse order: [currentKey, parentKey, grandparentKey, ..., 'root']
-                            // Remove 'root' if it exists and reverse to get correct order
-                            const cleanPath = keyPath.filter(k => k !== 'root');
-                            const pathParts = [...cleanPath].reverse();
-                            
-                            console.log('Path parts (after clean & reverse):', pathParts);
-                            
-                            let fullPath = '';
-                            let node = parsedJson;
-                            
-                            // Navigate to the node
-                            for (let i = 0; i < pathParts.length; i++) {
-                              const part = pathParts[i];
-                              
-                              if (node && typeof node === 'object' && part in node) {
-                                node = node[part];
-                                
-                                // Build path string with dots between segments
-                                if (typeof part === 'number' || !isNaN(Number(part))) {
-                                  fullPath += `[${part}]`;
-                                } else {
-                                  // Add dot before property name if needed
-                                  if (fullPath && !fullPath.endsWith('.')) {
-                                    fullPath += '.';
-                                  }
-                                  fullPath += part;
-                                }
-                              }
-                            }
-                            
-                            setSelectedNode(node);
-                            setSelectedPath(fullPath || 'root');
-                            console.log('Final path:', fullPath);
-                            console.log('Final node:', node);
-                          }}
-                        >
-                          {key}
-                        </strong>
-                      );
-                    }}
-                    valueRenderer={(raw, value) => {
-                      return <span>{JSON.stringify(value)}</span>;
-                    }}
-                  />
-                </>
-              )}
-              </div>
-
-              {/* Icon-only Sidebar - Collapsed */}
-              <div className="w-14 bg-[#f7f7f7] border-l border-gray-300 flex flex-col items-center py-4 gap-3">
-                {/* Details Panel Toggle */}
-              
-
-                {/* Download Icon */}
-                <button
-                  onClick={handleDownload}
-                  className="p-2.5 hover:bg-gray-300 rounded-lg transition-colors group relative"
-                  title="Download JSON"
-                >
-                  <ArrowDownTrayIcon className="w-5 h-5 text-gray-600" />
-                  <span className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                    Download JSON
-                  </span>
-                </button>
-
-                {/* Copy Icon */}
-                <button
-                  onClick={() => {
-                    handleCopy(JSON.stringify(parsedJson, null, 2));
-                    // Show brief confirmation
+          {/* Minimalistic Two-Panel Layout: Tree + Details */}
+          <div className="flex gap-0 border border-gray-200 bg-white overflow-hidden">
+            {/* Left Panel - Clean Tree View */}
+            <div 
+              ref={treeContainerRef}
+              className="flex-1 p-4 overflow-auto max-h-[600px] json-tree-container bg-white"
+              onPaste={handlePasteInTree}
+              tabIndex={0}
+            >
+              {error ? (
+                <div className="p-3 bg-red-50 border border-red-200 rounded">
+                  <p className="font-semibold text-sm text-red-700 mb-1">Error</p>
+                  <p className="text-xs text-red-600 font-mono">{error}</p>
+                </div>
+              ) : (
+                <JSONTreeNode 
+                  data={filteredJson(parsedJson, searchTerm) || {}}
+                  searchTerm={searchTerm}
+                  expandAll={expandAll}
+                  onSelect={(path, node) => {
+                    setSelectedPath(path);
+                    setSelectedNode(node);
                   }}
-                  className="p-2.5 hover:bg-gray-300 rounded-lg transition-colors group relative"
-                  title="Copy JSON"
-                >
-                  <ClipboardIcon className={`w-5 h-5 ${copied ? 'text-green-600' : 'text-gray-600'}`} />
-                  <span className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-                    {copied ? 'Copied!' : 'Copy JSON'}
-                  </span>
-                </button>
+                />
+              )}
+            </div>
 
-                <div className="flex-1"></div>
-
-                {/* Validation Status Indicator */}
-                <div className="flex flex-col items-center gap-1">
-                  {isValid ? (
-                    <div className="w-3 h-3 bg-green-500 rounded-full" title="Valid JSON"></div>
-                  ) : (
-                    <div className="w-3 h-3 bg-red-500 rounded-full" title="Invalid JSON"></div>
+            {/* Right Panel - Minimalistic Details (Always Visible) */}
+            <div className="w-80 bg-gray-50 border-l border-gray-200 overflow-auto max-h-[600px]">
+              {/* Simple Header */}
+              <div className="sticky top-0 bg-white border-b border-gray-200 p-3 z-10">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-700">Details</h3>
+                  {selectedNode !== null && (
+                    <button
+                      onClick={() => {
+                        setSelectedNode(null);
+                        setSelectedPath('');
+                      }}
+                      className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
+                      title="Clear"
+                    >
+                      <XMarkIcon className="h-4 w-4" />
+                    </button>
                   )}
                 </div>
               </div>
-            </div>
 
-            {/* Right Panel - Property Details - Postman Style (Expandable) */}
-            {selectedNode !== null && (
-              <div className="w-80 p-4 bg-[#fafafa] border-l border-gray-300 overflow-auto max-h-[600px]">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Details</h3>
-                  <button
-                    onClick={() => setSelectedNode(null)}
-                    className="p-1 hover:bg-gray-300 rounded transition-colors"
-                    title="Close"
-                  >
-                    <XMarkIcon className="h-4 w-4 text-gray-600" />
-                  </button>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="text-xs">
-                    <span className="font-semibold text-gray-600 uppercase tracking-wide block mb-2">Path</span>
-                    <div className="p-2 bg-white border border-gray-300 rounded font-mono text-xs break-all text-gray-800">
-                      {selectedPath || 'root.'}
+              <div className="p-3 space-y-3">
+                {selectedNode !== null ? (
+                  <>
+                    {/* Path */}
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 mb-1 block">Path</label>
+                      <div className="p-2 bg-white border border-gray-200 rounded font-mono text-xs text-gray-700 break-all">
+                        {selectedPath || 'root'}
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="border-t border-gray-300 pt-3">
-                    <div className="font-semibold text-gray-600 mb-2 text-xs uppercase tracking-wide">Properties</div>
-                    <div className="bg-white border border-gray-300 rounded overflow-hidden">
-                      <table className="w-full text-xs">
-                        <thead className="bg-[#f7f7f7] border-b border-gray-300">
-                          <tr>
-                            <th className="text-left p-2 font-semibold text-gray-700">Key</th>
-                            <th className="text-left p-2 font-semibold text-gray-700">Value</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {extractImmediateProperties(selectedNode).map(([key, value], index) => (
-                            <tr 
-                              key={index} 
-                              className="border-b border-gray-200 hover:bg-orange-50 cursor-pointer transition-colors"
-                              onClick={() => {
-                                // Remove trailing dot from selectedPath before building new path
-                                const basePath = selectedPath.endsWith('.') ? selectedPath.slice(0, -1) : selectedPath;
-                                const newPath = basePath 
-                                  ? `${basePath}.${key}` 
-                                  : key;
-                                handleSelectPath(newPath);
-                              }}
-                            >
-                              <td className="p-2 font-medium text-gray-800">{key}</td>
-                              <td className="p-2 text-gray-600 font-mono truncate max-w-[150px]" title={String(value)}>
-                                {typeof value === 'object' && value !== null 
-                                  ? Array.isArray(value) 
-                                    ? `Array(${value.length})` 
-                                    : `Object(${Object.keys(value).length})`
-                                  : String(value)}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+
+                    {/* Type */}
+                    <div>
+                      <label className="text-xs font-medium text-gray-500 mb-1 block">Type</label>
+                      <div className="flex gap-2 items-center">
+                        <span className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-medium text-gray-700">
+                          {Array.isArray(selectedNode) 
+                            ? 'Array' 
+                            : typeof selectedNode === 'object' && selectedNode !== null
+                            ? 'Object'
+                            : typeof selectedNode === 'string'
+                            ? 'String'
+                            : typeof selectedNode === 'number'
+                            ? 'Number'
+                            : typeof selectedNode === 'boolean'
+                            ? 'Boolean'
+                            : 'Null'}
+                        </span>
+                        
+                        {(typeof selectedNode === 'object' && selectedNode !== null) && (
+                          <span className="text-xs text-gray-500">
+                            {Object.keys(selectedNode).length} {Array.isArray(selectedNode) ? 'items' : 'props'}
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    
+                    {/* Properties */}
+                    {(typeof selectedNode === 'object' && selectedNode !== null) && (
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 mb-1 block">
+                          Properties
+                        </label>
+                        <div className="bg-white border border-gray-200 rounded overflow-hidden">
+                          <div className="max-h-80 overflow-y-auto">
+                            <table className="w-full text-xs">
+                              <thead className="sticky top-0 bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                  <th className="text-left p-2 font-medium text-gray-600">Key</th>
+                                  <th className="text-left p-2 font-medium text-gray-600">Value</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {extractImmediateProperties(selectedNode).length === 0 ? (
+                                  <tr>
+                                    <td colSpan={2} className="p-3 text-center text-gray-400 text-xs">
+                                      Empty
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  extractImmediateProperties(selectedNode).map(([key, value], index) => (
+                                    <tr 
+                                      key={index} 
+                                      className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
+                                      onClick={() => {
+                                        const basePath = selectedPath.endsWith('.') ? selectedPath.slice(0, -1) : selectedPath;
+                                        const newPath = basePath ? `${basePath}.${key}` : key;
+                                        handleSelectPath(newPath);
+                                      }}
+                                    >
+                                      <td className="p-2 font-medium text-gray-700">{key}</td>
+                                      <td className="p-2 text-gray-600 font-mono truncate max-w-[120px]" title={String(value)}>
+                                        {typeof value === 'object' && value !== null 
+                                          ? Array.isArray(value) 
+                                            ? `[${value.length}]`
+                                            : `{${Object.keys(value).length}}`
+                                          : String(value)}
+                                      </td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Value for Primitives */}
+                    {!(typeof selectedNode === 'object' && selectedNode !== null) && (
+                      <div>
+                        <label className="text-xs font-medium text-gray-500 mb-1 block">Value</label>
+                        <div className="p-2 bg-white border border-gray-200 rounded font-mono text-xs text-gray-700 break-all">
+                          {String(selectedNode)}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <svg className="w-12 h-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <p className="text-sm text-gray-500">Select a node</p>
+                    <p className="text-xs text-gray-400 mt-1">to view details</p>
                   </div>
-                </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
