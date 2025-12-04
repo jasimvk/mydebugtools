@@ -4,6 +4,30 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.mydebugtools.com"
+        }
+      ],
+      "destination": "https://mydebugtools.com/:path*",
+      "permanent": true
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(?!.*\\.)",
+      "headers": [
+        {
+          "key": "x-robots-tag",
+          "value": "noindex"
+        }
+      ]
+    }
+  ],
   "env": {
     "NEXT_PUBLIC_GA_MEASUREMENT_ID": "G-X21C1DLPKK",
     "NEXTAUTH_URL": "https://mydebugtools.com"
