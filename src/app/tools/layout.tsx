@@ -78,6 +78,16 @@ export default function ToolsLayout({
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-1">
+              <Link
+                href="/tools/all"
+                className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded transition-colors ${
+                  pathname === '/tools/all'
+                    ? 'bg-[#FF6C37] text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <span>All Tools</span>
+              </Link>
               {tools.map((tool) => {
                 const Icon = tool.icon;
                 const active = isActive(tool.path);
@@ -131,6 +141,17 @@ export default function ToolsLayout({
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-gray-200 bg-white">
             <div className="px-4 py-3 space-y-1">
+              <Link
+                href="/tools/all"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded ${
+                  pathname === '/tools/all'
+                    ? 'bg-[#FF6C37] text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <span>All Tools</span>
+              </Link>
               {tools.map((tool) => {
                 const Icon = tool.icon;
                 const active = isActive(tool.path);
