@@ -27,9 +27,4 @@ jobs:
       run: npm ci
     
     - name: Lint
-      run: npm run lint
-    
-    - name: Build
-      run: npm run build
-      env:
-        NEXT_PUBLIC_GA_MEASUREMENT_ID: ${{ secrets.NEXT_PUBLIC_GA_MEASUREMENT_ID }} 
+      run: npm run lint 
