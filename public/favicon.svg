@@ -1,0 +1,27 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="faviconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6C37;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff5722;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="32" height="32" rx="6" fill="url(#faviconGradient)"/>
+  
+  <!-- Terminal icon -->
+  <g transform="translate(16, 16)">
+    <!-- Terminal window outline -->
+    <rect x="-9" y="-9" width="18" height="18" rx="1.5" fill="none" stroke="white" stroke-width="1.5"/>
+    
+    <!-- Title bar -->
+    <line x1="-9" y1="-5" x2="9" y2="-5" stroke="white" stroke-width="1.5"/>
+    
+    <!-- Command prompt -->
+    <text x="-6" y="2" font-family="monospace" font-size="6" fill="white" font-weight="bold">> $</text>
+    <line x="-1" y="0" x2="6" y2="0" stroke="white" stroke-width="0.8"/>
+    
+    <!-- Lines below -->
+    <line x="-6" y="6" x2="5" y2="6" stroke="white" stroke-width="0.8" opacity="0.7"/>
+  </g>
+</svg>

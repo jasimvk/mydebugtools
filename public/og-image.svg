@@ -1,0 +1,104 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f5f5f5;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6C37;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ff5722;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+  
+  <!-- Left accent -->
+  <rect x="0" y="0" width="6" height="630" fill="#FF6C37"/>
+  
+  <!-- Logo Circle Background -->
+  <circle cx="150" cy="150" r="120" fill="#FF6C37" opacity="0.1"/>
+  <circle cx="150" cy="150" r="100" fill="url(#logoGradient)"/>
+  
+  <!-- Terminal Icon (Logo) -->
+  <g transform="translate(150, 150)">
+    <!-- Terminal window -->
+    <rect x="-40" y="-35" width="80" height="70" rx="4" fill="none" stroke="white" stroke-width="3"/>
+    <!-- Title bar -->
+    <rect x="-40" y="-35" width="80" height="15" rx="4" fill="white"/>
+    <!-- Dots -->
+    <circle cx="-30" cy="-27.5" r="2" fill="#FF6C37"/>
+    <circle cx="-22" cy="-27.5" r="2" fill="#FF6C37"/>
+    <circle cx="-14" cy="-27.5" r="2" fill="#FF6C37"/>
+    <!-- Command line -->
+    <text x="-35" y="5" font-family="monospace" font-size="10" fill="white" font-weight="bold">> debug</text>
+    <text x="-35" y="20" font-family="monospace" font-size="9" fill="white" opacity="0.8">~/tools</text>
+  </g>
+  
+  <!-- Main Heading -->
+  <text x="320" y="120" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#1a1a1a">
+    MyDebugTools
+  </text>
+  
+  <!-- Subheading -->
+  <text x="320" y="200" font-family="Arial, sans-serif" font-size="40" font-weight="500" fill="#666666">
+    All-in-one Developer Toolkit
+  </text>
+  
+  <!-- Feature Pills -->
+  <g>
+    <!-- Pill 1 -->
+    <rect x="320" y="250" width="200" height="50" rx="25" fill="#FF6C37" opacity="0.15" stroke="#FF6C37" stroke-width="2"/>
+    <text x="420" y="285" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#FF6C37" text-anchor="middle">
+      30+ Tools
+    </text>
+    
+    <!-- Pill 2 -->
+    <rect x="540" y="250" width="200" height="50" rx="25" fill="#FF6C37" opacity="0.15" stroke="#FF6C37" stroke-width="2"/>
+    <text x="640" y="285" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#FF6C37" text-anchor="middle">
+      Free & Open Source
+    </text>
+    
+    <!-- Pill 3 -->
+    <rect x="760" y="250" width="200" height="50" rx="25" fill="#FF6C37" opacity="0.15" stroke="#FF6C37" stroke-width="2"/>
+    <text x="860" y="285" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#FF6C37" text-anchor="middle">
+      Privacy First
+    </text>
+  </g>
+  
+  <!-- Tools Icons Row -->
+  <g transform="translate(320, 380)">
+    <!-- JSON -->
+    <circle cx="0" cy="0" r="35" fill="#f0f0f0"/>
+    <text x="0" y="15" font-family="monospace" font-size="24" font-weight="bold" fill="#1a1a1a" text-anchor="middle">{ }</text>
+    
+    <!-- API -->
+    <circle cx="100" cy="0" r="35" fill="#f0f0f0"/>
+    <text x="100" y="12" font-family="Arial" font-size="28" font-weight="bold" fill="#1a1a1a" text-anchor="middle">⚡</text>
+    
+    <!-- Code -->
+    <circle cx="200" cy="0" r="35" fill="#f0f0f0"/>
+    <text x="200" y="12" font-family="Arial" font-size="28" font-weight="bold" fill="#1a1a1a" text-anchor="middle">&lt;/&gt;</text>
+    
+    <!-- Color -->
+    <circle cx="300" cy="0" r="35" fill="#f0f0f0"/>
+    <rect x="285" y="-10" width="10" height="10" fill="#FF6C37"/>
+    <rect x="300" y="-10" width="10" height="10" fill="#00BCD4"/>
+    <rect x="315" y="-10" width="10" height="10" fill="#9C27B0"/>
+    
+    <!-- Database -->
+    <circle cx="400" cy="0" r="35" fill="#f0f0f0"/>
+    <text x="400" y="12" font-family="Arial" font-size="28" font-weight="bold" fill="#1a1a1a" text-anchor="middle">🗄</text>
+  </g>
+  
+  <!-- Bottom tagline -->
+  <text x="600" y="550" font-family="Arial, sans-serif" font-size="24" font-weight="400" fill="#999999" text-anchor="middle">
+    Fast. Reliable. Developer-Focused.
+  </text>
+  
+  <!-- URL -->
+  <text x="600" y="600" font-family="Arial, sans-serif" font-size="20" font-weight="500" fill="#FF6C37" text-anchor="middle">
+    mydebugtools.com
+  </text>
+</svg>

@@ -23,9 +23,14 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "MyDebugTools - All-in-one Developer Debugging Toolkit",
-  description: "A powerful collection of development tools including JSON Formatter, JWT Decoder, Base64 Tools, API Tester, and Icon Finder - all in one place.",
+  description: "A powerful collection of 30+ development tools including JSON Formatter, JWT Decoder, Base64 Tools, API Tester, Code Diff, and more - all free, open-source, and privacy-focused.",
   metadataBase: new URL('https://mydebugtools.com'),
-  keywords: "developer tools, json formatter, jwt decoder, base64 encoder, api tester, icon finder, color picker, regex tester, online tools, web developer tools",
+  keywords: "developer tools, json formatter, jwt decoder, base64 encoder, api tester, code diff, regex tester, online tools, web developer tools, debugging, formatting",
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
   robots: {
     index: true,
     follow: true,
@@ -46,13 +51,14 @@ export const metadata: Metadata = {
     url: 'https://mydebugtools.com/',
     siteName: 'MyDebugTools',
     title: 'MyDebugTools - All-in-one Developer Debugging Toolkit',
-    description: 'A powerful collection of development tools including JSON Formatter, JWT Decoder, Base64 Tools, API Tester, and Icon Finder - all in one place.',
+    description: 'A powerful collection of 30+ development tools including JSON Formatter, JWT Decoder, Base64 Tools, API Tester, Code Diff, and more - all free, open-source, and privacy-focused.',
     images: [
       {
-        url: 'https://mydebugtools.com/og-image.png',
+        url: 'https://mydebugtools.com/og-image.svg',
         width: 1200,
         height: 630,
         alt: 'MyDebugTools - All-in-one Developer Toolkit',
+        type: 'image/svg+xml',
       },
     ],
   },
@@ -61,8 +67,8 @@ export const metadata: Metadata = {
     site: '@jasimvk',
     creator: '@jasimvk',
     title: 'MyDebugTools - All-in-one Developer Debugging Toolkit',
-    description: 'A powerful collection of development tools including JSON Formatter, JWT Decoder, Base64 Tools, API Tester, and Icon Finder - all in one place.',
-    images: ['https://mydebugtools.com/og-image.png'],
+    description: 'A powerful collection of 30+ development tools including JSON Formatter, JWT Decoder, Base64 Tools, API Tester, Code Diff, and more - all free, open-source, and privacy-focused.',
+    images: ['https://mydebugtools.com/og-image.svg'],
   },
 };
 
