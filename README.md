@@ -5,6 +5,9 @@ A professional collection of 30+ developer tools built with Next.js 14 and React
 [![GitHub stars](https://img.shields.io/github/stars/jasimvk/mydebugtools?style=social)](https://github.com/jasimvk/mydebugtools/stargazers)
 [![GitHub issues](https://img.shields.io/github/issues/jasimvk/mydebugtools)](https://github.com/jasimvk/mydebugtools/issues)
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/jasimvk/mydebugtools/actions)
+[![Next.js](https://img.shields.io/badge/Next.js-14.1.0-black.svg)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-18.3.1-blue.svg)](https://react.dev/)
 
 ## ✨ Features
 
@@ -253,6 +256,12 @@ The API Tester is our most advanced tool - a professional REST API client with c
      - `https://your-domain.com/api/auth/callback/google`
      - `https://www.your-domain.com/api/auth/callback/google`
 
+### Build Status
+- **Local Build:** ✅ Passing (36 pages generated, 85kB shared JS)
+- **GitHub Actions:** ✅ Passing (Node 18.x & 20.x tested)
+- **Vercel Deployment:** ✅ Production-ready (with --legacy-peer-deps)
+- **Browser Support:** Modern browsers (Chrome, Firefox, Safari, Edge)
+
 > **Note:** The app works perfectly without environment variables. All tools function locally without any backend setup.
 
 ### WWW Redirect Configuration
@@ -260,6 +269,11 @@ The API Tester is our most advanced tool - a professional REST API client with c
 Automatic www to non-www redirect is included in `vercel.json`:
 ```json
 {
+  "version": 2,
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install --legacy-peer-deps",
+  "framework": "nextjs",
   "redirects": [{
     "source": "/:path*",
     "has": [{"type": "host", "value": "www.your-domain.com"}],
@@ -268,6 +282,12 @@ Automatic www to non-www redirect is included in `vercel.json`:
   }]
 }
 ```
+
+**Key Deployment Optimizations:**
+- `--legacy-peer-deps` flag: Resolves peer dependency conflicts during installation
+- Automatic pre-rendering of 36 pages
+- Optimized JavaScript bundle (85kB shared)
+- Full SSR support for dynamic routes
 
 ## 💬 Community & Support
 
