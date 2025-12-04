@@ -51,28 +51,27 @@ export default function Home() {
       </header>
 
       <div className="container mx-auto px-6 relative z-10">
-        {/* Hero Section - Clean & Minimal */}
-        <div className="text-center max-w-6xl mx-auto py-8">
-          {/* Simple Badge */}
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 border border-gray-300 rounded-full text-xs text-gray-700 font-medium mb-4">
-            <SparklesIcon className="h-3.5 w-3.5" />
-            <span>Free • Open Source • No Sign-up Required</span>
+        {/* Hero Section - Modern & Engaging */}
+        <div className="text-center max-w-6xl mx-auto py-12 md:py-16">
+          {/* Animated Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-50 to-white border border-[#FF6C37]/20 rounded-full text-xs text-gray-700 font-semibold mb-6 shadow-sm">
+            <SparklesIcon className="h-4 w-4 text-[#FF6C37]" />
+            <span>✨ Free • Open Source • Privacy First</span>
           </div>
 
-          {/* Clean Title - Black & Orange Only */}
-          <h1 className="text-4xl md:text-5xl font-black mb-3 leading-tight">
-            <span className="text-gray-900">
+          {/* Powerful Title with Better Hierarchy */}
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-black mb-6 leading-tight tracking-tight">
+            <span className="text-gray-900 block">
               Developer Tools
             </span>
-            <br />
-            <span className="text-[#FF6C37]">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF6C37] to-[#ff5722]">
               You Need
             </span>
           </h1>
           
-          <p className="text-base text-gray-600 mb-5 leading-relaxed max-w-2xl mx-auto">
-            Professional developer utilities for formatting, validating, converting, and debugging. 
-            <strong className="text-gray-900"> Fast, reliable, and privacy-focused.</strong>
+          <p className="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed max-w-3xl mx-auto font-medium">
+            30+ professional utilities for formatting, validating, converting, and debugging code.
+            <span className="block text-gray-900 font-bold mt-1">Fast. Reliable. Privacy-focused. 100% free.</span>
           </p>
 
           {/* CTA Buttons - Clean */}
@@ -115,141 +114,163 @@ export default function Home() {
           </div> */}
         </div>
 
-        {/* Featured Tools - Clean Cards */}
-        <div className="max-w-7xl mx-auto pb-8">
-          {/* <div className="text-center mb-6">
-            <h2 className="text-2xl md:text-3xl font-black text-gray-900 mb-2">
+        {/* Featured Tools - Improved Cards with Better Spacing */}
+        <div className="max-w-7xl mx-auto py-12 md:py-16">
+          {/* Section Header */}
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-3">
               Popular Tools
             </h2>
-            <p className="text-sm text-gray-600">
-              Most used by developers worldwide
+            <p className="text-base text-gray-600 max-w-2xl mx-auto">
+              Start with these widely-used utilities, or explore 30+ tools
             </p>
-          </div> */}
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
             {/* JSON Tool */}
-            <Link href="/tools/json" className="group bg-white rounded-xl border-2 border-gray-200 hover:border-[#FF6C37] transition-colors p-5 hover:shadow-xl">
-              <div className="inline-flex p-2.5 rounded-lg bg-gray-100 group-hover:bg-[#FF6C37] transition-colors mb-3">
-                <CurlyBraces className="h-5 w-5 text-gray-900 group-hover:text-white transition-colors" />
+            <Link href="/tools/json" className="group bg-white rounded-xl border-2 border-gray-200 hover:border-[#FF6C37] transition-all duration-200 p-6 hover:shadow-lg hover:scale-105">
+              <div className="inline-flex p-3 rounded-lg bg-gray-100 group-hover:bg-[#FF6C37] transition-all duration-200 mb-4">
+                <CurlyBraces className="h-6 w-6 text-gray-900 group-hover:text-white transition-colors" />
               </div>
-              <h3 className="text-base font-black text-gray-900 mb-1.5">
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
                 JSON Formatter
               </h3>
-              <p className="text-gray-600 text-xs leading-relaxed mb-3">
-                Format, validate, and visualize JSON data
+              <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                Format, validate, and visualize JSON data instantly
               </p>
-              <div className="flex items-center text-[#FF6C37] font-bold text-xs">
+              <div className="flex items-center text-[#FF6C37] font-bold text-sm group-hover:gap-2 transition-all">
                 Try it now
-                <ArrowRightIcon className="h-3 w-3 ml-1" />
+                <ArrowRightIcon className="h-4 w-4 ml-1" />
               </div>
             </Link>
             
             {/* JWT Tool */}
-            <Link href="/tools/jwt" className="group bg-white rounded-xl border-2 border-gray-200 hover:border-[#FF6C37] transition-colors p-5 hover:shadow-xl">
-              <div className="inline-flex p-2.5 rounded-lg bg-gray-100 group-hover:bg-[#FF6C37] transition-colors mb-3">
-                <KeyIcon className="h-5 w-5 text-gray-900 group-hover:text-white transition-colors" />
+            <Link href="/tools/jwt" className="group bg-white rounded-xl border-2 border-gray-200 hover:border-[#FF6C37] transition-all duration-200 p-6 hover:shadow-lg hover:scale-105">
+              <div className="inline-flex p-3 rounded-lg bg-gray-100 group-hover:bg-[#FF6C37] transition-all duration-200 mb-4">
+                <KeyIcon className="h-6 w-6 text-gray-900 group-hover:text-white transition-colors" />
               </div>
-              <h3 className="text-base font-black text-gray-900 mb-1.5">
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
                 JWT Decoder
               </h3>
-              <p className="text-gray-600 text-xs leading-relaxed mb-3">
-                Decode and verify JSON Web Tokens
+              <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                Decode and verify JSON Web Tokens with ease
               </p>
-              <div className="flex items-center text-[#FF6C37] font-bold text-xs">
+              <div className="flex items-center text-[#FF6C37] font-bold text-sm group-hover:gap-2 transition-all">
                 Try it now
-                <ArrowRightIcon className="h-3 w-3 ml-1" />
+                <ArrowRightIcon className="h-4 w-4 ml-1" />
               </div>
             </Link>
             
             {/* API Tester */}
-            <Link href="/tools/api" className="group bg-white rounded-xl border-2 border-gray-200 hover:border-[#FF6C37] transition-colors p-5 hover:shadow-xl">
-              <div className="inline-flex p-2.5 rounded-lg bg-gray-100 group-hover:bg-[#FF6C37] transition-colors mb-3">
-                <BeakerIcon className="h-5 w-5 text-gray-900 group-hover:text-white transition-colors" />
+            <Link href="/tools/api" className="group bg-white rounded-xl border-2 border-gray-200 hover:border-[#FF6C37] transition-all duration-200 p-6 hover:shadow-lg hover:scale-105">
+              <div className="inline-flex p-3 rounded-lg bg-gray-100 group-hover:bg-[#FF6C37] transition-all duration-200 mb-4">
+                <BeakerIcon className="h-6 w-6 text-gray-900 group-hover:text-white transition-colors" />
               </div>
-              <h3 className="text-base font-black text-gray-900 mb-1.5">
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
                 API Tester
               </h3>
-              <p className="text-gray-600 text-xs leading-relaxed mb-3">
-                Test REST APIs with custom headers
+              <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                Test REST APIs with custom headers and authentication
               </p>
-              <div className="flex items-center text-[#FF6C37] font-bold text-xs">
+              <div className="flex items-center text-[#FF6C37] font-bold text-sm group-hover:gap-2 transition-all">
                 Try it now
-                <ArrowRightIcon className="h-3 w-3 ml-1" />
+                <ArrowRightIcon className="h-4 w-4 ml-1" />
               </div>
             </Link>
             
             {/* Base64 */}
-            <Link href="/tools/base64" className="group bg-white rounded-xl border-2 border-gray-200 hover:border-[#FF6C37] transition-colors p-5 hover:shadow-xl">
-              <div className="inline-flex p-2.5 rounded-lg bg-gray-100 group-hover:bg-[#FF6C37] transition-colors mb-3">
-                <DocumentCheckIcon className="h-5 w-5 text-gray-900 group-hover:text-white transition-colors" />
+            <Link href="/tools/base64" className="group bg-white rounded-xl border-2 border-gray-200 hover:border-[#FF6C37] transition-all duration-200 p-6 hover:shadow-lg hover:scale-105">
+              <div className="inline-flex p-3 rounded-lg bg-gray-100 group-hover:bg-[#FF6C37] transition-all duration-200 mb-4">
+                <DocumentCheckIcon className="h-6 w-6 text-gray-900 group-hover:text-white transition-colors" />
               </div>
-              <h3 className="text-base font-black text-gray-900 mb-1.5">
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
                 Base64 Encoder
               </h3>
-              <p className="text-gray-600 text-xs leading-relaxed mb-3">
-                Encode and decode Base64 strings
+              <p className="text-gray-600 text-sm leading-relaxed mb-4">
+                Encode and decode Base64 strings and files
               </p>
-              <div className="flex items-center text-[#FF6C37] font-bold text-xs">
+              <div className="flex items-center text-[#FF6C37] font-bold text-sm group-hover:gap-2 transition-all">
                 Try it now
-                <ArrowRightIcon className="h-3 w-3 ml-1" />
+                <ArrowRightIcon className="h-4 w-4 ml-1" />
               </div>
             </Link>
             
             {/* Code Diff */}
-            <Link href="/tools/code-diff" className="group bg-white rounded-xl border-2 border-gray-200 hover:border-[#FF6C37] transition-colors p-5 hover:shadow-xl">
-              <div className="inline-flex p-2.5 rounded-lg bg-gray-100 group-hover:bg-[#FF6C37] transition-colors mb-3">
-                <CodeBracketIcon className="h-5 w-5 text-gray-900 group-hover:text-white transition-colors" />
+            <Link href="/tools/code-diff" className="group bg-white rounded-xl border-2 border-gray-200 hover:border-[#FF6C37] transition-all duration-200 p-6 hover:shadow-lg hover:scale-105">
+              <div className="inline-flex p-3 rounded-lg bg-gray-100 group-hover:bg-[#FF6C37] transition-all duration-200 mb-4">
+                <CodeBracketIcon className="h-6 w-6 text-gray-900 group-hover:text-white transition-colors" />
               </div>
-              <h3 className="text-base font-black text-gray-900 mb-1.5">
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
                 Code Diff
               </h3>
-              <p className="text-gray-600 text-xs leading-relaxed mb-3">
+              <p className="text-gray-600 text-sm leading-relaxed mb-4">
                 Compare code with syntax highlighting
               </p>
-              <div className="flex items-center text-[#FF6C37] font-bold text-xs">
+              <div className="flex items-center text-[#FF6C37] font-bold text-sm group-hover:gap-2 transition-all">
                 Try it now
-                <ArrowRightIcon className="h-3 w-3 ml-1" />
+                <ArrowRightIcon className="h-4 w-4 ml-1" />
               </div>
             </Link>
             
             {/* View All Tools */}
-            <Link href="/tools" className="group bg-gray-900 hover:bg-[#FF6C37] rounded-xl border-2 border-gray-900 hover:border-[#FF6C37] transition-colors p-5 hover:shadow-xl">
-              <div className="inline-flex p-2.5 rounded-lg bg-white/10 mb-3">
-                <WrenchIcon className="h-5 w-5 text-white" />
+            <Link href="/tools" className="group bg-gradient-to-br from-gray-900 to-gray-800 hover:from-[#FF6C37] hover:to-[#ff5722] rounded-xl border-2 border-gray-900 hover:border-[#FF6C37] transition-all duration-200 p-6 hover:shadow-lg hover:scale-105">
+              <div className="inline-flex p-3 rounded-lg bg-white/10 group-hover:bg-white/20 transition-all duration-200 mb-4">
+                <WrenchIcon className="h-6 w-6 text-white" />
               </div>
-              <h3 className="text-base font-black text-white mb-1.5">
+              <h3 className="text-lg font-bold text-white mb-2">
                 View All Tools
               </h3>
-              <p className="text-gray-300 text-xs leading-relaxed mb-3">
-                Explore 30+ developer utilities
+              <p className="text-gray-300 text-sm leading-relaxed mb-4">
+                Explore our complete collection of 30+ utilities
               </p>
-              <div className="flex items-center text-white font-bold text-xs">
+              <div className="flex items-center text-white font-bold text-sm group-hover:gap-2 transition-all">
                 Browse all
-                <ArrowRightIcon className="h-3 w-3 ml-1" />
+                <ArrowRightIcon className="h-4 w-4 ml-1" />
               </div>
             </Link>
           </div>
         </div>
 
-        {/* Footer - Clean */}
-        <footer className="max-w-7xl mx-auto pb-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-5 shadow">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-              <div className="flex flex-wrap justify-center md:justify-start gap-4 text-xs">
-                <a href="https://github.com/jasimvk/mydebugtools" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">
+        {/* Footer - Modern Design */}
+        <footer className="max-w-7xl mx-auto py-12 md:py-16">
+          <div className="bg-gradient-to-b from-gray-900 to-gray-800 rounded-2xl border border-gray-700 p-8 md:p-10 shadow-xl">
+            <div className="flex flex-col gap-8">
+              {/* Footer Links Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center md:text-left">
+                <a href="https://github.com/jasimvk/mydebugtools" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
                   ⭐ Star on GitHub
                 </a>
-                <a href="https://github.com/jasimvk/mydebugtools/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">
+                <a href="https://github.com/jasimvk/mydebugtools/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
                   MIT License
                 </a>
-                <a href="https://github.com/jasimvk/mydebugtools/issues" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">Report Issue</a>
-                <a href="https://github.com/jasimvk/mydebugtools/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">Contribute</a>
-                <Link href="/contact" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">Contact</Link>
-                <Link href="/faq" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">FAQ</Link>
-                <Link href="/privacy-policy" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">Privacy & Terms</Link>
+                <a href="https://github.com/jasimvk/mydebugtools/issues" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
+                  Report Issue
+                </a>
+                <a href="https://github.com/jasimvk/mydebugtools/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
+                  Contribute
+                </a>
+                <Link href="/contact" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
+                  Contact
+                </Link>
+                <Link href="/faq" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
+                  FAQ
+                </Link>
               </div>
-              <div className="text-xs text-gray-600">
-                Built by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-[#FF6C37] hover:underline font-semibold">@jasimvk</a>
+
+              {/* Divider */}
+              <div className="w-full h-px bg-gray-700"></div>
+
+              {/* Footer Bottom */}
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <Terminal className="h-5 w-5 text-[#FF6C37]" />
+                  <span className="text-gray-300">
+                    MyDebugTools © 2024. Built for developers.
+                  </span>
+                </div>
+                <Link href="/privacy-policy" className="text-gray-300 hover:text-[#FF6C37] transition-colors underline">
+                  Privacy & Terms
+                </Link>
               </div>
             </div>
           </div>

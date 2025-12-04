@@ -91,41 +91,41 @@ export default function FAQPage() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-6 py-12">
+      <main className="container mx-auto px-6 py-16">
         <div className="max-w-4xl mx-auto">
-          {/* Page Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-black text-gray-900 mb-4">
+          {/* Page Header - Improved */}
+          <div className="text-center mb-16">
+            <h1 className="text-5xl md:text-6xl font-black text-gray-900 mb-4">
               Frequently Asked Questions
             </h1>
-            <p className="text-lg text-gray-600">
+            <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
               Everything you need to know about MyDebugTools
             </p>
           </div>
 
-          {/* FAQ Accordion */}
-          <div className="space-y-4">
+          {/* FAQ Accordion - Enhanced */}
+          <div className="space-y-3">
             {faqs.map((faq, index) => (
               <div
                 key={index}
-                className="bg-white border-2 border-gray-200 rounded-xl overflow-hidden transition-all"
+                className="bg-white border-2 border-gray-200 rounded-xl overflow-hidden transition-all hover:border-[#FF6C37]/50"
               >
                 <button
                   onClick={() => toggleFAQ(index)}
-                  className="w-full px-6 py-5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+                  className="w-full px-6 py-6 flex items-center justify-between text-left hover:bg-orange-50/30 transition-colors group"
                 >
-                  <span className="text-lg font-bold text-gray-900 pr-4">
+                  <span className="text-base font-semibold text-gray-900 pr-4 group-hover:text-[#FF6C37] transition-colors">
                     {faq.question}
                   </span>
                   <ChevronDown
-                    className={`h-5 w-5 text-[#FF6C37] flex-shrink-0 transition-transform ${
+                    className={`h-5 w-5 text-[#FF6C37] flex-shrink-0 transition-transform duration-200 ${
                       openIndex === index ? 'rotate-180' : ''
                     }`}
                   />
                 </button>
                 {openIndex === index && (
-                  <div className="px-6 pb-5 pt-2">
-                    <p className="text-gray-600 leading-relaxed">
+                  <div className="px-6 pb-6 pt-2 border-t border-gray-200 bg-gradient-to-b from-orange-50/10 to-white">
+                    <p className="text-gray-600 leading-relaxed text-base">
                       {faq.answer}
                     </p>
                   </div>
@@ -134,18 +134,18 @@ export default function FAQPage() {
             ))}
           </div>
 
-          {/* Contact CTA */}
-          <div className="mt-12 text-center bg-gray-50 border-2 border-gray-200 rounded-xl p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">
+          {/* Contact CTA - Modern Card */}
+          <div className="mt-16 bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-2xl p-10 shadow-xl text-center">
+            <h2 className="text-3xl font-black text-white mb-3">
               Still have questions?
             </h2>
-            <p className="text-gray-600 mb-6">
-              Can't find what you're looking for? Feel free to reach out to us.
+            <p className="text-gray-300 mb-8 max-w-2xl mx-auto text-lg">
+              Can't find what you're looking for? Reach out to us or explore our documentation.
             </p>
-            <div className="flex items-center justify-center gap-4">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-4">
               <Link
                 href="/contact"
-                className="px-6 py-3 bg-[#FF6C37] hover:bg-[#ff5722] text-white font-semibold rounded-lg transition-colors shadow-lg"
+                className="px-8 py-4 bg-[#FF6C37] hover:bg-[#ff5722] text-white font-bold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 Contact Us
               </Link>
@@ -153,7 +153,7 @@ export default function FAQPage() {
                 href="https://github.com/jasimvk/mydebugtools/issues"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-3 bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-lg transition-colors"
+                className="px-8 py-4 bg-white hover:bg-gray-100 text-gray-900 font-bold rounded-lg transition-all duration-200 shadow hover:shadow-lg transform hover:scale-105"
               >
                 Report an Issue
               </a>
@@ -162,26 +162,44 @@ export default function FAQPage() {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="container mx-auto px-6 pb-6">
+      {/* Footer - Modern Dark */}
+      <footer className="container mx-auto px-6 py-12 md:py-16">
         <div className="max-w-7xl mx-auto">
-          <div className="bg-white rounded-xl border border-gray-200 p-5 shadow">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-              <div className="flex flex-wrap justify-center md:justify-start gap-4 text-xs">
-                <a href="https://github.com/jasimvk/mydebugtools" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">
+          <div className="bg-gradient-to-b from-gray-900 to-gray-800 rounded-2xl border border-gray-700 p-8 md:p-10 shadow-xl">
+            <div className="flex flex-col gap-8">
+              {/* Footer Links */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-center md:text-left">
+                <a href="https://github.com/jasimvk/mydebugtools" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
                   ⭐ Star on GitHub
                 </a>
-                <a href="https://github.com/jasimvk/mydebugtools/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">
+                <a href="https://github.com/jasimvk/mydebugtools/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
                   MIT License
                 </a>
-                <a href="https://github.com/jasimvk/mydebugtools/issues" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">Report Issue</a>
-                <a href="https://github.com/jasimvk/mydebugtools/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">Contribute</a>
-                <Link href="/contact" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">Contact</Link>
-                <Link href="/faq" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">FAQ</Link>
-                <Link href="/privacy-policy" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">Privacy & Terms</Link>
+                <a href="https://github.com/jasimvk/mydebugtools/issues" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
+                  Report Issue
+                </a>
+                <a href="https://github.com/jasimvk/mydebugtools/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
+                  Contribute
+                </a>
+                <Link href="/contact" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
+                  Contact
+                </Link>
+                <Link href="/privacy-policy" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
+                  Privacy & Terms
+                </Link>
               </div>
-              <div className="text-xs text-gray-600">
-                Built by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-[#FF6C37] hover:underline font-semibold">@jasimvk</a>
+
+              {/* Divider */}
+              <div className="w-full h-px bg-gray-700"></div>
+
+              {/* Footer Bottom */}
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
+                <span className="text-gray-300">
+                  Built with ❤️ for developers
+                </span>
+                <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-semibold">
+                  @jasimvk
+                </a>
               </div>
             </div>
           </div>
