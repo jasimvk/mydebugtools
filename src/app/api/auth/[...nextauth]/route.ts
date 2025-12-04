@@ -10,6 +10,14 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      // Always redirect to non-www version
+      return url.startsWith("https://mydebugtools.com")
+        ? url
+        : url.startsWith("https://www.mydebugtools.com")
+        ? url.replace("www.", "")
+        : baseUrl;
+    },
     async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id;
