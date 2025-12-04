@@ -4,7 +4,6 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install --legacy-peer-deps",
   "framework": "nextjs",
-  "nodeVersion": "20.x",
   "redirects": [
     {
       "source": "/:path*",
