@@ -1,6 +1,6 @@
 # MyDebugTools
 
-A professional collection of 30+ developer tools built with Next.js 14 and React. Fast, reliable, and always free - featuring a clean, Postman-inspired interface with cloud sync capabilities.
+A professional collection of 30+ developer tools built with Next.js 14 and React. Fast, reliable, and always free - featuring a clean, minimal design with cloud sync capabilities.
 
 [![GitHub stars](https://img.shields.io/github/stars/jasimvk/mydebugtools?style=social)](https://github.com/jasimvk/mydebugtools/stargazers)
 [![GitHub issues](https://img.shields.io/github/issues/jasimvk/mydebugtools)](https://github.com/jasimvk/mydebugtools/issues)
