@@ -51,12 +51,6 @@ const tools = [
     description: 'Encode and decode Base64',
     path: '/tools/base64',
     icon: DocumentCheckIcon
-  },
-  {
-    name: 'SVG Optimizer',
-    description: 'Optimize SVG files',
-    path: '/tools/svg',
-    icon: DocumentTextIcon
   }
 ];
 

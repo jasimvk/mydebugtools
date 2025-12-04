@@ -34,7 +34,6 @@ A professional collection of 30+ developer tools built with Next.js 14 and React
 - **Base64 Converter** - Encode/decode text and files (images, PDFs) to Base64
 - **Code Diff** - Side-by-side code comparison with syntax highlighting
 - **HTTP Status** - Complete HTTP status codes reference with descriptions
-- **SVG Optimizer** - Optimize SVG files with 13+ optimization options
 
 ### 🚀 Additional Tools
 
@@ -293,7 +292,6 @@ mydebugtools/
 │   │   │   ├── jwt/           # JWT Decoder
 │   │   │   ├── base64/        # Base64 Converter
 │   │   │   ├── code-diff/     # Code Diff
-│   │   │   ├── svg/           # SVG Optimizer
 │   │   │   └── ...            # 25+ more tools
 │   │   ├── page.tsx           # Homepage
 │   │   ├── layout.tsx         # Root layout
@@ -347,7 +345,6 @@ If you find MyDebugTools helpful, please consider:
 - [x] JWT Decoder
 - [x] Base64 Converter
 - [x] Code Diff Tool
-- [x] SVG Optimizer
 - [x] HTTP Status Reference
 - [x] Chrome Extension
 - [x] API Tester with Collections
