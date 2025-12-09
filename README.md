@@ -368,6 +368,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you find MyDebugTools helpful, please consider:
 - ⭐ [Star the repository](https://github.com/jasimvk/mydebugtools)
+- ☕ [Buy me a coffee](https://buymeacoffee.com/jasimvk) - Support development
 - 🐦 [Share on Twitter](https://twitter.com/intent/tweet?text=Check%20out%20MyDebugTools%20-%20A%20collection%20of%2030%2B%20developer%20tools&url=https://github.com/jasimvk/mydebugtools)
 - 🐛 Report bugs and suggest features
 - 🤝 Contribute code or documentation
