@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   robots: 'index, follow',
 };
 
+// Bump this by hand whenever the text of these terms changes.
+const LAST_UPDATED = '13 August 2026';
+
 export default function TermsOfService() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -20,7 +23,7 @@ export default function TermsOfService() {
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Terms of Service</h1>
       
       <div className="prose prose-lg max-w-none">
-        <p className="text-sm text-gray-600 mb-6">Last updated: {new Date().toLocaleDateString()}</p>
+        <p className="text-sm text-gray-600 mb-6">Last updated: {LAST_UPDATED}</p>
         
         <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">Agreement to Terms</h2>
         <p>
@@ -60,7 +63,7 @@ export default function TermsOfService() {
         <ul>
           <li>We may collect usage analytics to improve our Service</li>
           <li>We use cookies and tracking technologies as described in our Privacy Policy</li>
-          <li>Third-party services (Google Analytics, AdSense) may collect data as per their policies</li>
+          <li>Third-party services (Google Analytics) may collect data as per their policies</li>
         </ul>
 
         <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">Intellectual Property Rights</h2>
@@ -94,13 +97,6 @@ export default function TermsOfService() {
           In no event shall debugtools be liable for any indirect, incidental, special, 
           consequential, or punitive damages, including without limitation, loss of profits, 
           data, use, goodwill, or other intangible losses.
-        </p>
-
-        <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">Advertising</h2>
-        <p>
-          Our Service may display advertisements provided by third-party advertising networks, 
-          including Google AdSense. These ads may be targeted based on your interests and browsing 
-          behavior. We do not control the content of these advertisements.
         </p>
 
         <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">Modifications to Service</h2>

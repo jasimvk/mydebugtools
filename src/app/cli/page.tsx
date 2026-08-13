@@ -28,14 +28,14 @@ const laterCommands = [
 
 export default function CliPage() {
   return (
-    <main className="min-h-screen bg-[#f6f8fa] text-[#24292f]">
+    <main className="min-h-screen bg-[#fafafa] text-[#09090b]">
       <Navigation />
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <div className="rounded-md border border-[#d0d7de] bg-white">
-          <div className="border-b border-[#d0d7de] px-5 py-4">
-            <p className="font-mono text-xs text-[#57606a]">CLI_ROADMAP.md</p>
-            <h1 className="mt-2 text-3xl font-semibold text-[#24292f]">CLI roadmap</h1>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-[#57606a]">
+        <div className="rounded-md border border-[#e4e4e7] bg-white">
+          <div className="border-b border-[#e4e4e7] px-5 py-4">
+            <p className="font-mono text-xs text-[#71717a]">CLI_ROADMAP.md</p>
+            <h1 className="mt-2 text-3xl font-semibold text-[#09090b]">CLI roadmap</h1>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-[#71717a]">
               The CLI should make the web tools scriptable: same developer utilities, but pipe-friendly for terminals, CI jobs, release checks, and local workflows.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -43,7 +43,7 @@ export default function CliPage() {
                 href="https://github.com/jasimvkarim/mydebugtools/blob/main/CLI_ROADMAP.md"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-md bg-[#24292f] px-3 py-2 text-sm font-semibold text-white hover:bg-[#32383f] hover:text-white"
+                className="rounded-md bg-[#09090b] px-3 py-2 text-sm font-semibold text-white hover:bg-[#32383f] hover:text-white"
               >
                 Read roadmap
               </a>
@@ -51,7 +51,7 @@ export default function CliPage() {
                 href="https://github.com/jasimvkarim/mydebugtools/issues/new?title=Add%20debugtools%20CLI"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-md border border-[#d0d7de] bg-white px-3 py-2 text-sm font-semibold text-[#24292f] hover:bg-[#f6f8fa] hover:text-[#24292f]"
+                className="rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm font-semibold text-[#09090b] hover:bg-[#fafafa] hover:text-[#09090b]"
               >
                 Propose CLI issue
               </a>
@@ -60,40 +60,40 @@ export default function CliPage() {
 
           <div className="grid gap-0 lg:grid-cols-[1fr_320px]">
             <div className="p-5">
-              <h2 className="text-xl font-semibold text-[#24292f]">MVP commands</h2>
+              <h2 className="text-xl font-semibold text-[#09090b]">MVP commands</h2>
               <div className="mt-4 grid gap-3">
                 {mvpCommands.map((item) => (
-                  <div key={item.command} className="rounded-md border border-[#d0d7de] bg-[#f6f8fa] p-4">
-                    <code className="bg-white font-mono text-sm text-[#0969da]">{item.command}</code>
-                    <p className="mt-2 text-sm leading-6 text-[#57606a]">{item.purpose}</p>
+                  <div key={item.command} className="rounded-md border border-[#e4e4e7] bg-[#fafafa] p-4">
+                    <code className="bg-white font-mono text-sm text-[#2563eb]">{item.command}</code>
+                    <p className="mt-2 text-sm leading-6 text-[#71717a]">{item.purpose}</p>
                   </div>
                 ))}
               </div>
 
-              <h2 className="mt-8 text-xl font-semibold text-[#24292f]">V1 commands</h2>
+              <h2 className="mt-8 text-xl font-semibold text-[#09090b]">V1 commands</h2>
               <div className="mt-4 grid gap-3">
                 {nextCommands.map((item) => (
-                  <div key={item.command} className="rounded-md border border-[#d0d7de] bg-white p-4">
-                    <code className="bg-[#f6f8fa] font-mono text-sm text-[#0969da]">{item.command}</code>
-                    <p className="mt-2 text-sm leading-6 text-[#57606a]">{item.purpose}</p>
+                  <div key={item.command} className="rounded-md border border-[#e4e4e7] bg-white p-4">
+                    <code className="bg-[#fafafa] font-mono text-sm text-[#2563eb]">{item.command}</code>
+                    <p className="mt-2 text-sm leading-6 text-[#71717a]">{item.purpose}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            <aside className="border-t border-[#d0d7de] bg-[#f6f8fa] p-5 lg:border-l lg:border-t-0">
-              <h2 className="text-sm font-semibold text-[#24292f]">Recommended shape</h2>
-              <ul className="mt-3 space-y-3 text-sm leading-6 text-[#57606a]">
+            <aside className="border-t border-[#e4e4e7] bg-[#fafafa] p-5 lg:border-l lg:border-t-0">
+              <h2 className="text-sm font-semibold text-[#09090b]">Recommended shape</h2>
+              <ul className="mt-3 space-y-3 text-sm leading-6 text-[#71717a]">
                 <li>One binary: <code className="bg-white">debugtools</code>, with <code className="bg-white">dt</code> as an alias later.</li>
                 <li>Extract shared logic into <code className="bg-white">src/lib/tools/*</code> before adding CLI entrypoints.</li>
                 <li>Keep MVP commands dependency-light and CI-friendly.</li>
                 <li>Use release automation after the first CLI module lands.</li>
               </ul>
 
-              <h2 className="mt-8 text-sm font-semibold text-[#24292f]">Later possibilities</h2>
+              <h2 className="mt-8 text-sm font-semibold text-[#09090b]">Later possibilities</h2>
               <ul className="mt-3 space-y-3">
                 {laterCommands.map((item) => (
-                  <li key={item} className="flex gap-2 text-sm leading-6 text-[#57606a]">
+                  <li key={item} className="flex gap-2 text-sm leading-6 text-[#71717a]">
                     <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[#1f883d]" />
                     {item}
                   </li>

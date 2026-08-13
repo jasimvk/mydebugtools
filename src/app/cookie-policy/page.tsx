@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   robots: 'index, follow',
 };
 
+// Bump this by hand whenever the text of this policy changes.
+const LAST_UPDATED = '13 August 2026';
+
 export default function CookiePolicy() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -20,7 +23,7 @@ export default function CookiePolicy() {
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Cookie Policy</h1>
       
       <div className="prose prose-lg max-w-none">
-        <p className="text-sm text-gray-600 mb-6">Last updated: {new Date().toLocaleDateString()}</p>
+        <p className="text-sm text-gray-600 mb-6">Last updated: {LAST_UPDATED}</p>
         
         <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">What Are Cookies?</h2>
         <p>
@@ -30,13 +33,12 @@ export default function CookiePolicy() {
 
         <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">How We Use Cookies</h2>
         <p>
-          debugtools uses cookies to enhance your browsing experience and provide personalized content. 
-          We use cookies for:
+          debugtools uses cookies to enhance your browsing experience and to understand how the
+          site is used. We use cookies for:
         </p>
         <ul>
           <li>Website functionality and user preferences</li>
           <li>Analytics and performance monitoring</li>
-          <li>Advertising and marketing purposes</li>
           <li>Security and fraud prevention</li>
         </ul>
 
@@ -58,17 +60,6 @@ export default function CookiePolicy() {
           <li>How users navigate through the site</li>
           <li>Technical information about browsers and devices</li>
           <li>General location information (country/city level)</li>
-        </ul>
-        
-        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Advertising Cookies</h3>
-        <p>
-          We use Google AdSense to display advertisements. These cookies:
-        </p>
-        <ul>
-          <li>Help show relevant ads based on your interests</li>
-          <li>Measure ad effectiveness</li>
-          <li>Prevent showing the same ad too many times</li>
-          <li>Enable features like remarketing</li>
         </ul>
         
         <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Functionality Cookies</h3>
@@ -93,18 +84,15 @@ export default function CookiePolicy() {
             Google Analytics Opt-out Browser Add-on
           </a>.
         </p>
-        
-        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Google AdSense</h3>
         <p>
-          Google AdSense uses cookies to serve personalized ads. You can manage your ad preferences at 
-          <a href="https://www.google.com/settings/ads" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
-            Google Ad Settings
-          </a>.
+          We do not use advertising or remarketing networks, and no advertising cookies are set
+          on this website.
         </p>
 
         <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">Managing Cookies</h2>
         <p>
-          You can control and manage cookies in several ways:
+          We do not offer an on-site cookie preference centre. You can control and manage cookies
+          in the following ways:
         </p>
         
         <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Browser Settings</h3>
@@ -125,16 +113,6 @@ export default function CookiePolicy() {
               Google Analytics Opt-out
             </a>
           </li>
-          <li>
-            <a href="https://www.google.com/settings/ads" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
-              Google Ad Settings
-            </a>
-          </li>
-          <li>
-            <a href="http://www.networkadvertising.org/choices/" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
-              Network Advertising Initiative Opt-out
-            </a>
-          </li>
         </ul>
 
         <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">Impact of Disabling Cookies</h2>
@@ -144,7 +122,6 @@ export default function CookiePolicy() {
         <ul>
           <li>Some website features may not work properly</li>
           <li>Your preferences may not be saved</li>
-          <li>You may see less relevant advertisements</li>
           <li>Analytics tracking will be affected</li>
         </ul>
 

@@ -91,21 +91,34 @@ function IconFinderContent() {
   const [size, setSize] = useState(24);
   const [color, setColor] = useState('#111827');
   const [copied, setCopied] = useState<string | null>(null);
+  const [copyError, setCopyError] = useState('');
 
   const filteredIcons = useMemo(() => {
     const cleanQuery = query.trim().toLowerCase();
 
+    // Search the component name and provider too, and require every whitespace-
+    // separated token to match somewhere. Matching only `name` as one raw
+    // substring meant the identifiers developers actually type — "magnifying",
+    // "cpu", "filejson" — and any reordered phrase returned no results.
+    const tokens = cleanQuery.split(/\s+/).filter(Boolean);
+
     return icons.filter((icon) => {
       const matchesProvider = provider === 'all' || icon.provider === provider;
-      const matchesQuery = !cleanQuery || icon.name.toLowerCase().includes(cleanQuery);
+      const haystack = `${icon.name} ${icon.importName} ${icon.provider}`.toLowerCase();
+      const matchesQuery = tokens.every((token) => haystack.includes(token));
       return matchesProvider && matchesQuery;
     });
   }, [provider, query]);
 
   const copyIcon = async (icon: IconInfo) => {
-    await navigator.clipboard.writeText(getSnippet(icon, size, color));
-    setCopied(icon.name);
-    window.setTimeout(() => setCopied(null), 1600);
+    try {
+      await navigator.clipboard.writeText(getSnippet(icon, size, color));
+      setCopied(icon.name);
+      setCopyError('');
+      window.setTimeout(() => setCopied(null), 1600);
+    } catch {
+      setCopyError('Could not copy to the clipboard. Select the snippet and copy it manually.');
+    }
   };
 
   return (
@@ -121,8 +134,10 @@ function IconFinderContent() {
           <h1 className="text-2xl font-bold text-gray-900">Icon Finder</h1>
           <p className="text-sm text-gray-600">Curated developer icons that keep builds fast.</p>
         </div>
-        <p className="text-sm text-gray-500">{filteredIcons.length} icons</p>
+        <p aria-live="polite" className="text-sm text-gray-500">{filteredIcons.length} icons</p>
       </div>
+
+      {copyError && <p role="alert" className="text-sm text-red-600">{copyError}</p>}
 
       <div className="grid gap-3 rounded-lg border border-gray-200 bg-white p-4 md:grid-cols-[1fr_auto_auto]">
         <div className="relative">
@@ -130,6 +145,7 @@ function IconFinderContent() {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            aria-label="Search icons"
             placeholder="Search icons"
             className="w-full rounded-md border border-gray-200 bg-gray-50 py-2 pl-10 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
           />

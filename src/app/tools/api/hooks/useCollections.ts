@@ -39,6 +39,8 @@ export interface SavedRequest {
   body: string;
   contentType: ContentType;
   authConfig: AuthConfig;
+  preRequestScript?: string;
+  testScript?: string;
   description?: string;
   createdAt: number;
   updatedAt: number;
@@ -71,7 +73,62 @@ export function addRequestToCollections(
   });
 }
 
-export function useCollections(privateMode = false) {
+export interface OrphanedRequest {
+  collectionId: string;
+  request: SavedRequest;
+}
+
+// A hand-edited or half-written localStorage value can parse to something that is not
+// an array, which would blow up every `collections.map(...)` in the UI.
+export function parseStoredCollections(raw: string | null): Collection[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+// Requests that failed to reach the cloud keep a `local-req-` id inside a cloud
+// collection, so the collection-level sync sweep never picks them up.
+export function collectOrphanedRequests(collections: Collection[]): OrphanedRequest[] {
+  return collections
+    .filter((collection) => !collection.id.startsWith('local-'))
+    .flatMap((collection) =>
+      (Array.isArray(collection.requests) ? collection.requests : [])
+        .filter((request) => typeof request?.id === 'string' && request.id.startsWith('local-req-'))
+        .map((request) => ({ collectionId: collection.id, request }))
+    );
+}
+
+function mapCloudCollections(data: any[]): Collection[] {
+  return (Array.isArray(data) ? data : []).map((col: any) => ({
+    id: col.id,
+    name: col.name,
+    description: col.description || '',
+    color: col.color || '#0969da',
+    createdAt: new Date(col.created_at).getTime(),
+    updatedAt: new Date(col.updated_at).getTime(),
+    requests: (col.api_requests || []).map((req: any) => ({
+      id: req.id,
+      name: req.name,
+      method: req.method as HttpMethod,
+      url: req.url,
+      headers: req.headers || [],
+      body: req.body || '',
+      contentType: (req.headers?.find((h: any) => h.key === 'Content-Type')?.value || 'application/json') as ContentType,
+      authConfig: req.auth_config || { type: 'none' as AuthType },
+      preRequestScript: req.pre_request_script || '',
+      testScript: req.test_script || '',
+      description: req.description || '',
+      createdAt: new Date(req.created_at).getTime(),
+      updatedAt: new Date(req.updated_at).getTime(),
+    }))
+  }));
+}
+
+export function useCollections(privateMode = false, workspaceId?: string) {
   const { data: session } = useSession();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -87,8 +144,7 @@ export function useCollections(privateMode = false) {
     try {
       const stored = localStorage.getItem('api-collections');
       if (stored) {
-        const parsed = JSON.parse(stored);
-        setCollections(parsed);
+        setCollections(parseStoredCollections(stored));
       }
     } catch (err) {
       console.error('Error loading local collections:', err);
@@ -122,54 +178,41 @@ export function useCollections(privateMode = false) {
       return;
     }
 
+    if (!workspaceId) {
+      setCollections([]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       
       // First, get any local collections that might exist
-      const localCollectionsStr = localStorage.getItem('api-collections');
-      const localCollections: Collection[] = localCollectionsStr ? JSON.parse(localCollectionsStr) : [];
-      
+      const localCollections = parseStoredCollections(localStorage.getItem('api-collections'));
+
       // Fetch cloud collections
-      const response = await fetch('/api/collections');
+      const response = await fetch(`/api/collections?workspaceId=${encodeURIComponent(workspaceId)}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch collections');
       }
 
       const data = await response.json();
-      
+
       // Transform Supabase data to match our Collection interface
-      const cloudCollections = data.map((col: any) => ({
-        id: col.id,
-        name: col.name,
-        description: col.description || '',
-        color: col.color || '#FF6C37',
-        createdAt: new Date(col.created_at).getTime(),
-        updatedAt: new Date(col.updated_at).getTime(),
-        requests: (col.api_requests || []).map((req: any) => ({
-          id: req.id,
-          name: req.name,
-          method: req.method as HttpMethod,
-          url: req.url,
-          headers: req.headers || [],
-          body: req.body || '',
-          contentType: (req.headers?.find((h: any) => h.key === 'Content-Type')?.value || 'application/json') as ContentType,
-          authConfig: req.auth_config || { type: 'none' as AuthType },
-          description: req.description || '',
-          createdAt: new Date(req.created_at).getTime(),
-          updatedAt: new Date(req.updated_at).getTime(),
-        }))
-      }));
+      const cloudCollections = mapCloudCollections(data);
 
       // Find local-only collections (those with 'local-' prefix that aren't in cloud)
-      const localOnlyCollections = localCollections.filter(lc => 
+      const localOnlyCollections = localCollections.filter(lc =>
         lc.id.startsWith('local-')
       );
+      // Requests whose cloud save failed live on inside an already-synced collection.
+      const orphanedRequests = collectOrphanedRequests(localCollections);
 
       // Sync local collections to cloud
-      if (localOnlyCollections.length > 0) {
-        console.log(`Syncing ${localOnlyCollections.length} local collection(s) to cloud...`);
-        
+      if (localOnlyCollections.length > 0 || orphanedRequests.length > 0) {
+        console.log(`Syncing ${localOnlyCollections.length} local collection(s) and ${orphanedRequests.length} unsynced request(s) to cloud...`);
+
         for (const localCol of localOnlyCollections) {
           try {
             // Create collection in cloud
@@ -179,7 +222,8 @@ export function useCollections(privateMode = false) {
               body: JSON.stringify({
                 name: localCol.name,
                 description: localCol.description,
-                color: localCol.color
+                color: localCol.color,
+                workspaceId
               })
             });
 
@@ -200,6 +244,8 @@ export function useCollections(privateMode = false) {
                       headers: req.headers,
                       body: req.body,
                       authConfig: req.authConfig,
+                      preRequestScript: req.preRequestScript,
+                      testScript: req.testScript,
                       description: req.description
                     })
                   });
@@ -212,33 +258,36 @@ export function useCollections(privateMode = false) {
             console.error('Error syncing collection:', err);
           }
         }
-        
+
+        for (const orphan of orphanedRequests) {
+          try {
+            await fetch('/api/requests', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                collectionId: orphan.collectionId,
+                name: orphan.request.name,
+                method: orphan.request.method,
+                url: orphan.request.url,
+                headers: orphan.request.headers,
+                body: orphan.request.body,
+                authConfig: orphan.request.authConfig,
+                preRequestScript: orphan.request.preRequestScript,
+                testScript: orphan.request.testScript,
+                description: orphan.request.description
+              })
+            });
+          } catch (err) {
+            console.error('Error syncing unsynced request:', err);
+          }
+        }
+
         // Reload to get the synced collections
-        const reloadResponse = await fetch('/api/collections');
+        const reloadResponse = await fetch(`/api/collections?workspaceId=${encodeURIComponent(workspaceId)}`);
         if (reloadResponse.ok) {
           const reloadData = await reloadResponse.json();
-          const reloadedCollections = reloadData.map((col: any) => ({
-            id: col.id,
-            name: col.name,
-            description: col.description || '',
-            color: col.color || '#FF6C37',
-            createdAt: new Date(col.created_at).getTime(),
-            updatedAt: new Date(col.updated_at).getTime(),
-            requests: (col.api_requests || []).map((req: any) => ({
-              id: req.id,
-              name: req.name,
-              method: req.method as HttpMethod,
-              url: req.url,
-              headers: req.headers || [],
-              body: req.body || '',
-              contentType: (req.headers?.find((h: any) => h.key === 'Content-Type')?.value || 'application/json') as ContentType,
-              authConfig: req.auth_config || { type: 'none' as AuthType },
-              description: req.description || '',
-              createdAt: new Date(req.created_at).getTime(),
-              updatedAt: new Date(req.updated_at).getTime(),
-            }))
-          }));
-          
+          const reloadedCollections = mapCloudCollections(reloadData);
+
           setCollections(reloadedCollections);
           saveLocalCollections(reloadedCollections);
           console.log('✅ Local collections synced successfully!');
@@ -273,7 +322,7 @@ export function useCollections(privateMode = false) {
     };
 
     // If logged in, save to cloud
-    if (session?.user && !privateMode) {
+    if (session?.user && !privateMode && workspaceId) {
       try {
         const response = await fetch('/api/collections', {
           method: 'POST',
@@ -281,7 +330,8 @@ export function useCollections(privateMode = false) {
           body: JSON.stringify({
             name,
             description,
-            color: newCollection.color
+            color: newCollection.color,
+            workspaceId
           })
         });
 
@@ -312,9 +362,9 @@ export function useCollections(privateMode = false) {
   // Delete collection
   const deleteCollection = async (collectionId: string) => {
     // If logged in and cloud ID, delete from cloud
-    if (session?.user && !privateMode && !collectionId.startsWith('local-')) {
+    if (session?.user && !privateMode && workspaceId && !collectionId.startsWith('local-')) {
       try {
-        const response = await fetch(`/api/collections?id=${collectionId}`, {
+        const response = await fetch(`/api/collections?id=${collectionId}&workspaceId=${encodeURIComponent(workspaceId)}`, {
           method: 'DELETE'
         });
 
@@ -349,7 +399,7 @@ export function useCollections(privateMode = false) {
     };
 
     // If logged in and cloud collection, save to cloud
-    if (session?.user && !privateMode && !collectionId.startsWith('local-')) {
+    if (session?.user && !privateMode && workspaceId && !collectionId.startsWith('local-')) {
       try {
         const response = await fetch('/api/requests', {
           method: 'POST',
@@ -372,7 +422,11 @@ export function useCollections(privateMode = false) {
         newRequest.updatedAt = new Date(savedRequest.updated_at).getTime();
       } catch (err) {
         console.error('Error saving request to cloud:', err);
-        // Continue with local ID
+        // Keep the request locally under its `local-req-` id and tell the user it is
+        // not in the cloud yet; the next load sweeps it up.
+        setError(
+          `${err instanceof Error ? err.message : 'Failed to save request'} - kept locally, it will sync on the next reload.`
+        );
       }
     }
 
@@ -439,7 +493,7 @@ export function useCollections(privateMode = false) {
   // Load collections on mount and when session changes
   useEffect(() => {
     loadCollections();
-  }, [session?.user, privateMode]);
+  }, [session?.user, privateMode, workspaceId]);
 
   return {
     collections,

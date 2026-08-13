@@ -14,6 +14,9 @@ const originalApiKey = process.env.OPENAI_API_KEY;
   }
 };
 
+// Deliberately `require`, not `import`: the route must be loaded *after* the
+// Response stub above is installed, and an import declaration would hoist.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { POST } = require('./route') as typeof import('./route');
 
 describe('/api/ai-debug', () => {

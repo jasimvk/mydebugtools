@@ -97,7 +97,7 @@ export default function FAQPage() {
               </a>
               <Link 
                 href="/tools"
-                className="px-6 py-2.5 bg-[#FF6C37] hover:bg-[#ff5722] text-white font-semibold rounded-lg transition-colors shadow-lg"
+                className="px-6 py-2.5 bg-[#2563eb] hover:bg-[#0550ae] text-white font-semibold rounded-lg transition-colors shadow-lg"
               >
                 Browse Tools
               </Link>
@@ -124,23 +124,23 @@ export default function FAQPage() {
             {faqs.map((faq, index) => (
               <div
                 key={index}
-                className="bg-white border-2 border-gray-200 rounded-xl overflow-hidden transition-all hover:border-[#FF6C37]/50"
+                className="bg-white border-2 border-gray-200 rounded-xl overflow-hidden transition-all hover:border-[#2563eb]/50"
               >
                 <button
                   onClick={() => toggleFAQ(index)}
-                  className="w-full px-6 py-6 flex items-center justify-between text-left hover:bg-orange-50/30 transition-colors group"
+                  className="w-full px-6 py-6 flex items-center justify-between text-left hover:bg-blue-50/30 transition-colors group"
                 >
-                  <span className="text-base font-semibold text-gray-900 pr-4 group-hover:text-[#FF6C37] transition-colors">
+                  <span className="text-base font-semibold text-gray-900 pr-4 group-hover:text-[#2563eb] transition-colors">
                     {faq.question}
                   </span>
                   <ChevronDown
-                    className={`h-5 w-5 text-[#FF6C37] flex-shrink-0 transition-transform duration-200 ${
+                    className={`h-5 w-5 text-[#2563eb] flex-shrink-0 transition-transform duration-200 ${
                       openIndex === index ? 'rotate-180' : ''
                     }`}
                   />
                 </button>
                 {openIndex === index && (
-                  <div className="px-6 pb-6 pt-2 border-t border-gray-200 bg-gradient-to-b from-orange-50/10 to-white">
+                  <div className="px-6 pb-6 pt-2 border-t border-gray-200 bg-gradient-to-b from-blue-50/10 to-white">
                     <p className="text-gray-600 leading-relaxed text-base">
                       {faq.answer}
                     </p>
@@ -161,7 +161,7 @@ export default function FAQPage() {
             <div className="flex flex-col md:flex-row items-center justify-center gap-4">
               <Link
                 href="/contact"
-                className="px-8 py-4 bg-[#FF6C37] hover:bg-[#ff5722] text-white font-bold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                className="px-8 py-4 bg-[#2563eb] hover:bg-[#0550ae] text-white font-bold rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 Contact Us
               </Link>
@@ -185,22 +185,22 @@ export default function FAQPage() {
             <div className="flex flex-col gap-8">
               {/* Footer Links */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-center md:text-left">
-                <a href="https://github.com/jasimvkarim/mydebugtools" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
+                <a href="https://github.com/jasimvkarim/mydebugtools" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#2563eb] transition-colors font-medium text-sm">
                   ⭐ Star on GitHub
                 </a>
-                <a href="https://github.com/jasimvkarim/mydebugtools/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
+                <a href="https://github.com/jasimvkarim/mydebugtools/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#2563eb] transition-colors font-medium text-sm">
                   MIT License
                 </a>
-                <a href="https://github.com/jasimvkarim/mydebugtools/issues" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
+                <a href="https://github.com/jasimvkarim/mydebugtools/issues" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#2563eb] transition-colors font-medium text-sm">
                   Report Issue
                 </a>
-                <a href="https://github.com/jasimvkarim/mydebugtools/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
+                <a href="https://github.com/jasimvkarim/mydebugtools/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#2563eb] transition-colors font-medium text-sm">
                   Contribute
                 </a>
-                <Link href="/contact" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
+                <Link href="/contact" className="text-gray-300 hover:text-[#2563eb] transition-colors font-medium text-sm">
                   Contact
                 </Link>
-                <Link href="/privacy-policy" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-medium text-sm">
+                <Link href="/privacy-policy" className="text-gray-300 hover:text-[#2563eb] transition-colors font-medium text-sm">
                   Privacy & Terms
                 </Link>
               </div>
@@ -213,7 +213,7 @@ export default function FAQPage() {
                 <span className="text-gray-300">
                   Built with ❤️ for developers
                 </span>
-                <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#FF6C37] transition-colors font-semibold">
+                <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-[#2563eb] transition-colors font-semibold">
                   @jasimvk
                 </a>
               </div>

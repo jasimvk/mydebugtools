@@ -1,41 +1,53 @@
-# SEO, AEO, GEO, and PSEO Notes
+# SEO, AEO, GEO, and PSEO Implementation
 
-DEBUGTOOLS uses `https://debugtools.org` as the canonical domain and keeps the public brand uppercase as `DEBUGTOOLS`.
+DebugTools uses `https://debugtools.org` as the canonical domain.
 
-## Search Metadata
+## SEO
 
-- Global metadata describes DEBUGTOOLS as an open-source AI debugging toolkit for developers.
-- Tool pages use distinct titles, descriptions, canonical URLs, Open Graph data, and Twitter card data through the existing tool metadata helper.
-- Core tools are described consistently: API Tester, JSON Formatter, JWT Decoder, Base64 Encoder and Decoder, Hash Generator, Code Diff Tool, URL Encoder and Decoder, HTTP Status Codes, and AI Debug Assistant.
+- Global metadata, Open Graph, Twitter cards, robots directives, and canonical URLs are handled in `src/app/layout.tsx` and `src/lib/seo.ts`.
+- Tool metadata is centralized in `src/lib/tool-seo.ts`.
+- Static tool layouts call `toolMetadata(...)`.
+- Programmatic debug workflow pages under `/tools/[slug]/` generate metadata from the live tool registry.
+- `SoftwareApplication`, `WebPage`, `BreadcrumbList`, and `ItemList` JSON-LD are emitted for tool and registry pages.
 
-## Answer-Oriented Pages
+## AEO
 
-The `/answers/` section is intended for concise, source-like answers that map common debugging questions to the relevant tool. Each answer page should:
+- `/answers/` contains direct answer pages for common developer questions.
+- Each answer page starts with a short answer, then gives practical steps and the matching DebugTools route.
+- Answer pages emit `FAQPage` and `HowTo` JSON-LD.
+- New answer pages should be added only for real recurring questions, not as keyword filler.
 
-- Lead with a direct short answer.
-- Keep steps factual and implementation-neutral.
-- Link to the matching debugtools utility.
-- Avoid claims that cannot be verified from the app behavior.
-- Mention privacy or network behavior only when it is true for the tool.
+## GEO
 
-## Generative Engine Optimization
+- `public/llms.txt` gives answer engines a concise project summary and primary links.
+- `public/llms-full.txt` gives a full machine-readable index of tools, answers, and trust pages.
+- `public/ai.txt` gives a compact context file with product positioning, canonical URLs, privacy boundaries, and best entry pages.
+- `public/robots.txt` allows `llms.txt`, `llms-full.txt`, and `ai.txt`.
 
-Descriptions should be clear enough for answer engines to quote or summarize without extra context. Prefer precise wording over repeated keywords:
+## PSEO
 
-- "Decode JWT headers and payload claims locally" is better than repeating "JWT decoder".
-- "Send HTTP requests and inspect status, headers, timing, and response bodies" is better than generic "best API tool".
-- "Base64 is reversible encoding, not encryption" is useful factual context.
-- "Remove secrets before sending text to a configured AI provider" is better than vague privacy language for AI-assisted debugging.
+- `/tools/[slug]/` is the programmatic route for debug workflow tools.
+- `scripts/generate-sitemap.js` reads the live tool registry, debug workflow config, static tool folders, and answer-page data.
+- The generator writes:
+  - `public/sitemap.xml`
+  - `public/llms.txt`
+  - `public/llms-full.txt`
+  - `public/ai.txt`
 
-## Programmatic SEO
+## Add A New Tool
 
-When a new tool ships:
+1. Add the tool route or debug workflow config.
+2. Add or confirm registry data in `src/app/tools/lib/tool-registry.ts`.
+3. Add a specific metadata override in `src/lib/tool-seo.ts` only when the generated metadata is not enough.
+4. Run `npm run generate-sitemap`.
+5. Add an answer page only when there is a genuine search-style question.
 
-1. Add distinct metadata through the tool metadata helper.
-2. Add the route to `scripts/generate-sitemap.js`.
-3. Add an answer page only when there is a real recurring user question.
-4. Keep schema limited to useful `WebSite`, `SoftwareApplication`, `ItemList`, and answer-page `FAQPage` data.
+## Verification
 
-## Robots and Sitemap
+Run these before deployment:
 
-`public/robots.txt` points crawlers to `https://debugtools.org/sitemap.xml`. The generated sitemap should include public tool pages and answer pages, and should not include private, unfinished, or deprecated routes.
+```bash
+npm run generate-sitemap
+npm run build
+npx tsc --noEmit --pretty false
+```

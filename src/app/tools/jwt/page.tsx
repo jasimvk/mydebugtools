@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { KeyIcon, ClipboardIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { decodeJwtSegment } from '@/app/tools/lib/tool-utils';
 
@@ -8,39 +8,51 @@ interface JWTPayload {
   [key: string]: any;
 }
 
+/**
+ * Tokens are rarely pasted clean — they arrive with a `Bearer ` prefix, or with
+ * newlines from a wrapped log line. Both used to make `atob` throw and the tool
+ * report a valid token as invalid, so strip them before splitting.
+ */
+function normalizeToken(raw: string) {
+  return raw.trim().replace(/^Bearer\s+/i, '').replace(/\s+/g, '');
+}
+
+/** Claims are arbitrary JSON — an object claim rendered as a React child throws. */
+function renderClaim(value: unknown) {
+  return typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value);
+}
+
 export default function JWTDecoder() {
   const [token, setToken] = useState('');
-  const [header, setHeader] = useState<JWTPayload | null>(null);
-  const [payload, setPayload] = useState<JWTPayload | null>(null);
-  const [error, setError] = useState('');
   const [copySuccess, setCopySuccess] = useState<'header' | 'payload' | null>(null);
+  const [copyError, setCopyError] = useState('');
 
-  const decodeToken = () => {
-    try {
-      if (!token.trim()) {
-        setError('Please enter a JWT token');
-        setHeader(null);
-        setPayload(null);
-        return;
-      }
+  // Decoded reactively. This used to run only on a "Decode" click and left the
+  // previous token's header, payload and claim cards on screen after the input
+  // changed, so the user could read claims from a token no longer in the box.
+  const { header, payload, error } = useMemo(() => {
+    const empty = { header: null as JWTPayload | null, payload: null as JWTPayload | null, error: '' };
+    const normalized = normalizeToken(token);
+    if (!normalized) return empty;
 
-      const parts = token.split('.');
-      if (parts.length !== 3) {
-        throw new Error('Invalid JWT format');
-      }
-
-      const decodedHeader = decodeJwtSegment(parts[0]) as JWTPayload;
-      const decodedPayload = decodeJwtSegment(parts[1]) as JWTPayload;
-
-      setHeader(decodedHeader);
-      setPayload(decodedPayload);
-      setError('');
-    } catch (err) {
-      setError('Invalid JWT token: Please check your input');
-      setHeader(null);
-      setPayload(null);
+    const parts = normalized.split('.');
+    if (parts.length !== 3) {
+      return { ...empty, error: 'Invalid JWT format: expected three dot-separated segments.' };
     }
-  };
+
+    try {
+      return {
+        header: decodeJwtSegment(parts[0]) as JWTPayload,
+        payload: decodeJwtSegment(parts[1]) as JWTPayload,
+        error: '',
+      };
+    } catch {
+      return { ...empty, error: 'Invalid JWT token: Please check your input' };
+    }
+  }, [token]);
+
+  const isExpired =
+    typeof payload?.exp === 'number' && payload.exp * 1000 < Date.now();
 
   const formatJSON = (obj: any) => {
     return JSON.stringify(obj, null, 2);
@@ -50,15 +62,10 @@ export default function JWTDecoder() {
     try {
       await navigator.clipboard.writeText(text);
       setCopySuccess(type);
+      setCopyError('');
       setTimeout(() => setCopySuccess(null), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-      decodeToken();
+    } catch {
+      setCopyError('Could not copy to the clipboard. Select the JSON and copy it manually.');
     }
   };
 
@@ -68,39 +75,34 @@ export default function JWTDecoder() {
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <KeyIcon className="h-8 w-8 text-[#FF6C37]" />
+              <KeyIcon className="h-8 w-8 text-[#2563eb]" />
               <h1 className="text-3xl font-bold text-gray-900">JWT Decoder</h1>
             </div>
-            <p className="text-gray-600">Decode and verify JSON Web Tokens</p>
+            <p className="text-gray-600">Decode JSON Web Tokens locally in your browser</p>
           </div>
         </div>
 
       {/* Input */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">JWT Token</label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            onKeyDown={handleKeyPress}
-            placeholder="Paste your JWT token here..."
-            className="flex-1 p-3 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FF6C37] focus:border-[#FF6C37]"
-          />
-          <button
-            onClick={decodeToken}
-            className="flex items-center gap-2 bg-[#FF6C37] text-white px-6 py-3 rounded-lg hover:bg-[#ff5722] transition-colors font-medium"
-            title="Decode JWT (Cmd/Ctrl + Enter)"
-          >
-            <KeyIcon className="h-5 w-5" />
-            Decode
-          </button>
-        </div>
-        <p className="text-xs text-gray-500">Press Cmd/Ctrl + Enter to decode</p>
+        <label htmlFor="jwt-token" className="block text-sm font-medium text-gray-700">JWT Token</label>
+        {/* A textarea, not a single-line input: tokens run to hundreds of
+            characters and could not be reviewed after pasting. */}
+        <textarea
+          id="jwt-token"
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+          rows={4}
+          spellCheck={false}
+          placeholder="Paste your JWT token here..."
+          className="w-full resize-y p-3 font-mono text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2563eb] focus:border-[#2563eb]"
+        />
+        <p className="text-xs text-gray-500">Decodes as you type. A `Bearer ` prefix and line breaks are ignored.</p>
       </div>
 
+      {copyError && <p role="alert" className="text-sm text-red-600">{copyError}</p>}
+
       {error ? (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+        <div role="alert" className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
           <svg className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -175,15 +177,26 @@ export default function JWTDecoder() {
         <div className="space-y-4 mt-6">
           <h2 className="text-lg font-semibold text-gray-900">Token Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {payload?.exp && (
+            {/* `!== undefined`, not truthiness: `exp: 0` and `iat: 0` are valid
+                and used to hide the row entirely. */}
+            {payload?.exp !== undefined && (
               <div className="p-4 bg-[#FFF5F2] border border-[#FFD4C8] rounded-lg">
                 <div className="text-sm font-medium text-gray-600">Expires</div>
-                <div className="text-gray-900 font-semibold">
-                  {new Date(payload.exp * 1000).toLocaleString()}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-gray-900 font-semibold">
+                    {new Date(payload.exp * 1000).toLocaleString()}
+                  </span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                      isExpired ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                    }`}
+                  >
+                    {isExpired ? 'Expired' : 'Active'}
+                  </span>
                 </div>
               </div>
             )}
-            {payload?.iat && (
+            {payload?.iat !== undefined && (
               <div className="p-4 bg-[#FFF5F2] border border-[#FFD4C8] rounded-lg">
                 <div className="text-sm font-medium text-gray-600">Issued At</div>
                 <div className="text-gray-900 font-semibold">
@@ -191,19 +204,19 @@ export default function JWTDecoder() {
                 </div>
               </div>
             )}
-            {payload?.iss && (
+            {payload?.iss !== undefined && (
               <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <div className="text-sm font-medium text-gray-600">Issuer</div>
-                <div className="text-gray-900 font-semibold">
-                  {payload.iss}
+                <div className="text-gray-900 font-semibold break-all">
+                  {renderClaim(payload.iss)}
                 </div>
               </div>
             )}
-            {payload?.sub && (
+            {payload?.sub !== undefined && (
               <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
                 <div className="text-sm font-medium text-gray-600">Subject</div>
-                <div className="text-gray-900 font-semibold">
-                  {payload.sub}
+                <div className="text-gray-900 font-semibold break-all">
+                  {renderClaim(payload.sub)}
                 </div>
               </div>
             )}
@@ -220,15 +233,15 @@ export default function JWTDecoder() {
           </p>
           <ul className="space-y-2 text-sm text-gray-700">
             <li className="flex items-start gap-2">
-              <span className="font-semibold text-[#FF6C37]">•</span>
+              <span className="font-semibold text-[#2563eb]">•</span>
               <span>Compact, URL-safe token format</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="font-semibold text-[#FF6C37]">•</span>
+              <span className="font-semibold text-[#2563eb]">•</span>
               <span>Self-contained with user information</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="font-semibold text-[#FF6C37]">•</span>
+              <span className="font-semibold text-[#2563eb]">•</span>
               <span>Digitally signed for verification</span>
             </li>
           </ul>
@@ -241,15 +254,15 @@ export default function JWTDecoder() {
           </p>
           <ul className="space-y-2 text-sm text-gray-700">
             <li className="flex items-start gap-2">
-              <span className="font-semibold text-[#FF6C37]">•</span>
+              <span className="font-semibold text-[#2563eb]">•</span>
               <span>Do not trust the decoded data without verification</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="font-semibold text-[#FF6C37]">•</span>
+              <span className="font-semibold text-[#2563eb]">•</span>
               <span>Always validate tokens on your server</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="font-semibold text-[#FF6C37]">•</span>
+              <span className="font-semibold text-[#2563eb]">•</span>
               <span>Never expose your secret keys in client-side code</span>
             </li>
           </ul>

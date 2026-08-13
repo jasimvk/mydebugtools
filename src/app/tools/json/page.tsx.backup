@@ -688,8 +688,8 @@ const StatusBar: React.FC<{
           )}
           {transformStatus.active && (
             <div className="flex items-center space-x-2">
-              <ArrowsUpDownIcon className="h-4 w-4 text-orange-500" />
-              <span className="text-sm text-orange-500">
+              <ArrowsUpDownIcon className="h-4 w-4 text-blue-500" />
+              <span className="text-sm text-blue-500">
                 {transformStatus.operations} transformation{transformStatus.operations !== 1 ? 's' : ''} applied
               </span>
             </div>

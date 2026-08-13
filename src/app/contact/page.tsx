@@ -53,7 +53,7 @@ export default function Contact() {
               </a>
               <Link 
                 href="/tools"
-                className="px-6 py-2.5 bg-[#FF6C37] hover:bg-[#ff5722] text-white font-semibold rounded-lg transition-colors shadow-lg"
+                className="px-6 py-2.5 bg-[#2563eb] hover:bg-[#0550ae] text-white font-semibold rounded-lg transition-colors shadow-lg"
               >
                 Browse Tools
               </Link>
@@ -216,20 +216,20 @@ export default function Contact() {
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex flex-wrap justify-center md:justify-start gap-4 text-xs">
-              <a href="https://github.com/jasimvkarim/mydebugtools" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">
+              <a href="https://github.com/jasimvkarim/mydebugtools" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#2563eb] transition-colors font-medium">
                 ⭐ Star on GitHub
               </a>
-              <a href="https://github.com/jasimvkarim/mydebugtools/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">
+              <a href="https://github.com/jasimvkarim/mydebugtools/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#2563eb] transition-colors font-medium">
                 MIT License
               </a>
-              <a href="https://github.com/jasimvkarim/mydebugtools/issues" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">Report Issue</a>
-              <a href="https://github.com/jasimvkarim/mydebugtools/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">Contribute</a>
-              <Link href="/contact" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">Contact</Link>
-              <Link href="/faq" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">FAQ</Link>
-              <Link href="/privacy-policy" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">Privacy & Terms</Link>
+              <a href="https://github.com/jasimvkarim/mydebugtools/issues" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#2563eb] transition-colors font-medium">Report Issue</a>
+              <a href="https://github.com/jasimvkarim/mydebugtools/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#2563eb] transition-colors font-medium">Contribute</a>
+              <Link href="/contact" className="text-gray-600 hover:text-[#2563eb] transition-colors font-medium">Contact</Link>
+              <Link href="/faq" className="text-gray-600 hover:text-[#2563eb] transition-colors font-medium">FAQ</Link>
+              <Link href="/privacy-policy" className="text-gray-600 hover:text-[#2563eb] transition-colors font-medium">Privacy & Terms</Link>
             </div>
             <div className="text-xs text-gray-600">
-              Built by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-[#FF6C37] hover:underline font-semibold">@jasimvk</a>
+              Built by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-[#2563eb] hover:underline font-semibold">@jasimvk</a>
             </div>
           </div>
         </div>

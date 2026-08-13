@@ -2,314 +2,548 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://debugtools.org/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>1</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/tools/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/tools/all/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/tools/json/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/tools/jwt/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/tools/hash/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/tools/base64/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>1.00</priority>
   </url>
   <url>
     <loc>https://debugtools.org/tools/api/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.95</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/regex/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <loc>https://debugtools.org/tools/all/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.92</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/color/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/android-logcat/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/icons/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/api-auth-config/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/http-status/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/binary-inspector/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/code-diff/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/certificate-viewer/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/error-tracker/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/cookie-security/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/http-profiler/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/csp-parser/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/log-trace/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/flamegraph-viewer/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/stack-trace/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/heap-visualizer/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/css/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/java-thread-dump/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/html/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/jvm-gc-log/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/markdown/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/mobile-network-debug/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/crash-beautifier/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/native-debug-session/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/build-diff/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/node-performance/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/bundle-analyzer/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/oauth-token-inspector/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/database/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/perfetto-summary/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/startup-profiling/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/python-profiler/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/uuid/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/react-native-debug/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/url/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/redirect-inspector/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/tools/timestamp/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/saml-oidc-debugger/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/schema-validator/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/secret-scanner/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/sql-explain/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/sql-flow/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.82</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/websocket-debug/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.82</priority>
   </url>
   <url>
     <loc>https://debugtools.org/tools/ai/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/faq/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/base64/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/privacy-policy/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/build-diff/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/terms-of-service/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/bundle-analyzer/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/cookie-policy/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/ci-debugger/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/contact/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/code-diff/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.80</priority>
   </url>
   <url>
-    <loc>https://debugtools.org/about/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <loc>https://debugtools.org/tools/color/</loc>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/crash-beautifier/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/css/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/database/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/error-tracker/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/fetch-logger/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/hash/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/html/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/http-profiler/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/http-status/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/icons/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/json/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/jwt/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/k8s-debug/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/log-trace/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/markdown/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/otel-trace-viewer/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/password-generator/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/regex/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/security-headers/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/stack-trace/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/startup-profiling/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/timestamp/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/url/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/tools/uuid/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
   </url>
   <url>
     <loc>https://debugtools.org/answers/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/answers/best-free-json-formatter/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/answers/how-to-decode-jwt-safely/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/answers/base64-encode-vs-decode/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/answers/test-api-request-online/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/answers/compare-two-code-snippets/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/answers/generate-hash-for-text/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/answers/decode-url-query-string/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/answers/what-http-status-code-means/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/answers/use-ai-debug-assistant-safely/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/architecture/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/security/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/contributing/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/changelog/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://debugtools.org/cli/</loc>
-    <lastmod>2026-05-17</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.78</priority>
   </url>
   <url>
     <loc>https://debugtools.org/roadmap/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/about/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.70</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/architecture/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.70</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/faq/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.70</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/security/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.70</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/changelog/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.68</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/contributing/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.68</priority>
   </url>
   <url>
     <loc>https://debugtools.org/releases/</loc>
-    <lastmod>2026-05-17</lastmod>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.68</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/cli/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.66</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/analyze-har-file/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/base64-encode-vs-decode/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/best-free-json-formatter/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/compare-two-code-snippets/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/debug-cors-security-headers/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/debug-github-actions-failure/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/debug-kubernetes-crashloopbackoff/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/debug-oauth-redirect-uri-mismatch/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/decode-url-query-string/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/explain-stack-trace/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/generate-hash-for-text/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/generate-strong-password-locally/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/how-to-decode-jwt-safely/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/inspect-opentelemetry-trace/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/rebuild-log-trace/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/scan-logs-for-secrets/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/test-api-request-online/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/use-ai-debug-assistant-safely/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/answers/what-http-status-code-means/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.64</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/contact/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.60</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/privacy-policy/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.52</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/cookie-policy/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.50</priority>
+  </url>
+  <url>
+    <loc>https://debugtools.org/terms-of-service/</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.50</priority>
   </url>
 </urlset>

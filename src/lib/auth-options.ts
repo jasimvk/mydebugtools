@@ -1,6 +1,17 @@
 import type { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
+import { sendWelcomeEmail } from '@/lib/email';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+
+async function sendWelcomeEmailSafely(user: { email?: string | null; name?: string | null }) {
+  if (!user.email) return;
+
+  try {
+    await sendWelcomeEmail({ email: user.email, name: user.name });
+  } catch (error) {
+    console.warn('Unable to send welcome email:', error);
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -78,6 +89,8 @@ export const authOptions: NextAuthOptions = {
               scope: account.scope,
               id_token: account.id_token,
             });
+
+            await sendWelcomeEmailSafely({ email: newUser.email, name: newUser.name });
           }
         } else {
           token.id = existingUser.id;

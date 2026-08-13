@@ -3,6 +3,12 @@ import Link from 'next/link';
 
 const tools = [
   {
+    name: 'API Workbench',
+    description: 'Test APIs, manage auth, and inspect responses',
+    path: '/tools/api',
+    imagePlaceholder: 'bg-gradient-to-br from-blue-100 to-blue-200 dark:from-orange-900 dark:to-orange-800'
+  },
+  {
     name: 'JSON Formatter',
     description: 'Format and validate JSON with syntax highlighting',
     path: '/tools/json',
@@ -25,12 +31,6 @@ const tools = [
     description: 'Encode and decode Base64 strings',
     path: '/tools/base64',
     imagePlaceholder: 'bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900 dark:to-purple-800'
-  },
-  {
-    name: 'API Tester',
-    description: 'Test your APIs with a simple interface',
-    path: '/tools/api',
-    imagePlaceholder: 'bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900 dark:to-orange-800'
   },
   {
     name: 'Icon Finder',

@@ -32,6 +32,13 @@ jest.mock('next/navigation', () => ({
   },
 }));
 
+// jsdom has no fetch. Components that fetch on mount (e.g. GitHubStars) would
+// otherwise throw during render, so default to a rejecting stub that exercises
+// each component's failure path. Individual tests can override it.
+if (!global.fetch) {
+  global.fetch = jest.fn(() => Promise.reject(new Error('fetch is not available in tests')));
+}
+
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

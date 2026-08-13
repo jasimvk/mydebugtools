@@ -12,7 +12,10 @@ import {
   InformationCircleIcon,
   FlagIcon
 } from '@heroicons/react/24/outline';
-import { runRegexTest } from '@/app/tools/lib/tool-utils';
+import { buildRegexFlags, type RegexResults } from '@/app/tools/lib/tool-utils';
+import { runRegexTestSafely } from '@/app/tools/lib/regex-worker-client';
+
+const emptyResults: RegexResults = { match: false, matches: [], groups: [], truncated: false, timedOut: false };
 
 // Regex flags
 const regexFlags = [
@@ -50,10 +53,13 @@ export default function RegexTesterPage() {
   const [pattern, setPattern] = useState('');
   const [testString, setTestString] = useState('');
   const [replacement, setReplacement] = useState('');
+  // An empty string is a valid replacement, so intent is tracked separately from the value.
+  const [replacementEnabled, setReplacementEnabled] = useState(false);
   const [selectedFlags, setSelectedFlags] = useState<string[]>([]);
-  const [results, setResults] = useState<{match: boolean, matches: string[], groups: string[][]}>({ match: false, matches: [], groups: [] });
-  const [replacedText, setReplacedText] = useState('');
+  const [results, setResults] = useState<RegexResults>(emptyResults);
+  const [replacedText, setReplacedText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
@@ -73,32 +79,60 @@ export default function RegexTesterPage() {
     }
   };
 
-  // Test regex
-  const testRegex = () => {
+  // Clear results whenever the inputs change so stale matches are never shown
+  const clearResults = () => {
+    setResults(emptyResults);
+    setReplacedText(null);
+    setError(null);
+  };
+
+  // Test regex. Matching runs in a terminable worker: a catastrophically
+  // backtracking pattern never returns from a single exec(), so an in-loop time
+  // check cannot save the tab — only killing the thread can.
+  const testRegex = async () => {
     if (!pattern) {
       setError('Please enter a regex pattern');
       return;
     }
 
+    setIsTesting(true);
+    setError(null);
+
     try {
-      setError(null);
-      const flags = Array.from(new Set(selectedFlags)).join('');
-      const nextResults = runRegexTest(pattern, testString, selectedFlags);
+      const nextResults = await runRegexTestSafely(pattern, testString, selectedFlags);
+
+      if (nextResults.error) {
+        setError(nextResults.error);
+        setResults(emptyResults);
+        setReplacedText(null);
+        return;
+      }
+
       setResults(nextResults);
-      
-      // Apply replacement if there's a replacement string
-      if (replacement) {
-        const replaced = testString.replace(new RegExp(pattern, flags), replacement);
+
+      // Replacement runs on the main thread, so only attempt it once the worker
+      // has shown the pattern is well-behaved on this input.
+      if (replacementEnabled && !nextResults.timedOut) {
+        // Same flags the matcher used, so both panes agree.
+        const replaced = testString.replace(new RegExp(pattern, buildRegexFlags(selectedFlags)), replacement);
         setReplacedText(replaced);
       } else {
-        setReplacedText('');
+        setReplacedText(null);
       }
-      
-      showNotification('Regex tested successfully', 'success');
+
+      if (nextResults.timedOut) {
+        showNotification('Pattern took too long and was stopped — try a less ambiguous pattern', 'error');
+      } else if (nextResults.truncated) {
+        showNotification('Too many matches — showing the first 1000', 'info');
+      } else {
+        showNotification('Regex tested successfully', 'success');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Invalid regex pattern');
-      setResults({ match: false, matches: [], groups: [] });
-      setReplacedText('');
+      setResults(emptyResults);
+      setReplacedText(null);
+    } finally {
+      setIsTesting(false);
     }
   };
 
@@ -107,23 +141,29 @@ export default function RegexTesterPage() {
     setPattern('');
     setTestString('');
     setReplacement('');
+    setReplacementEnabled(false);
     setSelectedFlags([]);
-    setResults({ match: false, matches: [], groups: [] });
-    setReplacedText('');
+    setResults(emptyResults);
+    setReplacedText(null);
     setError(null);
     showNotification('All fields reset', 'info');
   };
 
   // Copy results to clipboard
-  const copyResults = () => {
-    const resultText = `Pattern: ${pattern}\nFlags: ${selectedFlags.join('')}\nTest String: ${testString}\n\nMatches: ${results.matches.length}\n${results.matches.map((m, i) => `${i+1}. ${m}`).join('\n')}\n\nGroups: ${results.groups.length}\n${results.groups.map((g, i) => `${i+1}. ${g.join(', ')}`).join('\n')}`;
-    navigator.clipboard.writeText(resultText);
-    showNotification('Results copied to clipboard', 'success');
+  const copyResults = async () => {
+    const resultText = `Pattern: ${pattern}\nFlags: ${selectedFlags.join('')}\nTest String: ${testString}\n\nMatches: ${results.matches.length}\n${results.matches.map((m, i) => `${i+1}. ${m}`).join('\n')}\n\nGroups: ${results.groups.length}\n${results.groups.map((g) => `Match ${g.matchIndex}: ${g.values.join(', ')}`).join('\n')}`;
+    try {
+      await navigator.clipboard.writeText(resultText);
+      showNotification('Results copied to clipboard', 'success');
+    } catch {
+      showNotification('Could not copy to clipboard', 'error');
+    }
   };
 
   // Apply common pattern
   const applyCommonPattern = (pattern: string) => {
     setPattern(pattern);
+    clearResults();
     showNotification('Pattern applied', 'info');
   };
 
@@ -147,22 +187,25 @@ export default function RegexTesterPage() {
         resetAll();
       }
       
-      // Ctrl/Cmd + C to copy results
+      // Ctrl/Cmd + C to copy results, but never over a real text selection
       if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        if (window.getSelection()?.toString()) {
+          return;
+        }
         e.preventDefault();
         copyResults();
       }
-      
+
       // Ctrl/Cmd + H to toggle help
       if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
         e.preventDefault();
-        setShowHelp(!showHelp);
+        setShowHelp(v => !v);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [pattern, testString, replacement, selectedFlags]);
+  }, [pattern, testString, replacement, replacementEnabled, selectedFlags, results]);
 
   return (
     <div className="container mx-auto p-4">
@@ -250,12 +293,13 @@ export default function RegexTesterPage() {
 
           {/* Action buttons */}
           <div className="flex flex-wrap gap-2 mb-4 justify-center">
-            <button 
+            <button
               onClick={testRegex}
-              className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+              disabled={isTesting}
+              className="flex items-center gap-1 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
             >
               <MagnifyingGlassIcon className="h-4 w-4" />
-              Test
+              {isTesting ? 'Testing…' : 'Test'}
             </button>
             <button 
               onClick={resetAll}
@@ -277,12 +321,13 @@ export default function RegexTesterPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Pattern</label>
+                <label htmlFor="regex-pattern" className="block text-sm font-medium mb-1">Pattern</label>
                 <div className="flex gap-2">
                   <input
+                    id="regex-pattern"
                     type="text"
                     value={pattern}
-                    onChange={(e) => setPattern(e.target.value)}
+                    onChange={(e) => { setPattern(e.target.value); clearResults(); }}
                     placeholder="Enter regex pattern..."
                     className="flex-1 p-2 border rounded-md font-mono"
                   />
@@ -294,25 +339,27 @@ export default function RegexTesterPage() {
                     <FlagIcon className="h-5 w-5" />
                   </button>
                 </div>
-                {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+                {error && <p role="alert" className="text-red-500 text-sm mt-1">{error}</p>}
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Test String</label>
+                <label htmlFor="regex-test-string" className="block text-sm font-medium mb-1">Test String</label>
                 <textarea
+                  id="regex-test-string"
                   value={testString}
-                  onChange={(e) => setTestString(e.target.value)}
+                  onChange={(e) => { setTestString(e.target.value); clearResults(); }}
                   placeholder="Enter text to test against..."
                   className="w-full h-32 p-2 border rounded-md font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Replacement (optional)</label>
+                <label htmlFor="regex-replacement" className="block text-sm font-medium mb-1">Replacement (optional)</label>
                 <input
+                  id="regex-replacement"
                   type="text"
                   value={replacement}
-                  onChange={(e) => setReplacement(e.target.value)}
+                  onChange={(e) => { setReplacement(e.target.value); setReplacementEnabled(true); setReplacedText(null); }}
                   placeholder="Enter replacement text..."
                   className="w-full p-2 border rounded-md font-mono"
                 />
@@ -322,10 +369,16 @@ export default function RegexTesterPage() {
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-medium mb-1">Results</h3>
-                <div className="p-2 border rounded-md bg-gray-50 dark:bg-gray-800 min-h-[200px]">
+                <div aria-live="polite" className="p-2 border rounded-md bg-gray-50 dark:bg-gray-800 min-h-[200px]">
                   {results.match ? (
                     <div>
                       <p className="text-green-500 font-medium">Match found!</p>
+                      {results.timedOut && (
+                        <p className="text-red-500 text-sm mt-1">Pattern took too long to run — showing partial results.</p>
+                      )}
+                      {results.truncated && (
+                        <p className="text-yellow-600 dark:text-yellow-400 text-sm mt-1">Match limit reached — showing the first 1000 matches.</p>
+                      )}
                       <div className="mt-2">
                         <p className="font-medium text-gray-900 dark:text-white">Matches ({results.matches.length}):</p>
                         <ul className="list-disc list-inside mt-1">
@@ -340,13 +393,13 @@ export default function RegexTesterPage() {
                           <ul className="list-disc list-inside mt-1">
                             {results.groups.map((group, index) => (
                               <li key={index} className="font-mono text-sm text-gray-800 dark:text-gray-200">
-                                Group {index + 1}: {group.join(', ')}
+                                Match {group.matchIndex}: {group.values.join(', ')}
                               </li>
                             ))}
                           </ul>
                         </div>
                       )}
-                      {replacedText && (
+                      {replacedText !== null && (
                         <div className="mt-2">
                           <p className="font-medium text-gray-900 dark:text-white">Replaced Text:</p>
                           <pre className="mt-1 p-2 bg-gray-100 dark:bg-gray-700 rounded text-sm overflow-x-auto text-gray-800 dark:text-gray-200">

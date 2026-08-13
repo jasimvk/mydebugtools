@@ -26,6 +26,8 @@ export interface ImportedRequest {
   body: string;
   contentType: ContentType;
   authConfig: AuthConfig;
+  preRequestScript?: string;
+  testScript?: string;
   description: string;
 }
 
@@ -145,6 +147,8 @@ function normalizeNativeRequest(request: unknown, index: number): ImportedReques
     body: String(request.body ?? ''),
     contentType: contentTypeFromHeaders(headers, request.contentType),
     authConfig: normalizeAuthConfig(request.authConfig),
+    preRequestScript: String(request.preRequestScript ?? ''),
+    testScript: String(request.testScript ?? ''),
     description: String(request.description ?? ''),
   };
 }
@@ -240,6 +244,20 @@ function postmanAuth(value: unknown): AuthConfig {
   return { type: 'none' };
 }
 
+function postmanEventScript(item: Record<string, any>, listen: 'prerequest' | 'test'): string {
+  if (!Array.isArray(item.event)) return '';
+  const event = item.event.find((candidate: unknown) => (
+    isObject(candidate)
+    && candidate.listen === listen
+    && isObject(candidate.script)
+  ));
+  if (!isObject(event?.script)) return '';
+
+  const exec = event.script.exec;
+  if (Array.isArray(exec)) return exec.map((line) => String(line)).join('\n');
+  return typeof exec === 'string' ? exec : '';
+}
+
 function normalizePostmanRequest(item: Record<string, any>, index: number): ImportedRequest | null {
   if (!isObject(item.request)) return null;
 
@@ -257,6 +275,8 @@ function normalizePostmanRequest(item: Record<string, any>, index: number): Impo
     body: body.body,
     contentType: contentTypeFromHeaders(headers, body.contentType),
     authConfig: postmanAuth(item.request.auth),
+    preRequestScript: postmanEventScript(item, 'prerequest'),
+    testScript: postmanEventScript(item, 'test'),
     description: postmanDescription(item.request.description ?? item.description),
   };
 }
@@ -308,8 +328,10 @@ function openApiQueryString(parameters: unknown): string {
   return parameters
     .filter((parameter) => isObject(parameter) && parameter.in === 'query' && typeof parameter.name === 'string')
     .map((parameter) => {
-      const value = firstDefined([parameter.example, parameter.default, `{{${parameter.name}}}`]);
-      return `${encodeURIComponent(parameter.name)}=${encodeURIComponent(String(value))}`;
+      const value = String(firstDefined([parameter.example, parameter.default, `{{${parameter.name}}}`]));
+      // Percent-encoding a {{placeholder}} stops the workbench from substituting it later.
+      const encodedValue = /^{{\s*[^{}\s]+\s*}}$/.test(value) ? value : encodeURIComponent(value);
+      return `${encodeURIComponent(parameter.name)}=${encodedValue}`;
     })
     .join('&');
 }
@@ -375,6 +397,8 @@ function normalizeOpenApiRequest(
     body: methodSupportsBody(normalizedMethod) ? body.body : '',
     contentType: body.contentType,
     authConfig: { type: 'none' },
+    preRequestScript: '',
+    testScript: '',
     description: String(operation.description ?? ''),
   };
 }
@@ -440,6 +464,8 @@ function normalizeInsomniaRequest(resource: Record<string, any>, index: number):
     body: body.body,
     contentType: contentTypeFromHeaders(headers, body.contentType),
     authConfig: { type: 'none' },
+    preRequestScript: '',
+    testScript: '',
     description: String(resource.description ?? ''),
   };
 }

@@ -20,37 +20,95 @@ export default function Base64Tools() {
   const [isPdf, setIsPdf] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [conversionMode, setConversionMode] = useState<'encode' | 'decode'>('encode');
-  const [fileType, setFileType] = useState<'image' | 'pdf' | 'text'>('image');
+  const [fileType, setFileType] = useState<'image' | 'pdf' | 'text'>('text');
   const [copySuccess, setCopySuccess] = useState(false);
   const [decodedText, setDecodedText] = useState('');
+  const [decodedMime, setDecodedMime] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const cleanBase64 = (input: string): string => {
-    try {
-      let cleaned = input.trim();
-      if (cleaned.includes(',')) {
-        cleaned = cleaned.split(',')[1];
-      }
-      cleaned = cleaned.replace(/[\s\r\n\t]/g, '');
-      cleaned = cleaned.replace(/[^A-Za-z0-9+/=]/g, '');
-      const padding = cleaned.length % 4;
-      if (padding) {
-        cleaned += '='.repeat(4 - padding);
-      }
-      return cleaned;
-    } catch (err) {
-      throw new Error('Failed to clean Base64 string');
+  const INVALID_BASE64 = 'Invalid Base64 string';
+
+  const cleanBase64 = (value: string): string => {
+    let cleaned = value.trim();
+    // Only a data: URI carries a payload after a comma; a bare comma is just
+    // ordinary text and must not be treated as a prefix separator.
+    if (cleaned.startsWith('data:') && cleaned.includes(',')) {
+      cleaned = cleaned.slice(cleaned.indexOf(',') + 1);
     }
+    // Line breaks are stripped (wrapped Base64 is common) but spaces are not:
+    // stripping them would silently turn arbitrary prose into "valid" Base64.
+    cleaned = cleaned.replace(/[\r\n\t]/g, '').replace(/-/g, '+').replace(/_/g, '/');
+
+    const remainder = cleaned.length % 4;
+    if (remainder === 1) throw new Error(INVALID_BASE64);
+    if (remainder) cleaned += '='.repeat(4 - remainder);
+
+    if (!cleaned || !/^[A-Za-z0-9+/]+={0,2}$/.test(cleaned)) {
+      throw new Error(INVALID_BASE64);
+    }
+    return cleaned;
+  };
+
+  const base64ToBytes = (value: string) => {
+    let binary: string;
+    try {
+      binary = atob(value);
+    } catch {
+      throw new Error(INVALID_BASE64);
+    }
+    return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  };
+
+  const bytesToBase64 = (bytes: Uint8Array) => {
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      binary += String.fromCharCode(...bytes.slice(index, index + chunkSize));
+    }
+    return btoa(binary);
+  };
+
+  const textToBase64 = (value: string) => bytesToBase64(new TextEncoder().encode(value));
+
+  const base64ToText = (value: string) => {
+    // fatal so that non-UTF-8 payloads surface as an error instead of mojibake
+    return new TextDecoder('utf-8', { fatal: true }).decode(base64ToBytes(value));
+  };
+
+  // Any change to the source invalidates the previous result; leaving it on
+  // screen makes a stale conversion indistinguishable from a fresh one.
+  const handleInputChange = (value: string) => {
+    setInput(value);
+    setOutput('');
+    setError('');
+    setDecodedText('');
+    setDecodedMime('');
+    setIsImage(false);
+    setIsPdf(false);
+  };
+
+  const encodeText = () => {
+    setError('');
+    setIsImage(false);
+    setIsPdf(false);
+    setDecodedText('');
+    setOutput(textToBase64(input));
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const fileField = event.target;
+    const file = fileField.files?.[0];
+    // Reset so re-picking the same file still fires a change event
+    fileField.value = '';
     if (!file) return;
 
     try {
       setIsLoading(true);
       setError('');
 
+      if (fileType === 'text') {
+        throw new Error('Switch to Image or PDF before uploading a file');
+      }
       if (fileType === 'image' && !file.type.startsWith('image/')) {
         throw new Error('Please upload an image file');
       }
@@ -103,9 +161,10 @@ export default function Base64Tools() {
       if (fileType === 'text') {
         // Decode to plain text
         try {
-          const decodedString = atob(cleanedInput);
+          const decodedString = base64ToText(cleanedInput);
           setDecodedText(decodedString);
           setOutput(decodedString);
+          setDecodedMime('text/plain');
           setIsImage(false);
           setIsPdf(false);
           setError('');
@@ -159,6 +218,7 @@ export default function Base64Tools() {
         
         img.onload = () => {
           setOutput(imageData);
+          setDecodedMime(mimeType);
           setIsImage(true);
           setIsPdf(false);
           setError('');
@@ -175,8 +235,23 @@ export default function Base64Tools() {
         
         img.src = imageData;
       } else {
+        // A non-PDF payload would render as a silently blank iframe, so check
+        // the %PDF signature before handing it to the viewer.
+        const header = base64ToBytes(cleanedInput.slice(0, 8));
+        const isPdfSignature =
+          header[0] === 0x25 && header[1] === 0x50 && header[2] === 0x44 && header[3] === 0x46;
+        if (!isPdfSignature) {
+          setError('Invalid PDF Base64 data. The decoded content is not a PDF file.');
+          setOutput('');
+          setIsPdf(false);
+          setIsImage(false);
+          setIsLoading(false);
+          return;
+        }
+
         const pdfData = `data:application/pdf;base64,${cleanedInput}`;
         setOutput(pdfData);
+        setDecodedMime('application/pdf');
         setIsPdf(true);
         setIsImage(false);
         setError('');
@@ -196,10 +271,23 @@ export default function Base64Tools() {
       const textToCopy = output;
       await navigator.clipboard.writeText(textToCopy);
       setCopySuccess(true);
+      setError('');
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
+      setError(err instanceof Error ? `Failed to copy: ${err.message}` : 'Failed to copy to clipboard');
     }
+  };
+
+  const extensionForMime = (mime: string) => {
+    const map: Record<string, string> = {
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/gif': 'gif',
+      'image/webp': 'webp',
+      'image/svg+xml': 'svg',
+      'application/pdf': 'pdf'
+    };
+    return map[mime] ?? 'bin';
   };
 
   const downloadFile = () => {
@@ -212,8 +300,14 @@ export default function Base64Tools() {
       link.href = URL.createObjectURL(blob);
       link.download = 'base64-output.txt';
     } else {
-      link.href = output;
-      link.download = `converted-file.${isPdf ? 'pdf' : 'png'}`;
+      if (fileType === 'text') {
+        const blob = new Blob([output], { type: 'text/plain;charset=utf-8' });
+        link.href = URL.createObjectURL(blob);
+        link.download = 'decoded-text.txt';
+      } else {
+        link.href = output;
+        link.download = `converted-file.${extensionForMime(decodedMime || (isPdf ? 'application/pdf' : 'image/png'))}`;
+      }
     }
     
     document.body.appendChild(link);
@@ -228,6 +322,7 @@ export default function Base64Tools() {
     setIsImage(false);
     setIsPdf(false);
     setDecodedText('');
+    setDecodedMime('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -236,7 +331,7 @@ export default function Base64Tools() {
   const switchMode = () => {
     setConversionMode(prev => {
       const nextMode = prev === 'encode' ? 'decode' : 'encode';
-      setFileType(nextMode === 'decode' ? 'text' : 'image');
+      setFileType('text');
       return nextMode;
     });
     clearAll();
@@ -249,7 +344,7 @@ export default function Base64Tools() {
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Base64 Converter</h1>
             <p className="text-sm text-gray-500 mt-1">
-              {conversionMode === 'encode' ? 'Convert files to Base64 encoded strings' : 'Decode Base64 strings to files'}
+              {conversionMode === 'encode' ? 'Encode text, images, and PDFs to Base64' : 'Decode Base64 as text, image, or PDF'}
             </p>
           </div>
           
@@ -297,8 +392,8 @@ export default function Base64Tools() {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 flex flex-col border-r border-gray-200">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <div className="flex-1 flex flex-col border-b border-gray-200 md:border-b-0 md:border-r">
           <div className="bg-gray-50 border-b border-gray-200 px-6 py-3">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-medium text-gray-700">
@@ -308,37 +403,10 @@ export default function Base64Tools() {
               {conversionMode === 'encode' && (
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setFileType('image')}
-                    className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                      fileType === 'image'
-                        ? 'bg-[#FF6C37] text-white'
-                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <PhotoIcon className="h-3.5 w-3.5" />
-                    Image
-                  </button>
-                  <button
-                    onClick={() => setFileType('pdf')}
-                    className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                      fileType === 'pdf'
-                        ? 'bg-[#FF6C37] text-white'
-                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <DocumentIcon className="h-3.5 w-3.5" />
-                    PDF
-                  </button>
-                </div>
-              )}
-              
-              {conversionMode === 'decode' && (
-                <div className="flex items-center gap-2">
-                  <button
                     onClick={() => setFileType('text')}
                     className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
                       fileType === 'text'
-                        ? 'bg-[#FF6C37] text-white'
+                        ? 'bg-[#2563eb] text-white'
                         : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                     }`}
                   >
@@ -349,7 +417,7 @@ export default function Base64Tools() {
                     onClick={() => setFileType('image')}
                     className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
                       fileType === 'image'
-                        ? 'bg-[#FF6C37] text-white'
+                        ? 'bg-[#2563eb] text-white'
                         : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                     }`}
                   >
@@ -360,7 +428,53 @@ export default function Base64Tools() {
                     onClick={() => setFileType('pdf')}
                     className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
                       fileType === 'pdf'
-                        ? 'bg-[#FF6C37] text-white'
+                        ? 'bg-[#2563eb] text-white'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <DocumentIcon className="h-3.5 w-3.5" />
+                    PDF
+                  </button>
+                  {fileType === 'text' && (
+                    <button
+                      onClick={encodeText}
+                      className="px-3 py-1.5 text-xs font-medium bg-[#2563eb] text-white rounded hover:bg-[#0550ae] transition-colors"
+                    >
+                      Encode
+                    </button>
+                  )}
+                </div>
+              )}
+              
+              {conversionMode === 'decode' && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setFileType('text')}
+                    className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                      fileType === 'text'
+                        ? 'bg-[#2563eb] text-white'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <DocumentIcon className="h-3.5 w-3.5" />
+                    Text
+                  </button>
+                  <button
+                    onClick={() => setFileType('image')}
+                    className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                      fileType === 'image'
+                        ? 'bg-[#2563eb] text-white'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <PhotoIcon className="h-3.5 w-3.5" />
+                    Image
+                  </button>
+                  <button
+                    onClick={() => setFileType('pdf')}
+                    className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                      fileType === 'pdf'
+                        ? 'bg-[#2563eb] text-white'
                         : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                     }`}
                   >
@@ -369,7 +483,7 @@ export default function Base64Tools() {
                   </button>
                   <button
                     onClick={decodeBase64}
-                    className="px-3 py-1.5 text-xs font-medium bg-[#FF6C37] text-white rounded hover:bg-[#ff5722] transition-colors"
+                    className="px-3 py-1.5 text-xs font-medium bg-[#2563eb] text-white rounded hover:bg-[#0550ae] transition-colors"
                   >
                     Decode
                   </button>
@@ -381,7 +495,15 @@ export default function Base64Tools() {
           <div className="flex-1 overflow-auto p-6">
             {conversionMode === 'encode' ? (
               <div className="h-full flex items-center justify-center">
-                {input ? (
+                {fileType === 'text' ? (
+                  <textarea
+                    value={input}
+                    onChange={(e) => handleInputChange(e.target.value)}
+                    aria-label="Text to encode"
+                    placeholder="Type or paste text to encode as Base64..."
+                    className="w-full h-full p-4 font-mono text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2563eb] focus:border-[#2563eb] resize-none"
+                  />
+                ) : input ? (
                   <div className="w-full h-full flex flex-col">
                     <div className="flex-1 flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                       {isImage ? (
@@ -414,7 +536,7 @@ export default function Base64Tools() {
                     </div>
                   </div>
                 ) : (
-                  <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 hover:border-[#FF6C37] transition-colors">
+                  <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 hover:border-[#2563eb] transition-colors">
                     <div className="flex flex-col items-center gap-3">
                       <div className="p-4 rounded-full bg-white border border-gray-200">
                         <ArrowUpTrayIcon className="h-8 w-8 text-gray-400" />
@@ -441,9 +563,10 @@ export default function Base64Tools() {
             ) : (
               <textarea
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => handleInputChange(e.target.value)}
+                aria-label="Base64 string to decode"
                 placeholder="Paste your Base64 encoded string here..."
-                className="w-full h-full p-4 font-mono text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FF6C37] focus:border-[#FF6C37] resize-none"
+                className="w-full h-full p-4 font-mono text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2563eb] focus:border-[#2563eb] resize-none"
               />
             )}
           </div>
@@ -457,7 +580,7 @@ export default function Base64Tools() {
               </h2>
               
               {error && (
-                <div className="flex items-center gap-1 text-xs text-red-600">
+                <div role="alert" className="flex items-center gap-1 text-xs text-red-600">
                   <XCircleIcon className="h-4 w-4" />
                   {error}
                 </div>
@@ -469,7 +592,7 @@ export default function Base64Tools() {
             {isLoading ? (
               <div className="h-full flex items-center justify-center">
                 <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-300 border-t-[#FF6C37]"></div>
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-300 border-t-[#2563eb]"></div>
                   Processing...
                 </div>
               </div>
@@ -479,7 +602,8 @@ export default function Base64Tools() {
                   <textarea
                     value={output}
                     readOnly
-                    className="w-full h-full p-4 font-mono text-xs bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FF6C37] focus:border-[#FF6C37] resize-none"
+                    aria-label="Base64 output"
+                    className="w-full h-full p-4 font-mono text-xs bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2563eb] focus:border-[#2563eb] resize-none"
                   />
                 </div>
               ) : (
@@ -488,7 +612,8 @@ export default function Base64Tools() {
                     <textarea
                       value={output}
                       readOnly
-                      className="w-full h-full p-4 font-mono text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#FF6C37] focus:border-[#FF6C37] resize-none"
+                      aria-label="Decoded text output"
+                      className="w-full h-full p-4 font-mono text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2563eb] focus:border-[#2563eb] resize-none"
                     />
                   ) : (
                     <div className="h-full flex items-center justify-center bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">

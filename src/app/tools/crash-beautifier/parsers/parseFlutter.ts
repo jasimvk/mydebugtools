@@ -9,13 +9,15 @@ export function parseFlutter(log: string): ParsedCrashLine[] {
     const trimmedLine = line.trim();
     if (!trimmedLine) continue;
 
-    // Error message (usually the first line)
-    if (isFirstLine && !trimmedLine.startsWith('#')) {
+    // Error message (usually the first line). Clear the flag on the first content line
+    // either way, otherwise a trace starting with `#0` styles a later line as the headline.
+    const isHeadline = isFirstLine && !trimmedLine.startsWith('#');
+    isFirstLine = false;
+    if (isHeadline) {
       parsedLines.push({
         type: 'error',
         content: trimmedLine
       });
-      isFirstLine = false;
       continue;
     }
 

@@ -17,9 +17,12 @@ function BuildDiffViewer() {
   const [newBuild, setNewBuild] = useState('');
   const [diffData, setDiffData] = useState<DiffData | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState('');
 
   const calculateDiff = (oldBuildInput = oldBuild, newBuildInput = newBuild) => {
-    if (!oldBuildInput || !newBuildInput) {
+    // One empty side is a meaningful diff (everything added, or everything removed);
+    // only two empty sides mean there is nothing to show.
+    if (!oldBuildInput.trim() && !newBuildInput.trim()) {
       setDiffData(null);
       return;
     }
@@ -27,38 +30,44 @@ function BuildDiffViewer() {
     setDiffData(buildDiffFromText(oldBuildInput, newBuildInput));
   };
 
-  const handleCopy = () => {
-    if (!diffData) return;
-    const summary = `Build Diff Summary:
-Added: ${(diffData.totalAdded / 1024).toFixed(2)} KB
-Removed: ${(diffData.totalRemoved / 1024).toFixed(2)} KB
-Modified: ${(diffData.totalModified / 1024).toFixed(2)} KB
+  const formatSignedKb = (bytes: number) => `${bytes >= 0 ? '+' : '-'}${(Math.abs(bytes) / 1024).toFixed(2)} KB`;
 
-Changes:
-${diffData.changes.map(c => {
+  // The headline "did my bundle get bigger?" number: totalModified sums absolute values,
+  // so growth and shrinkage cancel out only in this signed total.
+  const netDelta = (diffData?.changes || []).reduce((sum, change) => {
+    if (change.type === 'added') return sum + (change.newSize || 0);
+    if (change.type === 'removed') return sum - (change.oldSize || 0);
+    return sum + (change.diff || 0);
+  }, 0);
+
+  const buildSummary = (data: DiffData, heading: string) => `Build Diff Summary:
+Net change: ${formatSignedKb(netDelta)}
+Added: ${(data.totalAdded / 1024).toFixed(2)} KB
+Removed: ${(data.totalRemoved / 1024).toFixed(2)} KB
+Modified: ${(data.totalModified / 1024).toFixed(2)} KB
+
+${heading}:
+${data.changes.map(c => {
   if (c.type === 'added') return `+ ${c.path} (${(c.newSize! / 1024).toFixed(2)} KB)`;
   if (c.type === 'removed') return `- ${c.path} (${(c.oldSize! / 1024).toFixed(2)} KB)`;
-  return `~ ${c.path} (${(c.diff! / 1024).toFixed(2)} KB)`;
+  return `~ ${c.path} (${formatSignedKb(c.diff!)})`;
 }).join('\n')}`;
 
-    navigator.clipboard.writeText(summary);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    if (!diffData) return;
+    try {
+      await navigator.clipboard.writeText(buildSummary(diffData, 'Changes'));
+      setCopied(true);
+      setCopyError('');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopyError('Could not copy to the clipboard. Use Download instead.');
+    }
   };
 
   const handleDownload = () => {
     if (!diffData) return;
-    const summary = `Build Diff Summary:
-Added: ${(diffData.totalAdded / 1024).toFixed(2)} KB
-Removed: ${(diffData.totalRemoved / 1024).toFixed(2)} KB
-Modified: ${(diffData.totalModified / 1024).toFixed(2)} KB
-
-Detailed Changes:
-${diffData.changes.map(c => {
-  if (c.type === 'added') return `+ ${c.path} (${(c.newSize! / 1024).toFixed(2)} KB)`;
-  if (c.type === 'removed') return `- ${c.path} (${(c.oldSize! / 1024).toFixed(2)} KB)`;
-  return `~ ${c.path} (${(c.diff! / 1024).toFixed(2)} KB)`;
-}).join('\n')}`;
+    const summary = buildSummary(diffData, 'Detailed Changes');
 
     const blob = new Blob([summary], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -92,15 +101,15 @@ analytics.js 18 KB`;
         toolType="WebApplication"
       />
 
-      <div className="mb-4 flex flex-col justify-between gap-3 rounded-md border border-[#d0d7de] bg-white px-5 py-4 sm:flex-row sm:items-end">
+      <div className="mb-4 flex flex-col justify-between gap-3 rounded-md border border-[#e4e4e7] bg-white px-5 py-4 sm:flex-row sm:items-end">
         <div>
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-[#6e7781]">tools/build-diff</p>
-          <h1 className="mt-2 text-[#24292f]">Build Diff Viewer</h1>
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-[#71717a]">tools/build-diff</p>
+          <h1 className="mt-2 text-[#09090b]">Build Diff Viewer</h1>
         </div>
         <button
           type="button"
           onClick={loadSample}
-          className="rounded-md border border-[#d0d7de] bg-white px-3 py-2 text-sm font-semibold text-[#24292f] hover:bg-[#f6f8fa]"
+          className="rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm font-semibold text-[#09090b] hover:bg-[#fafafa]"
         >
           Sample
         </button>
@@ -117,6 +126,7 @@ analytics.js 18 KB`;
               </p>
             </div>
             <textarea
+              aria-label="Old build analysis"
               value={oldBuild}
               onChange={(e) => {
                 const nextOldBuild = e.target.value;
@@ -138,6 +148,7 @@ src/components/App.js 45.67 KB
               </p>
             </div>
             <textarea
+              aria-label="New build analysis"
               value={newBuild}
               onChange={(e) => {
                 const nextNewBuild = e.target.value;
@@ -180,10 +191,25 @@ src/components/App.js 41.20 KB
             </div>
           </div>
 
+          {copyError && <p role="alert" className="mb-4 text-sm text-red-600">{copyError}</p>}
+
           {diffData ? (
             <div className="space-y-6">
+              {(!oldBuild.trim() || !newBuild.trim()) && (
+                <p className="rounded-md border border-[#bf8700] bg-[#fff8c5] px-3 py-2 text-sm text-[#7d4e00]">
+                  Only the {oldBuild.trim() ? 'old' : 'new'} build is filled in, so every file counts as{' '}
+                  {oldBuild.trim() ? 'removed' : 'added'}.
+                </p>
+              )}
+
               {/* Summary Cards */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className={`p-4 rounded-lg ${netDelta > 0 ? 'bg-red-50' : 'bg-green-50'}`}>
+                  <div className={`text-sm font-medium ${netDelta > 0 ? 'text-red-600' : 'text-green-600'}`}>Net change</div>
+                  <div className={`text-2xl font-bold ${netDelta > 0 ? 'text-red-900' : 'text-green-900'}`}>
+                    {formatSignedKb(netDelta)}
+                  </div>
+                </div>
                 <div className="bg-green-50 p-4 rounded-lg">
                   <div className="text-sm text-green-600 font-medium">Added</div>
                   <div className="text-2xl font-bold text-green-900">
@@ -208,27 +234,33 @@ src/components/App.js 41.20 KB
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h3 className="text-sm font-medium text-gray-900 mb-4">Changes</h3>
                 <div className="space-y-2">
-                  {diffData.changes.map((change, index) => (
-                    <div key={index} className="relative">
-                      <div className="flex justify-between text-sm">
-                        <span className={`font-medium ${
-                          change.type === 'added' ? 'text-green-600' :
-                          change.type === 'removed' ? 'text-red-600' :
-                          'text-yellow-600'
-                        }`}>
-                          {change.type === 'added' ? '+' :
-                           change.type === 'removed' ? '-' : '~'} {change.path}
-                        </span>
-                        <span className="text-gray-500">
-                          {change.type === 'added' ? 
-                            `+${(change.newSize! / 1024).toFixed(2)} KB` :
-                           change.type === 'removed' ? 
-                            `-${(change.oldSize! / 1024).toFixed(2)} KB` :
-                            `${(change.diff! / 1024).toFixed(2)} KB`}
-                        </span>
+                  {diffData.changes.map((change, index) => {
+                    // A modified file that grew is bad news and a shrunk one is good news;
+                    // one shared yellow hides the direction that matters.
+                    const tone = (change.diff || 0) > 0 ? 'text-red-600' : 'text-green-600';
+
+                    return (
+                      <div key={index} className="relative">
+                        <div className="flex justify-between text-sm">
+                          <span className={`font-medium ${
+                            change.type === 'added' ? 'text-green-600' :
+                            change.type === 'removed' ? 'text-red-600' :
+                            tone
+                          }`}>
+                            {change.type === 'added' ? '+' :
+                             change.type === 'removed' ? '-' : '~'} {change.path}
+                          </span>
+                          <span className={change.type === 'modified' ? tone : 'text-gray-500'}>
+                            {change.type === 'added' ?
+                              `+${(change.newSize! / 1024).toFixed(2)} KB` :
+                             change.type === 'removed' ?
+                              `-${(change.oldSize! / 1024).toFixed(2)} KB` :
+                              formatSignedKb(change.diff!)}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -243,7 +275,7 @@ src/components/App.js 41.20 KB
         </div>
       </div>
 
-      <div className="mt-4 rounded-md border border-[#d0d7de] bg-white px-4 py-3 text-sm text-[#57606a]">
+      <div className="mt-4 rounded-md border border-[#e4e4e7] bg-white px-4 py-3 text-sm text-[#71717a]">
         Accepts one file per line, for example <code>app.js 156 KB</code>.
       </div>
     </div>

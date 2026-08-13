@@ -1,51 +1,52 @@
 'use client';
 
+import Link from 'next/link';
 import Navigation from '../components/Navigation';
 import { liveTools, proposedTools } from '../tools/lib/tool-registry';
 
 const shippedItems = [
   {
+    title: 'Logs & Errors pillar',
+    description: 'Stack Trace Explainer and Log Trace Rebuilder are implemented as local-first debugging workflows with parsing, highlighted evidence, root-cause hints, and fix checklists.',
+    scope: 'stack-trace, log-trace',
+  },
+  {
+    title: 'API / Network pillar',
+    description: 'API Workbench and HAR Analyzer / HTTP Profiler are live, while smaller URL and HTTP status utilities stay available as SEO entry tools.',
+    scope: 'api, http-profiler, url, http-status',
+  },
+  {
+    title: 'Auth / Security pillar',
+    description: 'Security Headers and JWT Decoder are live local tools for hardening response headers and inspecting token claims.',
+    scope: 'security-headers, jwt',
+  },
+  {
+    title: 'DevOps / Observability pillar',
+    description: 'CI / GitHub Actions Debugger, Kubernetes Debug Helper, and OpenTelemetry Trace Viewer are implemented as lightweight paste/upload analyzers.',
+    scope: 'ci-debugger, k8s-debug, otel-trace-viewer',
+  },
+  {
+    title: 'SEO entry utilities',
+    description: 'JSON, Base64, Hash, UUID, Timestamp, Regex, Code Diff, Build Diff, HTML, CSS, Markdown, Color, Icons, and Database tools remain available but no longer define the product edge.',
+    scope: 'utility routes',
+  },
+  {
     title: 'Tool catalog route',
     description: '`/tools/all` lists the live registry and links to implemented tool routes. It is a catalog, not a standalone tool.',
     scope: 'tools/all',
-  },
-  {
-    title: 'Inspect and transform tools',
-    description: 'JSON Tools, JWT Decoder, Base64, Hash Generator, Regex Tester, and URL Encoder have routed client implementations.',
-    scope: 'json, jwt, base64, hash, regex, url',
-  },
-  {
-    title: 'API reference utility',
-    description: 'HTTP Status is implemented as a searchable local reference for status codes, causes, and fixes.',
-    scope: 'http-status',
-  },
-  {
-    title: 'Runtime debugging tools',
-    description: 'Crash Beautifier, Code Diff, and Build Diff are usable browser tools with copy/download flows.',
-    scope: 'crash-beautifier, code-diff, build-diff',
-  },
-  {
-    title: 'Frontend workbench tools',
-    description: 'HTML Tools, CSS Tools, Markdown Preview, Color Picker, and Icon Finder have implemented UI workflows.',
-    scope: 'html, css, markdown, color, icons',
-  },
-  {
-    title: 'Small utilities',
-    description: 'UUID Generator and Timestamp Converter are implemented as focused local utilities.',
-    scope: 'uuid, timestamp',
   },
 ];
 
 const betaItems = [
   {
-    title: 'API Tester workbench',
-    description: 'Flagship workflow for REST requests, tabs, headers, auth helpers, environments, history, local collections, imports, and optional authenticated collection sync. Cloud rename/update polish and broader request-runner hardening are still needed.',
-    scope: 'tools/api',
+    title: 'Security Headers + CORS polish',
+    description: 'Security Headers is live, but the route should add deeper CORS-specific diagnosis for preflight failures, credentialed requests, wildcard origins, and cache behavior.',
+    scope: 'tools/security-headers',
   },
   {
-    title: 'SQLite database query',
-    description: 'Upload, inspect, query, preview tables, keep local query history, and export CSV are implemented. The visualization tab is still a placeholder.',
-    scope: 'tools/database',
+    title: 'API Workbench',
+    description: 'REST requests, tabs, headers, auth helpers, environments, history, local collections, imports, API documentation generation, AI context export, safer cURL reproduction, private-mode cleanup, and optional authenticated collection sync are live. Cloud rename/update polish is still needed.',
+    scope: 'tools/api',
   },
   {
     title: 'Bundle Analyzer',
@@ -61,18 +62,23 @@ const betaItems = [
 
 const nextItems = [
   {
-    title: 'Finish beta tool gaps',
-    description: 'Either implement or remove the SQLite visualization tab, add real bundle/stats import support, and tighten API Tester cloud update behavior.',
-    scope: 'beta tools',
+    title: 'Workspace and team foundation',
+    description: 'Define the organization, workspace, member, role, project, collection, and debug-report model before adding team controls to the API Workbench.',
+    scope: 'workspace / teams',
+  },
+  {
+    title: 'Deepen implemented analyzers',
+    description: 'The P0/P1/P2 routes now exist. Next work is improving parsers with richer imports, examples, exports, and route-specific test fixtures.',
+    scope: 'debug routes',
   },
   {
     title: 'Shared logic extraction',
-    description: 'Continue moving reusable parsing and transform logic out of client pages so browser tools, tests, and a future CLI can share implementations.',
+    description: 'Continue moving reusable parsing and transform logic out of client pages so browser tools, tests, exports, and a future CLI can share implementations.',
     scope: 'tools/lib + src/lib/tools',
   },
   {
     title: 'Route-level smoke coverage',
-    description: 'Add focused tests for the catalog and high-risk tools so registry claims stay aligned with routed code.',
+    description: 'Add focused tests for the catalog and high-risk tools so registry claims, route counts, samples, exports, and mobile layouts stay aligned with routed code.',
     scope: 'tool tests',
   },
   {
@@ -84,16 +90,22 @@ const nextItems = [
 
 const futureDebugTools = [
   {
-    priority: 'P1',
-    title: 'OpenTelemetry Trace Viewer',
-    route: '/tools/otel-trace-viewer',
-    description: 'Load OTLP-style JSON traces locally, show spans, durations, parent-child relationships, errors, and slow service hops.',
+    priority: 'P0',
+    title: 'SAML / OIDC Debugger',
+    route: '/tools/saml-oidc-debugger',
+    description: 'Decode auth redirects, SAML responses, OIDC discovery, claims, scopes, callback URLs, nonce/state issues, and common identity-provider failures.',
   },
   {
-    priority: 'P1',
-    title: 'Mobile Network Debug Checklist',
-    route: '/tools/mobile-network-debug',
-    description: 'Generate setup steps for Charles, Proxyman, HTTP Toolkit, Requestly, Android Network Inspector, Chucker, OkHttp logging, and device proxy debugging.',
+    priority: 'P0',
+    title: 'Certificate Chain Viewer',
+    route: '/tools/certificate-viewer',
+    description: 'Inspect pasted PEM certificates, chains, issuers, subjects, SANs, expiry, fingerprints, and validation warnings.',
+  },
+  {
+    priority: 'P0',
+    title: 'Android Logcat Analyzer',
+    route: '/tools/android-logcat',
+    description: 'Analyze Logcat, fatal exceptions, ANRs, process IDs, package names, device info, and root-cause candidates.',
   },
   {
     priority: 'P1',
@@ -103,33 +115,9 @@ const futureDebugTools = [
   },
   {
     priority: 'P1',
-    title: 'Android Logcat Analyzer',
-    route: '/tools/android-logcat',
-    description: 'Analyze Logcat, fatal exceptions, ANRs, process IDs, package names, device info, and root-cause candidates.',
-  },
-  {
-    priority: 'P1',
-    title: 'Android Debug Helper',
-    route: '/tools/android-debug',
-    description: 'Turn symptoms into adb, emulator, profiler, network, and device-inspection commands for Android investigations.',
-  },
-  {
-    priority: 'P1',
-    title: 'Mobile Feedback Parser',
-    route: '/tools/mobile-feedback',
-    description: 'Normalize tester reports into repro steps, environment details, attachments, expected behavior, actual behavior, and triage labels.',
-  },
-  {
-    priority: 'P1',
-    title: 'Monitoring Snapshot Inspector',
-    route: '/tools/monitoring-inspector',
-    description: 'Inspect pasted metrics, alerts, logs, and traces to highlight anomalies, saturation, latency spikes, and error-rate shifts.',
-  },
-  {
-    priority: 'P1',
-    title: 'Chrome Mobile DevTools Guide',
-    route: '/tools/mobile-devtools',
-    description: 'Provide checklist-driven debugging for mobile browser layout, network, console, performance, and remote inspection workflows.',
+    title: 'Mobile Network Debug Checklist',
+    route: '/tools/mobile-network-debug',
+    description: 'Generate setup steps for Charles, Proxyman, HTTP Toolkit, Requestly, Android Network Inspector, Chucker, OkHttp logging, and device proxy debugging.',
   },
   {
     priority: 'P1',
@@ -138,34 +126,70 @@ const futureDebugTools = [
     description: 'Generate and test API auth headers, tokens, sample credentials, request signing inputs, and endpoint-specific auth fixtures.',
   },
   {
-    priority: 'P2',
-    title: 'Python Debug Log Formatter',
-    route: '/tools/python-debug-log',
-    description: 'Format Python tracebacks, logging output, PySnooper-style traces, and execution notes into a compact debug report.',
+    priority: 'P1',
+    title: 'OAuth Token Inspector',
+    route: '/tools/oauth-token-inspector',
+    description: 'Inspect access tokens, refresh-token notes, scopes, audiences, expiry, issuer mismatch, and common OAuth flow failures.',
+  },
+  {
+    priority: 'P1',
+    title: 'WebSocket Debugger',
+    route: '/tools/websocket-debug',
+    description: 'Inspect WebSocket connection notes, close codes, handshake headers, message samples, auth failures, and reconnect loops.',
+  },
+  {
+    priority: 'P1',
+    title: 'Redirect Inspector',
+    route: '/tools/redirect-inspector',
+    description: 'Analyze redirect chains, status codes, canonical loops, HTTPS upgrades, auth callbacks, and cache-control mistakes.',
+  },
+  {
+    priority: 'P1',
+    title: 'Cookie Security Inspector',
+    route: '/tools/cookie-security',
+    description: 'Inspect Set-Cookie headers for SameSite, Secure, HttpOnly, domain/path scope, expiry, partitioning, and auth-session risks.',
+  },
+  {
+    priority: 'P1',
+    title: 'CSP Parser',
+    route: '/tools/csp-parser',
+    description: 'Parse Content Security Policy headers, flag unsafe directives, explain blocked-resource reports, and suggest tighter policies.',
+  },
+  {
+    priority: 'P1',
+    title: 'Secret Scanner',
+    route: '/tools/secret-scanner',
+    description: 'Scan pasted logs, env snippets, and config files for likely tokens, keys, credentials, and redaction gaps.',
+  },
+  {
+    priority: 'P1',
+    title: 'Schema Validator',
+    route: '/tools/schema-validator',
+    description: 'Validate JSON payloads against schemas, explain mismatches, and produce API-contract debugging reports.',
+  },
+  {
+    priority: 'P1',
+    title: 'SQL Explain',
+    route: '/tools/sql-explain',
+    description: 'Explain pasted query plans, indexes, joins, scans, and likely performance bottlenecks.',
+  },
+  {
+    priority: 'P1',
+    title: 'SQL Flow',
+    route: '/tools/sql-flow',
+    description: 'Turn SQL statements and logs into execution flow, dependency, lock, and migration-risk notes.',
   },
   {
     priority: 'P2',
-    title: 'Python Stack Sampler Inspector',
-    route: '/tools/python-profiler',
-    description: 'Summarize sampling profiler output, hot frames, blocking calls, and CPython stack snapshots.',
+    title: 'Flamegraph Viewer',
+    route: '/tools/flamegraph-viewer',
+    description: 'View folded stacks or sampled profiles, identify hot paths, and produce performance-debugging notes.',
   },
   {
     priority: 'P2',
-    title: 'GDB / LLDB Session Viewer',
-    route: '/tools/native-debug-session',
-    description: 'Parse debugger transcripts into breakpoints, signals, frames, variables, commands, and next actions.',
-  },
-  {
-    priority: 'P2',
-    title: 'Kubernetes Debug Helper',
-    route: '/tools/k8s-debug',
-    description: 'Generate kubectl logs, describe, events, exec, debug-container, and manifest checks from pod/service symptoms.',
-  },
-  {
-    priority: 'P2',
-    title: 'Binary / Hex Inspector',
-    route: '/tools/binary-inspector',
-    description: 'Inspect pasted hex or Base64 bytes, detect magic numbers, convert endian values, and surface file signatures.',
+    title: 'Perfetto Summary',
+    route: '/tools/perfetto-summary',
+    description: 'Summarize Perfetto trace exports into timeline highlights, slow sections, thread activity, and next checks.',
   },
   {
     priority: 'P2',
@@ -175,111 +199,39 @@ const futureDebugTools = [
   },
   {
     priority: 'P2',
-    title: 'Runtime Inspector Notes',
-    route: '/tools/runtime-inspector',
-    description: 'Organize app state, storage, network logs, feature flags, and runtime observations into a repeatable debug report.',
+    title: 'Node Performance Analyzer',
+    route: '/tools/node-performance',
+    description: 'Analyze Node.js timing, event-loop, memory, CPU, and async bottleneck evidence from pasted profiler output.',
   },
   {
     priority: 'P2',
-    title: 'Apple Debug Helper',
-    route: '/tools/apple-debug',
-    description: 'Assist with iOS/macOS crash snippets, Xcode notes, Instruments profiling, symbolication, device logs, and signing clues.',
+    title: 'Python Profiler',
+    route: '/tools/python-profiler',
+    description: 'Summarize sampling profiler output, hot frames, blocking calls, and CPython stack snapshots.',
   },
   {
     priority: 'P2',
-    title: 'Remote Web Debug Helper',
-    route: '/tools/remote-web-debug',
-    description: 'Create setup steps for Safari Web Inspector, Chrome remote devices, Weinre-style legacy debugging, and same-network device checks.',
+    title: 'Java Thread Dump',
+    route: '/tools/java-thread-dump',
+    description: 'Parse Java thread dumps for blocked threads, deadlock clues, hot stacks, thread states, and next JVM checks.',
   },
   {
     priority: 'P2',
-    title: 'Java Process Diagnosis Helper',
-    route: '/tools/java-process-debug',
-    description: 'Parse JVM logs, thread dumps, heap hints, GC snippets, stack traces, and process-health symptoms.',
+    title: 'JVM GC Log',
+    route: '/tools/jvm-gc-log',
+    description: 'Analyze GC logs for pause spikes, allocation pressure, heap tuning clues, and memory-regression evidence.',
   },
   {
     priority: 'P2',
-    title: 'Go Struct Dump Formatter',
-    route: '/tools/go-dump',
-    description: 'Format Go dumps, structs, maps, slices, and panic output into readable tree and table views.',
+    title: 'Native Debug Session',
+    route: '/tools/native-debug-session',
+    description: 'Parse GDB or LLDB transcripts into breakpoints, signals, frames, variables, commands, and next actions.',
   },
   {
     priority: 'P2',
-    title: 'Certificate Chain Viewer',
-    route: '/tools/certificate-viewer',
-    description: 'Inspect pasted PEM certificates, chains, issuers, subjects, SANs, expiry, fingerprints, and validation warnings.',
-  },
-  {
-    priority: 'P2',
-    title: 'Sample Data Generator',
-    route: '/tools/sample-data-generator',
-    description: 'Generate structured arrays of sample objects with custom fields, value types, API response shapes, and export formats.',
-  },
-  {
-    priority: 'P2',
-    title: 'OpenBadge Validator',
-    route: '/tools/openbadge-validator',
-    description: 'Validate OpenBadge credential JSON, required fields, issuer metadata, evidence links, expiry, and verification status.',
-  },
-  {
-    priority: 'P2',
-    title: 'PNG Text Decoder',
-    route: '/tools/png-text-decoder',
-    description: 'Extract PNG text chunks, metadata, dimensions, color details, and hidden diagnostic payloads from uploaded images.',
-  },
-  {
-    priority: 'P3',
-    title: 'Chrome DevTools MCP Helper',
-    route: '/tools/chrome-devtools-mcp',
-    description: 'Generate browser automation, DevTools Protocol, screenshot, console, network, and performance-debugging playbooks.',
-  },
-  {
-    priority: 'P3',
-    title: 'DWARF Debug Info Explainer',
-    route: '/tools/dwarf-explorer',
-    description: 'Explain DWARF debug-info snippets, symbols, compilation units, line tables, and native-debug metadata.',
-  },
-  {
-    priority: 'P3',
-    title: 'Time Travel Debugging Notes',
-    route: '/tools/time-travel-debug',
-    description: 'Compare replay debugging, rr, Redux DevTools, browser timelines, and record/replay investigation patterns.',
-  },
-  {
-    priority: 'P3',
-    title: 'Debugging Playbook Generator',
-    route: '/tools/debugging-playbook',
-    description: 'Convert a symptom, stack trace, or incident note into a step-by-step debugging plan and evidence checklist.',
-  },
-  {
-    priority: 'P3',
-    title: 'Qt Debug Helper',
-    route: '/tools/qt-debug',
-    description: 'Format Qt logs, signals/slots notes, platform plugin errors, build metadata, and cross-platform runtime symptoms.',
-  },
-  {
-    priority: 'P3',
-    title: 'Android Emulator Matrix',
-    route: '/tools/android-emulator',
-    description: 'Plan emulator coverage by API level, device class, density, architecture, Play Services, and network profile.',
-  },
-  {
-    priority: 'P3',
-    title: 'Unity Debug UI Planner',
-    route: '/tools/unity-debug-ui',
-    description: 'Plan in-game debug overlays, runtime toggles, metrics panels, logs, and QA-only controls.',
-  },
-  {
-    priority: 'P3',
-    title: 'AI Debug Question Builder',
-    route: '/tools/debug-question-builder',
-    description: 'Turn logs, traces, failing tests, and repro notes into concise questions for AI-assisted debugging sessions.',
-  },
-  {
-    priority: 'P3',
-    title: 'Product Planning Timeline',
-    route: '/tools/product-planning',
-    description: 'Prioritize debug-tool ideas, score effort and impact, and visualize delivery order on a lightweight Gantt-style timeline.',
+    title: 'Binary Inspector',
+    route: '/tools/binary-inspector',
+    description: 'Inspect pasted hex or Base64 bytes, detect magic numbers, convert endian values, and surface file signatures.',
   },
 ];
 
@@ -297,7 +249,7 @@ const researchSources = [
   {
     title: 'debugtools.dev',
     url: 'https://debugtools.dev/',
-    description: 'Adjacent tool hub with API Debugger, Certificate Viewer, Product Planning, Base64, Sample Data Generator, and hidden/upcoming validators.',
+    description: 'Adjacent tool hub with API debugging, certificate inspection, Base64, sample-data utilities, and hidden/upcoming validators.',
   },
   {
     title: 'DebugTools IntelliJ plugin',
@@ -315,8 +267,8 @@ const proposedBacklogItems = proposedTools.map((tool) => ({
 function statusClass(status: string) {
   if (status === 'shipped') return 'border-[#1a7f37] bg-[#dafbe1] text-[#1a7f37]';
   if (status === 'beta') return 'border-[#bf8700] bg-[#fff8c5] text-[#7d4e00]';
-  if (status === 'next') return 'border-[#0969da] bg-[#ddf4ff] text-[#0969da]';
-  return 'border-[#d0d7de] bg-[#f6f8fa] text-[#57606a]';
+  if (status === 'next') return 'border-[#2563eb] bg-[#ddf4ff] text-[#2563eb]';
+  return 'border-[#e4e4e7] bg-[#fafafa] text-[#71717a]';
 }
 
 function RoadmapSection({
@@ -329,22 +281,22 @@ function RoadmapSection({
   items: Array<{ title: string; description: string; scope: string }>;
 }) {
   return (
-    <section className="border-t border-[#d0d7de]">
-      <div className="border-b border-[#d0d7de] bg-[#f6f8fa] px-5 py-3">
+    <section className="border-t border-[#e4e4e7]">
+      <div className="border-b border-[#e4e4e7] bg-[#fafafa] px-5 py-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-[#24292f]">{title}</h2>
+          <h2 className="text-sm font-semibold text-[#09090b]">{title}</h2>
           <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClass(status)}`}>
             {status}
           </span>
         </div>
       </div>
-      <div className="divide-y divide-[#d0d7de]">
+      <div className="divide-y divide-[#e4e4e7]">
         {items.map((item) => (
           <article key={`${status}-${item.title}`} className="grid gap-3 p-5 md:grid-cols-[180px_1fr] md:items-start">
-            <div className="font-mono text-xs text-[#57606a]">{item.scope}</div>
+            <div className="font-mono text-xs text-[#71717a]">{item.scope}</div>
             <div>
-              <h3 className="text-base font-semibold text-[#0969da]">{item.title}</h3>
-              <p className="mt-1 text-sm leading-6 text-[#57606a]">{item.description}</p>
+              <h3 className="text-base font-semibold text-[#2563eb]">{item.title}</h3>
+              <p className="mt-1 text-sm leading-6 text-[#71717a]">{item.description}</p>
             </div>
           </article>
         ))}
@@ -355,10 +307,10 @@ function RoadmapSection({
 
 function CurrentToolsSection() {
   return (
-    <section className="border-t border-[#d0d7de]">
-      <div className="border-b border-[#d0d7de] bg-[#f6f8fa] px-5 py-3">
+    <section className="border-t border-[#e4e4e7]">
+      <div className="border-b border-[#e4e4e7] bg-[#fafafa] px-5 py-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-[#24292f]">Current tool routes</h2>
+          <h2 className="text-sm font-semibold text-[#09090b]">Current tool routes</h2>
           <span className="rounded-full border border-[#1a7f37] bg-[#dafbe1] px-2.5 py-1 text-xs font-semibold text-[#1a7f37]">
             live
           </span>
@@ -366,17 +318,23 @@ function CurrentToolsSection() {
       </div>
       <div className="grid gap-2 p-4 md:grid-cols-2 xl:grid-cols-3">
         {liveTools.map((tool) => (
-          <article key={tool.path} className="rounded-md border border-[#d0d7de] bg-white p-3">
+          // Shipped tools are linked, not printed as text. This list was the only
+          // place all 56 appeared, and none of them were reachable from it.
+          <article key={tool.path} className="rounded-md border border-[#e4e4e7] bg-white p-3 transition-colors hover:border-[#2563eb]">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-[#0969da]">{tool.name}</h3>
-                <p className="mt-1 font-mono text-xs text-[#57606a]">{tool.path}</p>
+                <h3 className="text-sm font-semibold text-[#2563eb]">
+                  <Link href={tool.path} className="hover:underline">
+                    {tool.name}
+                  </Link>
+                </h3>
+                <p className="mt-1 font-mono text-xs text-[#71717a]">{tool.path}</p>
               </div>
-              <span className="rounded-full border border-[#d0d7de] bg-[#f6f8fa] px-2 py-0.5 text-[11px] font-semibold text-[#57606a]">
+              <span className="rounded-full border border-[#e4e4e7] bg-[#fafafa] px-2 py-0.5 text-[11px] font-semibold text-[#71717a]">
                 {tool.maturity}
               </span>
             </div>
-            <p className="mt-2 line-clamp-2 text-xs leading-5 text-[#57606a]">{tool.description}</p>
+            <p className="mt-2 line-clamp-2 text-xs leading-5 text-[#71717a]">{tool.description}</p>
           </article>
         ))}
       </div>
@@ -385,35 +343,35 @@ function CurrentToolsSection() {
 }
 
 function FutureToolsSection() {
-  const groupedTools = ['P0', 'P1', 'P2', 'P3'].map((priority) => ({
+  const groupedTools = ['P0', 'P1', 'P2'].map((priority) => ({
     priority,
     tools: futureDebugTools.filter((tool) => tool.priority === priority),
   })).filter((group) => group.tools.length > 0);
 
   return (
-    <section className="border-t border-[#d0d7de]">
-      <div className="border-b border-[#d0d7de] bg-[#f6f8fa] px-5 py-3">
+    <section className="border-t border-[#e4e4e7]">
+      <div className="border-b border-[#e4e4e7] bg-[#fafafa] px-5 py-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold text-[#24292f]">Future debugging tools to implement</h2>
-          <span className="rounded-full border border-[#0969da] bg-[#ddf4ff] px-2.5 py-1 text-xs font-semibold text-[#0969da]">
-            {futureDebugTools.length} planned
+          <h2 className="text-sm font-semibold text-[#09090b]">Implemented roadmap routes</h2>
+          <span className="rounded-full border border-[#2563eb] bg-[#ddf4ff] px-2.5 py-1 text-xs font-semibold text-[#2563eb]">
+            {futureDebugTools.length} live
           </span>
         </div>
       </div>
-      <div className="divide-y divide-[#d0d7de]">
+      <div className="divide-y divide-[#e4e4e7]">
         {groupedTools.map((group) => (
           <div key={group.priority} className="grid gap-3 p-5 lg:grid-cols-[88px_1fr]">
             <div>
-              <span className="inline-flex rounded-full border border-[#d0d7de] bg-[#f6f8fa] px-2.5 py-1 font-mono text-xs font-semibold text-[#57606a]">
+              <span className="inline-flex rounded-full border border-[#e4e4e7] bg-[#fafafa] px-2.5 py-1 font-mono text-xs font-semibold text-[#71717a]">
                 {group.priority}
               </span>
             </div>
             <div className="grid gap-2 md:grid-cols-2">
               {group.tools.map((tool) => (
-                <article key={tool.route} className="rounded-md border border-[#d0d7de] bg-white p-3">
-                  <h3 className="text-sm font-semibold text-[#0969da]">{tool.title}</h3>
-                  <p className="mt-1 font-mono text-xs text-[#57606a]">{tool.route}</p>
-                  <p className="mt-2 text-xs leading-5 text-[#57606a]">{tool.description}</p>
+                <article key={tool.route} className="rounded-md border border-[#e4e4e7] bg-white p-3">
+                  <h3 className="text-sm font-semibold text-[#2563eb]">{tool.title}</h3>
+                  <p className="mt-1 font-mono text-xs text-[#71717a]">{tool.route}</p>
+                  <p className="mt-2 text-xs leading-5 text-[#71717a]">{tool.description}</p>
                 </article>
               ))}
             </div>
@@ -426,9 +384,9 @@ function FutureToolsSection() {
 
 function ResearchSourcesSection() {
   return (
-    <section className="border-t border-[#d0d7de]">
-      <div className="border-b border-[#d0d7de] bg-[#f6f8fa] px-5 py-3">
-        <h2 className="text-sm font-semibold text-[#24292f]">Research sources</h2>
+    <section className="border-t border-[#e4e4e7]">
+      <div className="border-b border-[#e4e4e7] bg-[#fafafa] px-5 py-3">
+        <h2 className="text-sm font-semibold text-[#09090b]">Research sources</h2>
       </div>
       <div className="grid gap-2 p-4 md:grid-cols-2">
         {researchSources.map((source) => (
@@ -437,10 +395,10 @@ function ResearchSourcesSection() {
             href={source.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-md border border-[#d0d7de] bg-white p-3 transition-colors hover:border-[#0969da] hover:bg-[#f6f8fa]"
+            className="rounded-md border border-[#e4e4e7] bg-white p-3 transition-colors hover:border-[#2563eb] hover:bg-[#fafafa]"
           >
-            <h3 className="text-sm font-semibold text-[#0969da]">{source.title}</h3>
-            <p className="mt-2 text-xs leading-5 text-[#57606a]">{source.description}</p>
+            <h3 className="text-sm font-semibold text-[#2563eb]">{source.title}</h3>
+            <p className="mt-2 text-xs leading-5 text-[#71717a]">{source.description}</p>
           </a>
         ))}
       </div>
@@ -453,15 +411,15 @@ export default function RoadmapPage() {
   const betaToolCount = liveTools.filter((tool) => tool.maturity !== 'Stable').length;
 
   return (
-    <main className="min-h-screen bg-[#f6f8fa] text-[#24292f]">
+    <main className="min-h-screen bg-[#fafafa] text-[#09090b]">
       <Navigation />
       <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <div className="rounded-md border border-[#d0d7de] bg-white">
-          <div className="border-b border-[#d0d7de] px-5 py-4">
-            <p className="font-mono text-xs text-[#57606a]">ROADMAP.md</p>
-            <h1 className="mt-2 text-3xl font-semibold text-[#24292f]">Project roadmap</h1>
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-[#57606a]">
-              This roadmap reflects the current tool routes in the codebase. API Tester is the flagship workflow; the live registry has {liveTools.length} implemented tool routes: {stableToolCount} stable local tools and {betaToolCount} beta or experimental tools that work but need polish.
+        <div className="rounded-md border border-[#e4e4e7] bg-white">
+          <div className="border-b border-[#e4e4e7] px-5 py-4">
+            <p className="font-mono text-xs text-[#71717a]">ROADMAP.md</p>
+            <h1 className="mt-2 text-3xl font-semibold text-[#09090b]">DebugTools roadmap</h1>
+            <p className="mt-3 max-w-3xl text-sm leading-7 text-[#71717a]">
+              This roadmap keeps utility tools as SEO entry points while prioritizing debugging workflows for logs, traces, APIs, auth, CI, mobile, Kubernetes, and production incidents. The live registry has {liveTools.length} implemented tool routes: {stableToolCount} stable local tools and {betaToolCount} beta or experimental tools that work but need polish.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <a
@@ -476,7 +434,7 @@ export default function RoadmapPage() {
                 href="https://github.com/jasimvkarim/mydebugtools/blob/main/CLI_ROADMAP.md"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-md border border-[#d0d7de] bg-white px-3 py-2 text-sm font-semibold text-[#24292f] hover:bg-[#f6f8fa] hover:text-[#24292f]"
+                className="rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm font-semibold text-[#09090b] hover:bg-[#fafafa] hover:text-[#09090b]"
               >
                 CLI roadmap
               </a>

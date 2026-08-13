@@ -1,11 +1,12 @@
-import { toolMetadata } from '@/lib/tool-seo';
+import { toolMetadata } from '@/lib/tool-seo'
+import ToolProductShell from '../components/ToolProductShell'
 
-export const metadata = toolMetadata('http-status');
+export const metadata = toolMetadata('http-status')
 
-export default function HttpStatusLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return <>{children}</>;
+export default function HttpStatusToolLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ToolProductShell slug="http-status">
+      {children}
+    </ToolProductShell>
+  )
 }

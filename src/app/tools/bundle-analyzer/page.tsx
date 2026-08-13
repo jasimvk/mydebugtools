@@ -35,28 +35,44 @@ function BundleAnalyzer() {
       const modules: BundleModule[] = [];
       let totalSize = 0;
 
+      // The percentage column is specific to webpack-bundle-analyzer; plain build output
+      // (`app.js 42 KB`) has only a size, so the share is derived from the total below.
+      const parsed: Array<Omit<BundleModule, 'percentage'> & { percentage?: number }> = [];
+
       lines.forEach(line => {
-        // Match webpack-bundle-analyzer format
-        const match = line.trim().match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*(b|bytes|kb|kib|mb|mib|gb|gib)?\s+([\d.]+)%/i);
-        if (match) {
-          const [_, name, size, unit = '', percentage] = match;
-          const moduleSize = parseSizeToBytes(size, unit);
-          totalSize += moduleSize;
+        const match = line.trim().match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*(b|bytes|kb|kib|mb|mib|gb|gib)?(?:\s+(\d+(?:\.\d+)?)%)?\s*$/i);
+        if (!match) return;
 
-          let type: BundleModule['type'] = 'other';
-          if (name.endsWith('.js')) type = 'js';
-          else if (name.endsWith('.css')) type = 'css';
-          else if (/\.(png|jpg|jpeg|gif|svg)$/i.test(name)) type = 'image';
-          else if (/\.(woff|woff2|ttf|otf)$/i.test(name)) type = 'font';
+        const [, name, size, unit = '', percentage] = match;
+        // Without a unit or a percentage the line is just prose that happens to hold a number.
+        if (!unit && percentage === undefined) return;
 
-          modules.push({
-            name,
-            size: moduleSize,
-            percentage: parseFloat(percentage),
-            type
-          });
-        }
+        const moduleSize = parseSizeToBytes(size, unit);
+        totalSize += moduleSize;
+
+        let type: BundleModule['type'] = 'other';
+        if (name.endsWith('.js')) type = 'js';
+        else if (name.endsWith('.css')) type = 'css';
+        else if (/\.(png|jpg|jpeg|gif|svg)$/i.test(name)) type = 'image';
+        else if (/\.(woff|woff2|ttf|otf)$/i.test(name)) type = 'font';
+
+        parsed.push({
+          name,
+          size: moduleSize,
+          percentage: percentage === undefined ? undefined : parseFloat(percentage),
+          type
+        });
       });
+
+      // Unparseable text must not render a confident all-zero dashboard.
+      if (parsed.length === 0) {
+        return null;
+      }
+
+      modules.push(...parsed.map(module => ({
+        ...module,
+        percentage: module.percentage ?? (totalSize > 0 ? (module.size / totalSize) * 100 : 0)
+      })));
 
       return {
         totalSize,
@@ -75,7 +91,7 @@ Total Size: ${(bundleData.totalSize / 1024).toFixed(2)} KB
 
 Top Modules:
 ${bundleData.modules.slice(0, 10).map(m => 
-  `${m.name}: ${(m.size / 1024).toFixed(2)} KB (${m.percentage}%)`
+  `${m.name}: ${(m.size / 1024).toFixed(2)} KB (${m.percentage.toFixed(1)}%)`
 ).join('\n')}`;
 
     navigator.clipboard.writeText(summary);
@@ -90,7 +106,7 @@ Total Size: ${(bundleData.totalSize / 1024).toFixed(2)} KB
 
 Detailed Analysis:
 ${bundleData.modules.map(m => 
-  `${m.name}: ${(m.size / 1024).toFixed(2)} KB (${m.percentage}%)`
+  `${m.name}: ${(m.size / 1024).toFixed(2)} KB (${m.percentage.toFixed(1)}%)`
 ).join('\n')}`;
 
     const blob = new Blob([summary], { type: 'text/plain' });
@@ -122,15 +138,15 @@ src/app/globals.css 18.5 KB 8.0%`;
         toolType="WebApplication"
       />
 
-      <div className="mb-4 flex flex-col justify-between gap-3 rounded-md border border-[#d0d7de] bg-white px-5 py-4 sm:flex-row sm:items-end">
+      <div className="mb-4 flex flex-col justify-between gap-3 rounded-md border border-[#e4e4e7] bg-white px-5 py-4 sm:flex-row sm:items-end">
         <div>
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-[#6e7781]">tools/bundle</p>
-          <h1 className="mt-2 text-[#24292f]">Bundle Size Analyzer</h1>
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-[#71717a]">tools/bundle</p>
+          <h1 className="mt-2 text-[#09090b]">Bundle Size Analyzer</h1>
         </div>
         <button
           type="button"
           onClick={loadSample}
-          className="rounded-md border border-[#d0d7de] bg-white px-3 py-2 text-sm font-semibold text-[#24292f] hover:bg-[#f6f8fa]"
+          className="rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm font-semibold text-[#09090b] hover:bg-[#fafafa]"
         >
           Sample
         </button>
@@ -146,6 +162,7 @@ src/app/globals.css 18.5 KB 8.0%`;
             </p>
           </div>
           <textarea
+            aria-label="Bundle analysis input"
             value={input}
             onChange={(e) => {
               setInput(e.target.value);
@@ -214,7 +231,7 @@ src/components/App.js 45.67 KB 5.8%
                       <div className="flex justify-between text-sm">
                         <span className="font-medium">{module.name}</span>
                         <span className="text-gray-500">
-                          {(module.size / 1024).toFixed(2)} KB ({module.percentage}%)
+                          {(module.size / 1024).toFixed(2)} KB ({module.percentage.toFixed(1)}%)
                         </span>
                       </div>
                       <div className="h-2 relative w-full bg-gray-200 rounded mt-1">
@@ -227,7 +244,8 @@ src/components/App.js 45.67 KB 5.8%
                             'bg-gray-500'
                           }`}
                           style={{
-                            width: `${module.percentage}%`
+                            // Percentages come straight from pasted input.
+                            width: `${Math.min(100, Math.max(0, module.percentage))}%`
                           }}
                         />
                       </div>
@@ -247,7 +265,7 @@ src/components/App.js 45.67 KB 5.8%
         </div>
       </div>
 
-      <div className="mt-4 rounded-md border border-[#d0d7de] bg-white px-4 py-3 text-sm text-[#57606a]">
+      <div className="mt-4 rounded-md border border-[#e4e4e7] bg-white px-4 py-3 text-sm text-[#71717a]">
         Accepts lines like <code>src/app/page.tsx 42 KB 12.5%</code>.
       </div>
     </div>

@@ -14,12 +14,11 @@ import StructuredData from '@/components/StructuredData';
 interface StartupMetric {
   name: string;
   duration: number;
-  startTime: number;
-  endTime: number;
   phase: 'js-init' | 'native-init' | 'render' | 'network' | 'other';
 }
 
 interface ProfileData {
+  /** Sum of every phase duration. Markers carry no offsets, so this is not wall-clock time. */
   totalDuration: number;
   metrics: StartupMetric[];
   jsInitTime: number;
@@ -31,6 +30,7 @@ function StartupProfiling() {
   const [input, setInput] = useState('');
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState('');
 
   const parseProfileData = (log: string): ProfileData | null => {
     try {
@@ -42,36 +42,31 @@ function StartupProfiling() {
       let totalDuration = 0;
 
       lines.forEach(line => {
-        // Match React Native performance markers
-        const markerMatch = line.match(/\[Performance\]\s+(.+?):\s+(\d+)ms/);
+        // Match React Native performance markers. Durations are often fractional
+        // (`350.4ms`) or expressed in seconds (`1.2s`).
+        const markerMatch = line.match(/\[Performance\]\s+(.+?):\s+(\d+(?:\.\d+)?)\s*(ms|s)\b/i);
         if (markerMatch) {
-          const [_, name, duration] = markerMatch;
-          const startTime = totalDuration;
-          const endTime = startTime + parseInt(duration);
+          const [, name, rawDuration, unit] = markerMatch;
+          const duration = parseFloat(rawDuration) * (unit.toLowerCase() === 's' ? 1000 : 1);
 
           let phase: StartupMetric['phase'] = 'other';
           if (name.includes('JavaScript')) {
             phase = 'js-init';
-            jsInitTime += parseInt(duration);
+            jsInitTime += duration;
           } else if (name.includes('Native')) {
             phase = 'native-init';
-            nativeInitTime += parseInt(duration);
-          } else if (name.includes('Render') || name.includes('Layout')) {
+            nativeInitTime += duration;
+          } else if (/Render|Layout/.test(name)) {
             phase = 'render';
-            firstRenderTime = Math.max(firstRenderTime, endTime);
+            // Only the First Render marker is the first-render duration; a Layout marker
+            // is a different phase and must not overwrite it.
+            if (/First Render/i.test(name)) firstRenderTime = duration;
           } else if (name.includes('Network') || name.includes('API')) {
             phase = 'network';
           }
 
-          metrics.push({
-            name,
-            duration: parseInt(duration),
-            startTime,
-            endTime,
-            phase
-          });
-
-          totalDuration = endTime;
+          metrics.push({ name, duration, phase });
+          totalDuration += duration;
         }
       });
 
@@ -93,40 +88,37 @@ function StartupProfiling() {
   };
 
   useEffect(() => {
-    if (input) {
-      const data = parseProfileData(input);
-      setProfileData(data);
-    } else {
-      setProfileData(null);
-    }
+    setProfileData(input.trim() ? parseProfileData(input) : null);
   }, [input]);
 
-  const handleCopy = () => {
-    if (!profileData) return;
-    const summary = `React Native Startup Profile Summary:
-Total Duration: ${profileData.totalDuration}ms
-JavaScript Init: ${profileData.jsInitTime}ms
-Native Init: ${profileData.nativeInitTime}ms
-First Render: ${profileData.firstRenderTime}ms
+  const noMarkersFound = Boolean(input.trim()) && !profileData;
+
+  const formatMs = (value: number) => `${Number(value.toFixed(1))}ms`;
+
+  const buildSummary = (data: ProfileData) => `React Native Startup Profile Summary:
+Sum of phase durations: ${formatMs(data.totalDuration)}
+JavaScript Init: ${formatMs(data.jsInitTime)}
+Native Init: ${formatMs(data.nativeInitTime)}
+First Render: ${formatMs(data.firstRenderTime)}
 
 Detailed Metrics:
-${profileData.metrics.map(m => `${m.name}: ${m.duration}ms (${m.phase})`).join('\n')}`;
+${data.metrics.map(m => `${m.name}: ${formatMs(m.duration)} (${m.phase})`).join('\n')}`;
 
-    navigator.clipboard.writeText(summary);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    if (!profileData) return;
+    setCopyError('');
+    try {
+      await navigator.clipboard.writeText(buildSummary(profileData));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopyError('Clipboard is unavailable in this browser. Use Download instead.');
+    }
   };
 
   const handleDownload = () => {
     if (!profileData) return;
-    const summary = `React Native Startup Profile Summary:
-Total Duration: ${profileData.totalDuration}ms
-JavaScript Init: ${profileData.jsInitTime}ms
-Native Init: ${profileData.nativeInitTime}ms
-First Render: ${profileData.firstRenderTime}ms
-
-Detailed Metrics:
-${profileData.metrics.map(m => `${m.name}: ${m.duration}ms (${m.phase})`).join('\n')}`;
+    const summary = buildSummary(profileData);
 
     const blob = new Blob([summary], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -155,15 +147,15 @@ ${profileData.metrics.map(m => `${m.name}: ${m.duration}ms (${m.phase})`).join('
         toolType="WebApplication"
       />
 
-      <div className="mb-4 flex flex-col justify-between gap-3 rounded-md border border-[#d0d7de] bg-white px-5 py-4 sm:flex-row sm:items-end">
+      <div className="mb-4 flex flex-col justify-between gap-3 rounded-md border border-[#e4e4e7] bg-white px-5 py-4 sm:flex-row sm:items-end">
         <div>
-          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-[#6e7781]">tools/startup</p>
-          <h1 className="mt-2 text-[#24292f]">Startup Profiling</h1>
+          <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-[#71717a]">tools/startup</p>
+          <h1 className="mt-2 text-[#09090b]">Startup Profiling</h1>
         </div>
         <button
           type="button"
           onClick={loadSample}
-          className="rounded-md border border-[#d0d7de] bg-white px-3 py-2 text-sm font-semibold text-[#24292f] hover:bg-[#f6f8fa]"
+          className="rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm font-semibold text-[#09090b] hover:bg-[#fafafa]"
         >
           Sample
         </button>
@@ -217,31 +209,36 @@ ${profileData.metrics.map(m => `${m.name}: ${m.duration}ms (${m.phase})`).join('
             </div>
           </div>
 
+          {copyError && (
+            <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{copyError}</p>
+          )}
+
           {profileData ? (
             <div className="space-y-6">
               {/* Summary Cards */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="text-sm text-blue-600 font-medium">Total Duration</div>
-                  <div className="text-2xl font-bold text-blue-900">{profileData.totalDuration}ms</div>
+                  <div className="text-sm text-blue-600 font-medium">Sum of phase durations</div>
+                  <div className="text-2xl font-bold text-blue-900">{formatMs(profileData.totalDuration)}</div>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg">
                   <div className="text-sm text-green-600 font-medium">First Render</div>
-                  <div className="text-2xl font-bold text-green-900">{profileData.firstRenderTime}ms</div>
+                  <div className="text-2xl font-bold text-green-900">{formatMs(profileData.firstRenderTime)}</div>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg">
                   <div className="text-sm text-purple-600 font-medium">JavaScript Init</div>
-                  <div className="text-2xl font-bold text-purple-900">{profileData.jsInitTime}ms</div>
+                  <div className="text-2xl font-bold text-purple-900">{formatMs(profileData.jsInitTime)}</div>
                 </div>
-                <div className="bg-orange-50 p-4 rounded-lg">
-                  <div className="text-sm text-orange-600 font-medium">Native Init</div>
-                  <div className="text-2xl font-bold text-orange-900">{profileData.nativeInitTime}ms</div>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-sm text-blue-600 font-medium">Native Init</div>
+                  <div className="text-2xl font-bold text-orange-900">{formatMs(profileData.nativeInitTime)}</div>
                 </div>
               </div>
 
-              {/* Timeline */}
+              {/* Phase durations. Markers carry no start offsets, so bars are relative
+                  widths rather than positions on a wall-clock timeline. */}
               <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="text-sm font-medium text-gray-900 mb-4">Timeline</h3>
+                <h3 className="text-sm font-medium text-gray-900 mb-4">Phase durations</h3>
                 <div className="space-y-2">
                   {profileData.metrics.map((metric, index) => (
                     <div key={index} className="relative">
@@ -250,21 +247,32 @@ ${profileData.metrics.map(m => `${m.name}: ${m.duration}ms (${m.phase})`).join('
                         <div
                           className={`absolute h-full rounded ${
                             metric.phase === 'js-init' ? 'bg-purple-500' :
-                            metric.phase === 'native-init' ? 'bg-orange-500' :
+                            metric.phase === 'native-init' ? 'bg-blue-500' :
                             metric.phase === 'render' ? 'bg-green-500' :
                             metric.phase === 'network' ? 'bg-blue-500' :
                             'bg-gray-500'
                           }`}
                           style={{
-                            left: `${(metric.startTime / profileData.totalDuration) * 100}%`,
-                            width: `${(metric.duration / profileData.totalDuration) * 100}%`
+                            width: profileData.totalDuration > 0
+                              ? `${(metric.duration / profileData.totalDuration) * 100}%`
+                              : '0%'
                           }}
                         />
                       </div>
-                      <div className="text-xs text-gray-500 text-right">{metric.duration}ms</div>
+                      <div className="text-xs text-gray-500 text-right">{formatMs(metric.duration)}</div>
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+          ) : noMarkersFound ? (
+            <div className="h-[400px] flex items-center justify-center text-gray-500">
+              <div className="text-center px-6">
+                <ChartBarIcon className="h-12 w-12 mx-auto mb-4" />
+                <p className="font-medium text-gray-700">No performance markers found</p>
+                <p className="mt-1 text-sm">
+                  Lines must look like <code>[Performance] JavaScript Init: 350ms</code> (<code>ms</code> or <code>s</code>).
+                </p>
               </div>
             </div>
           ) : (
@@ -278,7 +286,7 @@ ${profileData.metrics.map(m => `${m.name}: ${m.duration}ms (${m.phase})`).join('
         </div>
       </div>
 
-      <div className="mt-4 rounded-md border border-[#d0d7de] bg-white px-4 py-3 text-sm text-[#57606a]">
+      <div className="mt-4 rounded-md border border-[#e4e4e7] bg-white px-4 py-3 text-sm text-[#71717a]">
         Accepts performance markers like <code>[Performance] JavaScript Init: 350ms</code>.
       </div>
     </div>

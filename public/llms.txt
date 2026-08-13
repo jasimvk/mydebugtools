@@ -1,53 +1,53 @@
-# debugtools
+# DebugTools
 
-> Free, open-source, privacy-focused browser tools for developers. debugtools helps debug APIs, format data, decode tokens, compare code, inspect bundles, and document releases.
+> Open-source debugging toolkit for logs, traces, APIs, auth, CI, mobile, Kubernetes, OpenTelemetry, and production issues.
 
-## Core Pages
+DebugTools is local-first by default. Pasted logs, tokens, stack traces, crash reports, HAR files, and build failures stay in the browser unless the user explicitly chooses a network or AI workflow.
 
-- [Homepage](https://debugtools.org/): Project overview and featured tools.
+## Start Here
+
+- [Homepage](https://debugtools.org/): Project overview and primary tools.
+- [API Workbench](https://debugtools.org/tools/api/): Browser REST client with collections, auth, environments, imports, and response inspection.
 - [All tools](https://debugtools.org/tools/all/): Complete tool registry.
 - [Developer answers](https://debugtools.org/answers/): Concise answer pages for common debugging workflows.
-- [CLI roadmap](https://debugtools.org/cli/): Command-line plans and scope.
-- [Roadmap](https://debugtools.org/roadmap/): Shipped work, active foundation work, and future modules.
-- [Releases](https://debugtools.org/releases/): Release notes and changelog context.
-- [FAQ](https://debugtools.org/faq/): Product, privacy, contribution, licensing, and usage answers.
+- [Roadmap](https://debugtools.org/roadmap/): Shipped and planned debugging tools.
 - [GitHub repository](https://github.com/jasimvkarim/mydebugtools): Source code, issues, license, and contribution workflow.
 
-## Shipped Tools
+## Primary Debugging Tools
 
-- [API Tester](https://debugtools.org/tools/api/): REST client with collections, auth, environments, imports, and response inspection.
-- [JSON Formatter](https://debugtools.org/tools/json/): Format, validate, repair, and inspect JSON payloads.
-- [JWT Decoder](https://debugtools.org/tools/jwt/): Decode JWT headers and payload claims locally in the browser.
-- [HTTP Status Codes](https://debugtools.org/tools/http-status/): Reference HTTP status codes and response meanings.
-- [Code Diff](https://debugtools.org/tools/code-diff/): Compare snippets during code review and debugging.
-- [Base64 Encoder and Decoder](https://debugtools.org/tools/base64/): Encode and decode Base64 strings and files.
-- [Regex Tester](https://debugtools.org/tools/regex/): Test regular expressions with live matches.
-- [Color Picker](https://debugtools.org/tools/color/): Pick, convert, and inspect color values.
-- [CSS Tools](https://debugtools.org/tools/css/): Minify, beautify, and validate CSS.
-- [HTML Tools](https://debugtools.org/tools/html/): Format, preview, and inspect HTML.
-- [Markdown Preview](https://debugtools.org/tools/markdown/): Write and preview Markdown content.
-- [Icon Finder](https://debugtools.org/tools/icons/): Search icon libraries for UI assets.
-- [Crash Beautifier](https://debugtools.org/tools/crash-beautifier/): Clean up and inspect stack traces.
-- [Build Diff](https://debugtools.org/tools/build-diff/): Compare build outputs and artifact changes.
-- [Bundle Analyzer](https://debugtools.org/tools/bundle-analyzer/): Inspect bundle size and composition.
-- [Database Query](https://debugtools.org/tools/database/): Run SQLite queries in a focused workspace.
-- [Startup Profiling](https://debugtools.org/tools/startup-profiling/): Visualize React Native startup timelines.
-- [Hash Generator](https://debugtools.org/tools/hash/): Generate SHA hashes locally in the browser.
-- [UUID Generator](https://debugtools.org/tools/uuid/): Generate UUID v4 values in bulk for fixtures and local development.
-- [URL Encoder and Decoder](https://debugtools.org/tools/url/): Encode, decode, and inspect URLs and query strings.
-- [Timestamp Converter](https://debugtools.org/tools/timestamp/): Convert Unix timestamps, ISO strings, UTC, and local date-time values.
+- [API Workbench](https://debugtools.org/tools/api/): Flagship REST client with collections, auth, environments, imports, and response inspection.
+- [CI Debugger](https://debugtools.org/tools/ci-debugger/): Inspect GitHub Actions workflows for jobs, steps, local act commands, and risky patterns.
+- [HTTP Traffic Inspector](https://debugtools.org/tools/http-profiler/): Inspect HAR exports for timing, redirects, failures, payload sizes, and slow requests.
+- [Kubernetes Debug Helper](https://debugtools.org/tools/k8s-debug/): Detect common pod failure signals and generate focused kubectl debug commands.
+- [Log Trace Rebuilder](https://debugtools.org/tools/log-trace/): Group multiline logs by trace ID, request ID, correlation ID, severity, and related details.
+- [OpenTelemetry Trace Viewer](https://debugtools.org/tools/otel-trace-viewer/): Summarize OTLP traces, spans, root spans, error spans, and slow operations.
+- [Security Headers Inspector](https://debugtools.org/tools/security-headers/): Score response headers, missing browser protections, and cookie security flags.
+- [Stack Trace Explainer](https://debugtools.org/tools/stack-trace/): Extract error type, root frame, app frames, dependencies, and likely cause from pasted stack traces.
 
 ## Answer Pages
 
-- [Best free JSON formatter](https://debugtools.org/answers/best-free-json-formatter/)
-- [How to decode a JWT safely](https://debugtools.org/answers/how-to-decode-jwt-safely/)
-- [Base64 encode vs decode](https://debugtools.org/answers/base64-encode-vs-decode/)
-- [Test an API request online](https://debugtools.org/answers/test-api-request-online/)
-- [Compare two code snippets](https://debugtools.org/answers/compare-two-code-snippets/)
+- [What is the best free JSON formatter for developers?](https://debugtools.org/answers/best-free-json-formatter/): The best free JSON formatter validates syntax, formats nested payloads clearly, and keeps sensitive JSON local to your browser when possible.
+- [How do I decode a JWT safely?](https://debugtools.org/answers/how-to-decode-jwt-safely/): Decode JWTs in a local browser tool, review claims such as exp, iss, aud, and sub, and verify signatures separately when authenticity matters.
+- [What is the difference between Base64 encoding and decoding?](https://debugtools.org/answers/base64-encode-vs-decode/): Base64 encoding converts bytes or text into an ASCII-safe representation. Decoding converts that Base64 text back into the original bytes or string.
+- [How can I test an API request online?](https://debugtools.org/answers/test-api-request-online/): Use an API tester to choose the method, enter the URL, add headers or auth, send the request, and inspect status, response headers, and body.
+- [How do I compare two code snippets?](https://debugtools.org/answers/compare-two-code-snippets/): Paste the old snippet and new snippet into a diff tool, then review added, removed, and changed lines side by side.
+- [How do I generate a hash for text?](https://debugtools.org/answers/generate-hash-for-text/): Paste text into a hash generator, choose the algorithm you need, and compare the generated digest with the expected checksum.
+- [How do I decode a URL query string?](https://debugtools.org/answers/decode-url-query-string/): Use a URL decoder to convert percent-encoded characters back to readable text, then inspect each query parameter separately.
+- [How do I check what an HTTP status code means?](https://debugtools.org/answers/what-http-status-code-means/): Search the status code, confirm its category, then use the meaning to decide whether the issue is client-side, server-side, redirect-related, or informational.
+- [How should I use an AI debug assistant safely?](https://debugtools.org/answers/use-ai-debug-assistant-safely/): Use an AI debug assistant for non-sensitive errors, stack traces, API responses, and JSON issues, but remove secrets and private data before sending text to any configured AI provider.
+- [How do I explain a stack trace?](https://debugtools.org/answers/explain-stack-trace/): Start with the exception message, then find the first frame owned by your application. That frame usually points to the code path to inspect first.
+- [How do I rebuild a trace from logs?](https://debugtools.org/answers/rebuild-log-trace/): Collect logs around one failing request, group by request or trace ID, then order the events by timestamp to find the first error and downstream failures.
+- [How do I analyze a HAR file?](https://debugtools.org/answers/analyze-har-file/): Load the HAR, sort by failed or slow requests, then inspect status, timing, redirects, payload size, and cache headers for the first broken dependency.
+- [How do I debug a GitHub Actions failure?](https://debugtools.org/answers/debug-github-actions-failure/): Find the first failed step in the job, read a few lines above the error, then check whether the workflow command, dependency cache, secret, or environment changed.
+- [How do I debug CORS and security headers?](https://debugtools.org/answers/debug-cors-security-headers/): Capture the exact response headers for the failing request, then check origin, credentials, allowed methods, CSP, cookie flags, and caching rules together.
+- [How do I debug Kubernetes CrashLoopBackOff?](https://debugtools.org/answers/debug-kubernetes-crashloopbackoff/): Start with pod events and the previous container logs. CrashLoopBackOff is usually caused by process exit, failed probes, missing config, image issues, or startup dependency failures.
+- [How do I inspect an OpenTelemetry trace?](https://debugtools.org/answers/inspect-opentelemetry-trace/): Find the root span, then inspect slow spans and spans with error status. The first upstream error span often explains the rest of the trace.
+- [How do I fix redirect_uri_mismatch in OAuth?](https://debugtools.org/answers/debug-oauth-redirect-uri-mismatch/): Use the exact redirect_uri sent in the OAuth request and add that same scheme, host, path, and trailing slash to the provider client configuration.
+- [How do I scan logs for secrets before sharing?](https://debugtools.org/answers/scan-logs-for-secrets/): Scan the log text for key, token, secret, cookie, private key, and connection-string patterns, then replace values with stable placeholders before sharing.
+- [How do I generate a strong password locally?](https://debugtools.org/answers/generate-strong-password-locally/): Use a local password generator, choose a long length, include enough character variety, avoid ambiguous characters when humans must type it, and store the result in a password manager.
 
-## Optional
+## Machine-Readable Indexes
 
-- [Privacy Policy](https://debugtools.org/privacy-policy/)
-- [Terms of Service](https://debugtools.org/terms-of-service/)
-- [Cookie Policy](https://debugtools.org/cookie-policy/)
-- [Sponsor](https://buymeacoffee.com/jasimvk)
+- [Full LLM index](https://debugtools.org/llms-full.txt)
+- [AI context file](https://debugtools.org/ai.txt)
+- [Sitemap](https://debugtools.org/sitemap.xml)

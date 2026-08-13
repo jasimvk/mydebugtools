@@ -53,6 +53,10 @@ describe('parseImportedCollection', () => {
                   bearer: [{ key: 'token', value: '{{token}}' }],
                 },
               },
+              event: [
+                { listen: 'prerequest', script: { exec: ['set header X-Debug: true'] } },
+                { listen: 'test', script: { exec: ['status is 200', 'header content-type contains json'] } },
+              ],
             },
           ],
         },
@@ -84,6 +88,8 @@ describe('parseImportedCollection', () => {
       body: '{"email":"user@example.com"}',
       contentType: 'application/json',
       authConfig: { type: 'bearer', token: '{{token}}' },
+      preRequestScript: 'set header X-Debug: true',
+      testScript: 'status is 200\nheader content-type contains json',
     });
     expect(collection.requests[1]).toMatchObject({
       name: 'Products',
@@ -133,6 +139,28 @@ describe('parseImportedCollection', () => {
       contentType: 'application/json',
       body: '{\n  "name": "Desk",\n  "price": 120\n}',
     });
+  });
+
+  it('leaves OpenAPI query placeholders substitutable instead of percent-encoding them', () => {
+    const collection = parseImportedCollection({
+      openapi: '3.1.0',
+      info: { title: 'Search API' },
+      servers: [{ url: 'https://api.example.com' }],
+      paths: {
+        '/search': {
+          get: {
+            summary: 'Search',
+            parameters: [
+              { name: 'id', in: 'query' },
+              { name: 'q', in: 'query', example: 'blue shoes' },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(collection.requests[0].url).toBe('https://api.example.com/search?id={{id}}&q=blue%20shoes');
+    expect(collection.requests[0].url).not.toContain('%7B%7B');
   });
 
   it('imports Insomnia request exports', () => {

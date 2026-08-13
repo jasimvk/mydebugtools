@@ -19,8 +19,9 @@ export function parseReactNative(log: string): ParsedCrashLine[] {
       continue;
     }
 
-    // Stack trace line
-    const stackMatch = trimmedLine.match(/at\s+([^(]+)\s*\(([^:]+):(\d+):(\d+)\)/);
+    // Stack trace line. Anchor on the trailing `:line:col` so Metro bundle URLs
+    // (`http://localhost:8081/index.bundle:1234:56`) keep their scheme and port.
+    const stackMatch = trimmedLine.match(/at\s+(.+?)\s*\((.+):(\d+):(\d+)\)/);
     if (stackMatch) {
       parsedLines.push({
         type: 'stack',
@@ -34,7 +35,7 @@ export function parseReactNative(log: string): ParsedCrashLine[] {
     }
 
     // Alternative stack trace format (anonymous functions)
-    const anonymousMatch = trimmedLine.match(/at\s+([^:]+):(\d+):(\d+)/);
+    const anonymousMatch = trimmedLine.match(/at\s+(.+):(\d+):(\d+)\)?\s*$/);
     if (anonymousMatch) {
       parsedLines.push({
         type: 'stack',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DiffEditor } from '@monaco-editor/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -23,8 +23,6 @@ import {
   SparklesIcon,
   AdjustmentsHorizontalIcon,
   MagnifyingGlassIcon,
-  SunIcon,
-  MoonIcon,
   Cog6ToothIcon,
   CommandLineIcon,
   PlayIcon
@@ -64,7 +62,6 @@ const wordWrapOptions = [
 // Export format options
 const exportFormats = [
   { value: 'html', label: 'HTML Report', icon: '🌐' },
-  { value: 'pdf', label: 'PDF Document', icon: '📄' },
   { value: 'json', label: 'JSON Data', icon: '📊' },
   { value: 'markdown', label: 'Markdown', icon: '📝' },
   { value: 'txt', label: 'Plain Text', icon: '📄' }
@@ -101,17 +98,13 @@ export default function CodeDiffPage() {
   const [showHelp, setShowHelp] = useState(false);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
 
-  const [exportFormat, setExportFormat] = useState('html');
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [ignoreWhitespace, setIgnoreWhitespace] = useState(false);
-  const [ignoreCaseChanges, setIgnoreCaseChanges] = useState(false);
-  const [showInlineView, setShowInlineView] = useState(false);
   const [diffStats, setDiffStats] = useState<{additions: number, deletions: number, changes: number} | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [highlightSimilarities, setHighlightSimilarities] = useState(true);
   const [compactMode, setCompactMode] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true); // ChatGPT defaults to dark
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isDarkMode] = useState(true); // ChatGPT defaults to dark
+
+  const diffEditorRef = useRef<any>(null);
 
   // Show notification
   const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
@@ -136,7 +129,13 @@ export default function CodeDiffPage() {
       setIsLoading(false);
       showNotification(`File loaded successfully`, 'success');
     };
+    reader.onerror = () => {
+      setIsLoading(false);
+      showNotification('Failed to read file', 'error');
+    };
     reader.readAsText(file);
+    // Reset so re-picking the same file still fires a change event
+    e.target.value = '';
   };
 
   // Copy code to clipboard
@@ -160,39 +159,46 @@ export default function CodeDiffPage() {
     showNotification('Code cleared', 'info');
   };
 
-  // Update Monaco theme based on dark mode
-  useEffect(() => {
-    setTheme(isDarkMode ? 'vs-dark' : 'vs');
-  }, [isDarkMode]);
+  // Derive the stats from Monaco's own diff model so the numbers can never
+  // disagree with the diff rendered below. A line-by-index comparison cannot
+  // see insertions/removals and reports every shifted line as a change.
+  const updateDiffStats = (editor: any) => {
+    if (!editor) return;
 
-  // Calculate diff statistics
-  const calculateDiffStats = () => {
-    if (!originalCode || !modifiedCode) {
+    const originalText = editor.getOriginalEditor?.().getValue() ?? '';
+    const modifiedText = editor.getModifiedEditor?.().getValue() ?? '';
+    if (!originalText && !modifiedText) {
       setDiffStats(null);
       return;
     }
 
-    const originalLines = originalCode.split('\n');
-    const modifiedLines = modifiedCode.split('\n');
+    const lineChanges: any[] = editor.getLineChanges() ?? [];
 
     let additions = 0;
     let deletions = 0;
     let changes = 0;
 
-    const maxLines = Math.max(originalLines.length, modifiedLines.length);
+    for (const change of lineChanges) {
+      // Monaco encodes "nothing on this side" as an end line number of 0
+      const originalCount = change.originalEndLineNumber === 0
+        ? 0
+        : change.originalEndLineNumber - change.originalStartLineNumber + 1;
+      const modifiedCount = change.modifiedEndLineNumber === 0
+        ? 0
+        : change.modifiedEndLineNumber - change.modifiedStartLineNumber + 1;
 
-    for (let i = 0; i < maxLines; i++) {
-      const originalLine = originalLines[i] || '';
-      const modifiedLine = modifiedLines[i] || '';
-
-      if (originalLine !== modifiedLine) {
-        if (!originalLine) additions++;
-        else if (!modifiedLine) deletions++;
-        else changes++;
-      }
+      changes += Math.min(originalCount, modifiedCount);
+      additions += Math.max(0, modifiedCount - originalCount);
+      deletions += Math.max(0, originalCount - modifiedCount);
     }
 
     setDiffStats({ additions, deletions, changes });
+  };
+
+  const handleDiffEditorMount = (editor: any) => {
+    diffEditorRef.current = editor;
+    updateDiffStats(editor);
+    editor.onDidUpdateDiff(() => updateDiffStats(editor));
   };
 
   // Toggle view mode
@@ -225,6 +231,11 @@ export default function CodeDiffPage() {
         showNotification('Export format not supported yet', 'error');
     }
   };
+
+  // '&' must be escaped first, otherwise the entities produced for '<' and '>'
+  // get double-escaped and source containing '&lt;' is misreported.
+  const escapeHtml = (value: string) =>
+    value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   const exportAsHTML = (filename: string) => {
     const html = `
@@ -265,11 +276,11 @@ export default function CodeDiffPage() {
         <div class="diff-container">
             <div class="code-block">
                 <h3>📄 Original Code</h3>
-                <pre>${originalCode.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+                <pre>${escapeHtml(originalCode)}</pre>
             </div>
             <div class="code-block">
                 <h3>📝 Modified Code</h3>
-                <pre>${modifiedCode.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+                <pre>${escapeHtml(modifiedCode)}</pre>
             </div>
         </div>
     </div>
@@ -290,8 +301,7 @@ export default function CodeDiffPage() {
           showLineNumbers,
           wordWrap,
           fontSize,
-          ignoreWhitespace,
-          ignoreCaseChanges
+          ignoreWhitespace
         }
       },
       originalCode,
@@ -355,11 +365,6 @@ ${modifiedCode}
 
 
 
-  // Calculate diff stats when code changes
-  useEffect(() => {
-    calculateDiffStats();
-  }, [originalCode, modifiedCode]);
-
   // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -383,7 +388,7 @@ ${modifiedCode}
       // Ctrl/Cmd + H to toggle help
       if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
         e.preventDefault();
-        setShowHelp(!showHelp);
+        setShowHelp(prev => !prev);
       }
 
 
@@ -503,7 +508,7 @@ ${modifiedCode}
                 <ArrowDownTrayIcon className="h-5 w-5 text-blue-500" />
                 <h3 className="font-semibold">Export Options</h3>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {exportFormats.map((format) => (
                   <button
                     key={format.value}
@@ -563,7 +568,7 @@ ${modifiedCode}
 
               <button
                 onClick={() => setShowExportPanel(!showExportPanel)}
-                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
               >
                 <ArrowDownTrayIcon className="h-4 w-4" />
                 Export
@@ -577,7 +582,7 @@ ${modifiedCode}
               <div className="flex items-center justify-between">
                 <label className={`text-sm font-medium ${
                   isDarkMode ? 'text-gray-200' : 'text-gray-700'
-                }`}>Original Code</label>
+                }`} htmlFor="originalCode">Original Code</label>
                 <div className="flex gap-1">
                   <button
                     onClick={() => copyToClipboard(originalCode, 'original')}
@@ -594,10 +599,11 @@ ${modifiedCode}
                     isDarkMode
                       ? 'hover:bg-gray-700 text-gray-400'
                       : 'hover:bg-gray-100 text-gray-600'
-                  }`} title="Upload file">
+                  }`} title="Upload file" aria-label="Upload original code file">
                     <input
                       type="file"
                       className="hidden"
+                      aria-label="Upload original code file"
                       onChange={(e) => handleFileUpload(e, true)}
                     />
                     <DocumentArrowDownIcon className="h-4 w-4" />
@@ -610,6 +616,7 @@ ${modifiedCode}
                     ? 'bg-gray-800 border-gray-600 text-gray-200 placeholder-gray-500'
                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                 } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                id="originalCode"
                 value={originalCode}
                 onChange={(e) => setOriginalCode(e.target.value)}
                 placeholder="Paste your original code here..."
@@ -619,7 +626,7 @@ ${modifiedCode}
               <div className="flex items-center justify-between">
                 <label className={`text-sm font-medium ${
                   isDarkMode ? 'text-gray-200' : 'text-gray-700'
-                }`}>Modified Code</label>
+                }`} htmlFor="modifiedCode">Modified Code</label>
                 <div className="flex gap-1">
                   <button
                     onClick={() => copyToClipboard(modifiedCode, 'modified')}
@@ -636,10 +643,11 @@ ${modifiedCode}
                     isDarkMode
                       ? 'hover:bg-gray-700 text-gray-400'
                       : 'hover:bg-gray-100 text-gray-600'
-                  }`} title="Upload file">
+                  }`} title="Upload file" aria-label="Upload modified code file">
                     <input
                       type="file"
                       className="hidden"
+                      aria-label="Upload modified code file"
                       onChange={(e) => handleFileUpload(e, false)}
                     />
                     <DocumentArrowDownIcon className="h-4 w-4" />
@@ -652,6 +660,7 @@ ${modifiedCode}
                     ? 'bg-gray-800 border-gray-600 text-gray-200 placeholder-gray-500'
                     : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
                 } focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
+                id="modifiedCode"
                 value={modifiedCode}
                 onChange={(e) => setModifiedCode(e.target.value)}
                 placeholder="Paste your modified code here..."
@@ -758,16 +767,6 @@ ${modifiedCode}
                 <div className="flex items-center space-x-2">
                   <input
                     type="checkbox"
-                    id="ignoreCaseChanges"
-                    checked={ignoreCaseChanges}
-                    onChange={(e) => setIgnoreCaseChanges(e.target.checked)}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <label htmlFor="ignoreCaseChanges" className="text-sm font-medium">Ignore Case</label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
                     id="compactMode"
                     checked={compactMode}
                     onChange={(e) => setCompactMode(e.target.checked)}
@@ -795,7 +794,8 @@ ${modifiedCode}
                 language={language}
                 original={originalCode}
                 modified={modifiedCode}
-                theme={isDarkMode ? 'vs-dark' : 'vs'}
+                onMount={handleDiffEditorMount}
+                theme={theme}
                 options={{
                   readOnly: true,
                   renderSideBySide,
