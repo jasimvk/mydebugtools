@@ -328,8 +328,10 @@ function openApiQueryString(parameters: unknown): string {
   return parameters
     .filter((parameter) => isObject(parameter) && parameter.in === 'query' && typeof parameter.name === 'string')
     .map((parameter) => {
-      const value = firstDefined([parameter.example, parameter.default, `{{${parameter.name}}}`]);
-      return `${encodeURIComponent(parameter.name)}=${encodeURIComponent(String(value))}`;
+      const value = String(firstDefined([parameter.example, parameter.default, `{{${parameter.name}}}`]));
+      // Percent-encoding a {{placeholder}} stops the workbench from substituting it later.
+      const encodedValue = /^{{\s*[^{}\s]+\s*}}$/.test(value) ? value : encodeURIComponent(value);
+      return `${encodeURIComponent(parameter.name)}=${encodedValue}`;
     })
     .join('&');
 }

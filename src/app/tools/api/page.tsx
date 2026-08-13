@@ -333,9 +333,117 @@ const normalizeRequestTab = (tab: Partial<RequestTab>, index: number): RequestTa
 
 const shellSingleQuote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`;
 
+const REQUEST_TIMEOUT_MS = 30000;
+
+// Rendering one node per key/element locks the tab up on large payloads.
+const RENDERED_JSON_NODE_LIMIT = 2000;
+
+const countJsonNodes = (value: any): number => {
+  if (typeof value !== 'object' || value === null) return 1;
+
+  let total = 1;
+  for (const entry of Array.isArray(value) ? value : Object.values(value)) {
+    total += countJsonNodes(entry);
+    if (total > RENDERED_JSON_NODE_LIMIT) return total;
+  }
+  return total;
+};
+
+// Response bodies can be megabytes, and localStorage tops out around 5MB.
+const stripPersistedTabState = (tab: RequestTab): RequestTab => ({
+  ...tab,
+  response: null,
+  responseMetrics: null,
+});
+
+interface ModalShellProps {
+  onClose: () => void;
+  label: string;
+  overlayClassName?: string;
+  panelClassName?: string;
+  children: React.ReactNode;
+}
+
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+// Shared dialog wrapper: labels the dialog, traps Tab inside it, and closes on Escape.
+function ModalShell({ onClose, label, overlayClassName, panelClassName, children }: ModalShellProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  // Held in a ref so inline onClose handlers do not re-run (and re-focus) the trap.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusableItems = () =>
+      Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
+        .filter((item) => item.offsetParent !== null || item === document.activeElement);
+
+    // React already applied any autoFocus, so only take focus when it is still outside.
+    if (!panel.contains(document.activeElement)) {
+      (focusableItems()[0] || panel).focus();
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        onCloseRef.current();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      const items = focusableItems();
+      if (items.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = items[0];
+      const last = items[items.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      } else if (!panel.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+      previouslyFocused?.focus?.();
+    };
+  }, []);
+
+  return (
+    <div className={overlayClassName}>
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={label}
+        tabIndex={-1}
+        className={panelClassName}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function APITesterContent() {
   const { data: session } = useSession();
   const importFileInputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [storageReady, setStorageReady] = useState(false);
   
   // Tab management
@@ -400,19 +508,16 @@ function APITesterContent() {
   
   const authConfig = currentTab?.authConfig || { type: 'none' };
   const setAuthConfig = (newAuthConfig: AuthConfig) => {
-    // Automatically apply auth config to all tabs
-    setTabs(prevTabs => {
-      return prevTabs.map((tab, index) => {
-        // Update all tabs with the new auth config
-        return {
-          ...tab,
-          authConfig: newAuthConfig,
-          hasUnsavedChanges: index === activeTabIndex ? true : tab.hasUnsavedChanges
-        };
-      });
-    });
+    // Auth belongs to the tab being edited; new tabs inherit it via createNewTab.
+    updateCurrentTab({ authConfig: newAuthConfig, hasUnsavedChanges: true });
   };
-  
+
+  // Helper function to update a tab by id. Async work must use this rather than the
+  // index, which goes stale as soon as the user switches tabs mid-flight.
+  const updateTabById = (tabId: string, updates: Partial<RequestTab>) => {
+    setTabs(prevTabs => prevTabs.map(tab => (tab.id === tabId ? { ...tab, ...updates } : tab)));
+  };
+
   // Helper function to update current tab
   const updateCurrentTab = (updates: Partial<RequestTab>) => {
     setTabs(prevTabs => {
@@ -421,7 +526,7 @@ function APITesterContent() {
       return newTabs;
     });
   };
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<RequestEditorTab>('params');
@@ -508,6 +613,8 @@ function APITesterContent() {
   const [aiContextNotes, setAiContextNotes] = useState('');
   const [aiContextEnvironment, setAiContextEnvironment] = useState('Development');
   const [importNotice, setImportNotice] = useState<{ type: 'success' | 'error'; message: string; detail?: string } | null>(null);
+  const [importingCollection, setImportingCollection] = useState(false);
+  const [importProgress, setImportProgress] = useState<{ done: number; total: number } | null>(null);
   const [workbenchNotice, setWorkbenchNotice] = useState<{ type: 'success' | 'error' | 'info'; message: string; detail?: string } | null>(null);
   const [networkHint, setNetworkHint] = useState<{ title: string; message: string; curl: string } | null>(null);
   const [showValidation, setShowValidation] = useState(false);
@@ -583,6 +690,10 @@ function APITesterContent() {
     setIsEditorMounted(true);
     loadSavedData();
     setStorageReady(true);
+    // Below lg the sidebar is an overlay drawer, so it must not cover the workbench on load.
+    if (window.innerWidth < 1024) {
+      setShowCollections(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -592,29 +703,39 @@ function APITesterContent() {
   }, [privateMode]);
 
   const saveData = () => {
-    if (privateMode) {
-      clearPrivateModeStorage();
+    // Runs from effects, so a quota error here would otherwise break the render.
+    try {
+      if (privateMode) {
+        clearPrivateModeStorage();
+        localStorage.setItem('settings', JSON.stringify({
+          autoFormat,
+          autoSave,
+          privateMode: true
+        }));
+        return;
+      }
+
       localStorage.setItem('settings', JSON.stringify({
         autoFormat,
         autoSave,
-        privateMode: true
+        privateMode
       }));
-      return;
+
+      localStorage.setItem('requestHistory', JSON.stringify(requestHistory));
+      localStorage.setItem('environments', JSON.stringify(environments));
+      localStorage.setItem('presets', JSON.stringify(presets));
+      localStorage.setItem('activeEnvironment', activeEnvironment);
+      localStorage.setItem('apiTesterTabs', JSON.stringify(tabs.map(stripPersistedTabState)));
+      localStorage.setItem('apiTesterActiveTabIndex', activeTabIndex.toString());
+      // Collections are now saved to Supabase automatically via API calls
+    } catch (err) {
+      console.error('Failed to save workbench state:', err);
+      showWorkbenchNotice({
+        type: 'error',
+        message: 'Could not save this workbench locally',
+        detail: 'Browser storage is full or blocked. Requests still run, but tabs may not be restored.',
+      });
     }
-
-    localStorage.setItem('settings', JSON.stringify({
-      autoFormat,
-      autoSave,
-      privateMode
-    }));
-
-    localStorage.setItem('requestHistory', JSON.stringify(requestHistory));
-    localStorage.setItem('environments', JSON.stringify(environments));
-    localStorage.setItem('presets', JSON.stringify(presets));
-    localStorage.setItem('activeEnvironment', activeEnvironment);
-    localStorage.setItem('apiTesterTabs', JSON.stringify(tabs));
-    localStorage.setItem('apiTesterActiveTabIndex', activeTabIndex.toString());
-    // Collections are now saved to Supabase automatically via API calls
   };
 
   // Tab management functions
@@ -728,6 +849,17 @@ function APITesterContent() {
     setShowNewCollectionDialog(false);
   };
 
+  const closeNewCollectionDialog = () => {
+    setShowNewCollectionDialog(false);
+    setNewCollectionName('');
+    setNewCollectionDescription('');
+  };
+
+  const closeNewWorkspaceDialog = () => {
+    setShowNewWorkspaceDialog(false);
+    setNewWorkspaceName('');
+  };
+
   const createWorkspaceFromDialog = async () => {
     if (!newWorkspaceName.trim()) return;
 
@@ -787,6 +919,13 @@ function APITesterContent() {
     updateCurrentTab({ hasUnsavedChanges: false });
   };
 
+  const closeSaveDialog = () => {
+    setShowSaveDialog(false);
+    setSaveRequestName('');
+    setSaveRequestDescription('');
+    setSelectedCollectionId('');
+  };
+
   const loadRequestFromCollection = (request: SavedRequest) => {
     // Create a new tab with the saved request data
     const newTab = createRequestTab(tabs.length + 1, {
@@ -815,15 +954,19 @@ function APITesterContent() {
   };
 
   const exportCollection = (collection: Collection) => {
-    const dataStr = JSON.stringify(collection, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
-    const exportFileDefaultName = `${collection.name.replace(/\s+/g, '_')}_collection.json`;
-    
+    // Exported files leave the browser, so redact credentials like every save path does.
+    const exportedCollection = {
+      ...collection,
+      requests: collection.requests.map((request) => ({ ...request, ...sanitizeSavedRequest(request) })),
+    };
+
+    // A Blob URL avoids the browser length cap that data: URIs have on big collections.
+    const blob = new Blob([JSON.stringify(exportedCollection, null, 2)], { type: 'application/json;charset=utf-8' });
     const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.href = URL.createObjectURL(blob);
+    linkElement.download = `${collection.name.replace(/\s+/g, '_')}_collection.json`;
     linkElement.click();
+    URL.revokeObjectURL(linkElement.href);
   };
 
   const generateApiDocumentation = () => {
@@ -979,9 +1122,22 @@ function APITesterContent() {
 
   const importCollection = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || importingCollection) return;
+
+    setImportingCollection(true);
+    setImportProgress(null);
 
     const reader = new FileReader();
+    reader.onerror = () => {
+      setImportingCollection(false);
+      setImportProgress(null);
+      setImportNotice({
+        type: 'error',
+        message: 'Import failed',
+        detail: 'The file could not be read. Check that it is still available and try again.'
+      });
+      event.target.value = '';
+    };
     reader.onload = async (e) => {
       try {
         const importedCollection = parseImportedCollection(
@@ -1022,7 +1178,9 @@ function APITesterContent() {
         
         // Import all requests
         let importedRequestCount = 0;
-        for (const request of importedCollection.requests || []) {
+        const requestsToImport = importedCollection.requests || [];
+        setImportProgress({ done: 0, total: requestsToImport.length });
+        for (const request of requestsToImport) {
           const requestToImport = {
             name: request.name,
             method: request.method,
@@ -1041,10 +1199,11 @@ function APITesterContent() {
           );
 
           if (savedRequest) importedRequestCount += 1;
+          setImportProgress({ done: importedRequestCount, total: requestsToImport.length });
         }
-        const totalRequests = importedCollection.requests?.length || 0;
+        const totalRequests = requestsToImport.length;
         const skippedRequests = Math.max(totalRequests - importedRequestCount, 0);
-        
+
         setImportNotice({
           type: 'success',
           message: `Imported "${importedCollection.name}"`,
@@ -1058,6 +1217,8 @@ function APITesterContent() {
         });
         console.error('Import error:', error);
       } finally {
+        setImportingCollection(false);
+        setImportProgress(null);
         event.target.value = '';
       }
     };
@@ -1076,6 +1237,9 @@ function APITesterContent() {
 
   // Token detection and automation
   const detectTokenInResponse = (data: any): { token: string; path: string } | null => {
+    // Empty bodies (204 and empty 2xx) arrive as null and must not be indexed.
+    if (!data || typeof data !== 'object') return null;
+
     // Common token field names
     const tokenFields = [
       'access_token',
@@ -1263,6 +1427,17 @@ function APITesterContent() {
     }
   };
 
+  const closeBearerSetupWizard = () => {
+    setShowBearerSetupWizard(false);
+    setBearerSetupStep(1);
+  };
+
+  const closeTokenSetupConfirm = () => {
+    setShowTokenSetupConfirm(false);
+    setClickedTokenValue('');
+    setClickedTokenPath('');
+  };
+
   // Handle clicking on token fields in response
   const handleTokenClick = (tokenValue: string, tokenPath: string) => {
     console.log('Token clicked:', { tokenPath, tokenValue: tokenValue.substring(0, 50) + '...' });
@@ -1291,7 +1466,7 @@ function APITesterContent() {
         // Ignore JSON parse errors, use empty credentials
       }
 
-      // Configure auth with clicked token - this will automatically apply to all tabs
+      // Configure auth with clicked token for this tab
       const newAuthConfig = {
         type: 'bearer' as const,
         token: clickedTokenValue,
@@ -1303,14 +1478,13 @@ function APITesterContent() {
         tokenExpiry: decodeJWT(clickedTokenValue)?.exp
       };
 
-      // setAuthConfig now automatically applies to all tabs
       setAuthConfig(newAuthConfig);
 
       // Show success and close dialog
       showWorkbenchNotice({
         type: 'success',
-        message: 'Bearer token configured for all tabs',
-        detail: `Token field: ${clickedTokenPath}. Applied to ${tabs.length} tab${tabs.length > 1 ? 's' : ''}.`,
+        message: 'Bearer token configured for this tab',
+        detail: `Token field: ${clickedTokenPath}. New tabs inherit this auth.`,
       });
       
       setShowTokenSetupConfirm(false);
@@ -1329,6 +1503,16 @@ function APITesterContent() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // These shortcuts shadow browser defaults, so never steal them from a field
+      // the user is typing in (Cmd+R in the URL bar must not rename the tab).
+      const target = e.target as HTMLElement | null;
+      if (
+        target
+        && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+      ) {
+        return;
+      }
+
       // Ctrl/Cmd + T: New tab
       if ((e.ctrlKey || e.metaKey) && e.key === 't') {
         e.preventDefault();
@@ -1340,7 +1524,7 @@ function APITesterContent() {
         closeTab(activeTabIndex);
       }
       // Ctrl/Cmd + Tab: Next tab
-      else if ((e.ctrlKey || e.metaKey) && e.key === 'Tab') {
+      else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'Tab') {
         e.preventDefault();
         setActiveTabIndex((activeTabIndex + 1) % tabs.length);
       }
@@ -1701,7 +1885,8 @@ function APITesterContent() {
     }
 
     headers.forEach(({ key, value, enabled }) => {
-      if (enabled && key.trim() && value.trim()) {
+      // An empty value is a valid header, so only the key is required.
+      if (enabled && key.trim()) {
         requestHeaders[key] = applyEnvironmentVariables(value, activeEnv);
       }
     });
@@ -1720,13 +1905,27 @@ function APITesterContent() {
     && authOverride.type === 'none'
     && !Object.keys(requestHeaders).some(isSensitiveKey);
 
-  const handleSubmit = useCallback(async () => {
+  const executeRequest = useCallback(async function runRequest(
+    options: { authOverride?: AuthConfig; retried?: boolean; bypassCache?: boolean } = {}
+  ): Promise<void> {
+    const { authOverride, retried = false, bypassCache = false } = options;
+    const effectiveAuth = authOverride || authConfig;
+    // The response belongs to the tab that started the request, even if the user
+    // switches tabs before it lands.
+    const requestTabId = currentTab?.id;
+    const applyToRequestTab = (updates: Partial<RequestTab>) => {
+      if (requestTabId) updateTabById(requestTabId, updates);
+    };
+
+    let timeoutId: number | undefined;
+    let timedOut = false;
+    let controller: AbortController | null = null;
+
     try {
       setLoading(true);
       setError('');
       setNetworkHint(null);
-      setResponse(null);
-      setTestResults([]);
+      applyToRequestTab({ response: null, testResults: [] });
       setActiveResponseTab('body');
 
       if (!url.trim()) {
@@ -1751,7 +1950,7 @@ function APITesterContent() {
           }
         : activeEnv;
 
-      const requestParts = buildCurrentRequestParts(authConfig, requestEnvironment);
+      const requestParts = buildCurrentRequestParts(effectiveAuth, requestEnvironment);
       const { processedUrl, processedBody, unresolvedVariables } = requestParts;
       let { requestHeaders } = requestParts;
       const preRequestResult = applyPreRequestDirectives(preRequestScript, requestHeaders);
@@ -1813,39 +2012,49 @@ function APITesterContent() {
         headers: requestHeaders,
         body: processedBody
       });
-      const useCache = requestCanUseCache(requestHeaders);
+      const useCache = requestCanUseCache(requestHeaders, effectiveAuth);
       const cachedResponse = requestCache[cacheKey];
-      
-      if (useCache && cachedResponse && now - cachedResponse.timestamp < CACHE_DURATION) {
+
+      // Pressing Send is an explicit "ask the server again", so it never reads the cache.
+      if (!bypassCache && useCache && cachedResponse && now - cachedResponse.timestamp < CACHE_DURATION) {
         const cachedBodyText = typeof cachedResponse.data === 'string'
           ? cachedResponse.data
           : JSON.stringify(cachedResponse.data ?? '');
-        setResponse({
-          status: cachedResponse.status,
-          headers: cachedResponse.headers,
-          data: cachedResponse.data,
+        applyToRequestTab({
+          response: {
+            status: cachedResponse.status,
+            headers: cachedResponse.headers,
+            data: cachedResponse.data,
+          },
+          responseMetrics: {
+            size: new Blob([JSON.stringify(cachedResponse.data)]).size,
+            time: 0,
+            status: cachedResponse.status,
+            headers: cachedResponse.headers
+          },
+          testResults: runPostmanStyleTests(testScript, {
+            status: cachedResponse.status,
+            headers: cachedResponse.headers,
+            bodyText: cachedBodyText,
+            durationMs: 0,
+          }),
         });
-        setResponseMetrics({
-          size: new Blob([JSON.stringify(cachedResponse.data)]).size,
-          time: 0,
-          status: cachedResponse.status,
-          headers: cachedResponse.headers
-        });
-        setTestResults(runPostmanStyleTests(testScript, {
-          status: cachedResponse.status,
-          headers: cachedResponse.headers,
-          bodyText: cachedBodyText,
-          durationMs: 0,
-        }));
-        setLoading(false);
         return;
       }
+
+      controller = new AbortController();
+      abortControllerRef.current = controller;
+      timeoutId = window.setTimeout(() => {
+        timedOut = true;
+        controller?.abort();
+      }, REQUEST_TIMEOUT_MS);
 
       const startTime = Date.now();
       const response = await fetch(processedUrl, {
         method,
         headers: requestHeaders,
         body: methodSupportsBody(method) ? processedBody : undefined,
+        signal: controller.signal,
       });
 
       // Parse response data safely
@@ -1866,20 +2075,14 @@ function APITesterContent() {
         data = responseText || null;
       }
       
-      // Check if token expired and auto-login is enabled
-      if (authConfig.autoLogin && isTokenExpiredResponse(response.status, data)) {
+      // Check if token expired and auto-login is enabled. `retried` makes this one-shot:
+      // without it a still-rejected token would trigger login/request forever.
+      if (effectiveAuth.autoLogin && !retried && isTokenExpiredResponse(response.status, data)) {
         console.log('Token expired, attempting auto-login and token refresh...');
-        
+
         const newToken = await performAutoLogin();
-        
+
         if (newToken) {
-          // Automatically update the bearer token in auth config
-          setAuthConfig({ 
-            ...authConfig,
-            token: newToken,
-            tokenExpiry: undefined // Will be recalculated
-          });
-          
           // Show brief success notification
           const successNotification = document.createElement('div');
           successNotification.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2 text-sm';
@@ -1896,16 +2099,23 @@ function APITesterContent() {
             }
           }, 2000);
           
-          // Retry the request with new token by calling handleSubmit again
+          // Retry once, passing the fresh token explicitly: this callback closes over
+          // the authConfig captured at render, so re-reading it would resend the old one.
           console.log('Retrying request with refreshed token...');
-          // Wait a bit for state to update, then retry
-          setTimeout(() => handleSubmit(), 100);
+          await runRequest({
+            authOverride: {
+              ...effectiveAuth,
+              token: newToken,
+              tokenExpiry: decodeJWT(newToken)?.exp,
+            },
+            retried: true,
+            bypassCache: true,
+          });
           return;
-        } else {
-          setError('Token expired and auto-refresh failed. Please login manually.');
         }
-        
-        return; // Exit early since we're retrying
+
+        setError('Token expired and auto-refresh failed. Please login manually.');
+        return;
       }
       
       const endTime = Date.now();
@@ -1914,7 +2124,7 @@ function APITesterContent() {
       // Auto-detect token in response
       if (response.status >= 200 && response.status < 300) {
         const detected = detectTokenInResponse(data);
-        if (detected && detected.token !== authConfig.token) {
+        if (detected && detected.token !== effectiveAuth.token) {
           setDetectedToken(detected.token);
           setDetectedTokenPath(detected.path);
           setShowTokenDetection(true);
@@ -1937,7 +2147,9 @@ function APITesterContent() {
         durationMs: duration,
       });
 
-      if (useCache) {
+      // Only successful responses are cacheable; replaying a 404/500 for five minutes
+      // hides the fact that the server was fixed.
+      if (useCache && response.status >= 200 && response.status < 300) {
         setRequestCache(prev => ({
           ...prev,
           [cacheKey]: {
@@ -1950,15 +2162,16 @@ function APITesterContent() {
       }
 
       setResponseTime(duration);
-      setResponseMetrics({
-        size: new Blob([JSON.stringify(data)]).size,
-        time: duration,
-        status: response.status,
-        headers: responseData.headers
+      applyToRequestTab({
+        response: responseData,
+        responseMetrics: {
+          size: new Blob([JSON.stringify(data)]).size,
+          time: duration,
+          status: response.status,
+          headers: responseData.headers
+        },
+        testResults: responseTestResults,
       });
-
-      setResponse(responseData);
-      setTestResults(responseTestResults);
 
       // Add to history
       const historyItem: RequestHistory = {
@@ -1976,7 +2189,11 @@ function APITesterContent() {
       }
     } catch (err: any) {
       const message = err.message || 'An error occurred';
-      if (looksLikeBrowserNetworkBlock(message)) {
+      if (err?.name === 'AbortError') {
+        setError(timedOut
+          ? `Request timed out after ${REQUEST_TIMEOUT_MS / 1000}s. The endpoint never responded.`
+          : 'Request cancelled.');
+      } else if (looksLikeBrowserNetworkBlock(message)) {
         setError('The browser could not complete this request.');
         setNetworkHint({
           title: 'Likely CORS or browser network block',
@@ -1987,9 +2204,19 @@ function APITesterContent() {
         setError(message);
       }
     } finally {
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+      if (controller && abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
       setLoading(false);
     }
-  }, [url, method, headers, body, environments, activeEnvironment, contentType, authConfig, requestCache, requestTimestamps, privateMode, requestHistory, preRequestScript, testScript]);
+  }, [url, method, headers, body, environments, activeEnvironment, contentType, authConfig, currentTab?.id, requestCache, requestTimestamps, privateMode, requestHistory, preRequestScript, testScript]);
+
+  const handleSubmit = useCallback(() => executeRequest({ bypassCache: true }), [executeRequest]);
+
+  const cancelRequest = () => {
+    abortControllerRef.current?.abort();
+  };
 
   const copyToClipboard = async (text: string, message = 'Copied to clipboard') => {
     try {
@@ -2227,6 +2454,9 @@ print(response.json())`,
     .map((result) => `${result.passed ? 'PASS' : 'FAIL'} ${result.name}${result.message ? ` - ${result.message}` : ''}`)
     .join('\n');
   const responseBodyDescription = response ? describeResponseBody(response.data) : null;
+  const responseBodyIsObject = Boolean(response) && typeof response?.data === 'object' && response?.data !== null;
+  // Fall back to the raw view instead of mounting tens of thousands of nodes.
+  const canRenderClickableJson = responseBodyIsObject && countJsonNodes(response.data) <= RENDERED_JSON_NODE_LIMIT;
   const responseDetailsText = responseMetrics
     ? [
         `${method} ${url}`,
@@ -2272,9 +2502,15 @@ print(response.json())`,
 
   return (
     <div className="dt-api-workbench flex min-h-screen overflow-hidden bg-[#101011] text-[13px] leading-5 text-[#d7d7dc]">
-      {/* Workspace Sidebar */}
+      {/* Workspace Sidebar - overlay drawer below lg, docked column at lg and up */}
       {showCollections && (
-      <div className="order-1 hidden w-[340px] border-r border-[#26262c] bg-[#151516] text-[#d7d7dc] lg:flex lg:flex-col">
+      <>
+      <div
+        className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+        onClick={() => setShowCollections(false)}
+        aria-hidden="true"
+      />
+      <div className="fixed inset-y-0 left-0 z-50 flex w-[86vw] max-w-[340px] flex-col border-r border-[#26262c] bg-[#151516] text-[#d7d7dc] lg:static lg:order-1 lg:z-auto lg:w-[340px] lg:max-w-none">
         {/* Sidebar Header */}
         <div className="flex items-center justify-between gap-3 border-b border-[#26262c] bg-[#171719] px-3 py-2.5">
           <div>
@@ -2296,10 +2532,11 @@ print(response.json())`,
                 <button
                   type="button"
                   onClick={() => importFileInputRef.current?.click()}
-                  className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-[#34343b] bg-[#202024] px-2 py-1.5 text-xs font-semibold text-[#d7d7dc] transition-colors hover:bg-[#27272d]"
-                  title="Import Collection"
+                  disabled={importingCollection}
+                  className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-[#34343b] bg-[#202024] px-2 py-1.5 text-xs font-semibold text-[#d7d7dc] transition-colors hover:bg-[#27272d] disabled:cursor-not-allowed disabled:opacity-50"
+                  title={importingCollection ? 'Import in progress' : 'Import Collection'}
                 >
-                  <ArrowDownOnSquareIcon className="h-4 w-4" />
+                  <ArrowDownOnSquareIcon className={`h-4 w-4 ${importingCollection ? 'animate-pulse' : ''}`} />
                 </button>
               </>
             )}
@@ -2382,15 +2619,25 @@ print(response.json())`,
             })}
           </div>
           {privateMode && (
-            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            <div className="rounded-md border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs text-amber-200">
               Private mode is on. Nothing sensitive is saved locally.
+            </div>
+          )}
+          {importingCollection && (
+            <div className="rounded-md border border-[#34343b] bg-[#1c1c20] px-3 py-2 text-xs text-[#d7d7dc]">
+              <p className="font-semibold">Importing collection...</p>
+              <p className="mt-0.5 text-[#a4a4ad]">
+                {importProgress
+                  ? `${importProgress.done} of ${importProgress.total} request${importProgress.total === 1 ? '' : 's'} saved`
+                  : 'Reading file'}
+              </p>
             </div>
           )}
           {importNotice && (
             <div className={`rounded-md border px-3 py-2 text-xs ${
               importNotice.type === 'success'
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
-                : 'border-red-200 bg-red-50 text-red-800'
+                ? 'border-emerald-400/25 bg-emerald-400/10 text-emerald-100'
+                : 'border-rose-400/25 bg-rose-400/10 text-rose-100'
             }`}>
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -2412,7 +2659,28 @@ print(response.json())`,
         {/* Collections List */}
         {sidebarMode === 'collections' && (
         <div className="flex-1 overflow-y-auto">
-          {collections.length === 0 ? (
+          {collectionsLoading && collections.length === 0 ? (
+            <div className="space-y-2 p-3" aria-busy="true" aria-label="Loading collections">
+              {[0, 1, 2].map((row) => (
+                <div key={row} className="animate-pulse rounded-md border border-[#26262c] bg-[#181819] px-3 py-3">
+                  <div className="h-3 w-1/2 rounded bg-[#2a2a30]" />
+                  <div className="mt-2 h-2.5 w-3/4 rounded bg-[#232329]" />
+                </div>
+              ))}
+            </div>
+          ) : collectionsError ? (
+            <div className="m-3 rounded-md border border-rose-400/25 bg-rose-400/10 p-4 text-rose-100">
+              <p className="text-sm font-semibold">Could not load collections</p>
+              <p className="mt-1 text-xs opacity-90">{collectionsError}</p>
+              <button
+                type="button"
+                onClick={() => loadCollections()}
+                className="mt-3 rounded-md border border-rose-300/30 bg-rose-400/10 px-3 py-1.5 text-xs font-semibold text-rose-100 hover:bg-rose-400/20"
+              >
+                Try again
+              </button>
+            </div>
+          ) : collections.length === 0 ? (
             <div className="p-6 text-center text-[#85858e]">
               <TableCellsIcon className="h-12 w-12 mx-auto mb-3 text-[#4b4b52]" />
               <p className="text-sm font-medium mb-1">No Collections</p>
@@ -2632,6 +2900,7 @@ print(response.json())`,
         )}
 
       </div>
+      </>
       )}
 
       {/* Right Content Area */}
@@ -2691,11 +2960,11 @@ print(response.json())`,
 
             <div className="flex shrink-0 items-center gap-2">
               {session && (
-                <div className="hidden items-center gap-1 rounded-lg border border-[#34343b] bg-[#202024] px-2 py-1 lg:flex">
+                <div className="flex items-center gap-1 rounded-lg border border-[#34343b] bg-[#202024] px-2 py-1">
                   <select
                     value={activeWorkspaceId}
                     onChange={(event) => setActiveWorkspaceId(event.target.value)}
-                    className="max-w-[180px] border-0 bg-transparent px-1 py-0 text-xs font-semibold text-[#d7d7dc] outline-none focus:ring-0"
+                    className="max-w-[104px] border-0 bg-transparent px-1 py-0 text-xs font-semibold text-[#d7d7dc] outline-none focus:ring-0 lg:max-w-[180px]"
                     title="Active workspace"
                   >
                     {workspaces.map((workspace) => (
@@ -2796,10 +3065,10 @@ print(response.json())`,
                 <button
                   type="button"
                   onClick={() => setShowAuthModal(true)}
-                  className="hidden h-10 items-center gap-2 rounded-lg border border-[#34343b] bg-[#202024] px-3.5 text-[13px] font-semibold text-[#d7d7dc] transition-colors hover:bg-[#27272d] hover:text-white lg:inline-flex"
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-[#34343b] bg-[#202024] px-3.5 text-[13px] font-semibold text-[#d7d7dc] transition-colors hover:bg-[#27272d] hover:text-white"
                 >
                   <ArrowPathIcon className="h-4 w-4" />
-                  Sync
+                  <span className="hidden sm:inline">Sync</span>
                 </button>
               )}
             </div>
@@ -2833,17 +3102,17 @@ print(response.json())`,
 
       {/* Help Panel */}
       {showHelp && (
-        <div className="bg-blue-50 border-b border-blue-200 px-4 py-4">
+        <div className="border-b border-[#25252b] bg-[#151516] px-4 py-4">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2">
-              <QuestionMarkCircleIcon className="h-6 w-6 text-blue-600" />
-              <h3 className="text-lg font-semibold text-blue-900">Quick Start Guide</h3>
+              <QuestionMarkCircleIcon className="h-6 w-6 text-[#8f83ff]" />
+              <h3 className="text-lg font-semibold text-[#f4f4f5]">Quick Start Guide</h3>
             </div>
-            <button onClick={() => setShowHelp(false)} className="text-blue-600 hover:text-blue-800">
+            <button onClick={() => setShowHelp(false)} className="text-[#85858e] hover:text-white">
               <XMarkIcon className="h-5 w-5" />
             </button>
           </div>
-          <div className="grid md:grid-cols-3 gap-6 text-sm text-blue-800">
+          <div className="grid md:grid-cols-3 gap-6 text-sm text-[#a4a4ad]">
             <div className="space-y-2">
               <p className="font-semibold flex items-center gap-2">
                 <WrenchIcon className="h-5 w-5" />
@@ -2877,18 +3146,18 @@ print(response.json())`,
               </ul>
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-blue-200">
-            <p className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+          <div className="mt-4 pt-4 border-t border-[#25252b]">
+            <p className="font-semibold text-[#f4f4f5] mb-2 flex items-center gap-2">
               <CommandLineIcon className="h-5 w-5" />
               <span>Keyboard Shortcuts</span>
             </p>
-            <div className="grid md:grid-cols-2 gap-2 text-xs text-blue-800">
-              <div><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Ctrl/Cmd + T</kbd> New tab</div>
-              <div><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Ctrl/Cmd + W</kbd> Close tab</div>
-              <div><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Ctrl/Cmd + D</kbd> Duplicate tab</div>
-              <div><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Ctrl/Cmd + R</kbd> Rename tab</div>
-              <div><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Double-click</kbd> Rename tab</div>
-              <div><kbd className="px-2 py-1 bg-white rounded border border-blue-300">Ctrl/Cmd + Tab</kbd> Next tab</div>
+            <div className="grid md:grid-cols-2 gap-2 text-xs text-[#a4a4ad]">
+              <div><kbd className="px-2 py-1 bg-[#202024] rounded border border-[#34343b] text-[#d7d7dc]">Ctrl/Cmd + T</kbd> New tab</div>
+              <div><kbd className="px-2 py-1 bg-[#202024] rounded border border-[#34343b] text-[#d7d7dc]">Ctrl/Cmd + W</kbd> Close tab</div>
+              <div><kbd className="px-2 py-1 bg-[#202024] rounded border border-[#34343b] text-[#d7d7dc]">Ctrl/Cmd + D</kbd> Duplicate tab</div>
+              <div><kbd className="px-2 py-1 bg-[#202024] rounded border border-[#34343b] text-[#d7d7dc]">Ctrl/Cmd + R</kbd> Rename tab</div>
+              <div><kbd className="px-2 py-1 bg-[#202024] rounded border border-[#34343b] text-[#d7d7dc]">Double-click</kbd> Rename tab</div>
+              <div><kbd className="px-2 py-1 bg-[#202024] rounded border border-[#34343b] text-[#d7d7dc]">Ctrl/Cmd + Tab</kbd> Next tab</div>
             </div>
           </div>
         </div>
@@ -2896,39 +3165,43 @@ print(response.json())`,
 
       {/* Save Request Dialog */}
       {showSaveDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Save Request to Collection</h3>
+        <ModalShell
+          onClose={closeSaveDialog}
+          label="Save request to collection"
+          overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          panelClassName="w-full max-w-md rounded-lg border border-[#2b2b31] bg-[#171719] p-6 shadow-2xl outline-none"
+        >
+            <h3 className="mb-4 text-lg font-semibold text-[#f4f4f5]">Save Request to Collection</h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Request Name</label>
+                <label className="mb-1 block text-sm font-medium text-[#d7d7dc]">Request Name</label>
                 <input
                   type="text"
                   value={saveRequestName}
                   onChange={(e) => setSaveRequestName(e.target.value)}
                   placeholder="e.g., Get User Profile"
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
+                  className="w-full rounded border border-[#34343b] bg-[#202024] px-3 py-2 text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc] focus:ring-2 focus:ring-[#6d5dfc]/20"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+                <label className="mb-1 block text-sm font-medium text-[#d7d7dc]">Description (Optional)</label>
                 <textarea
                   value={saveRequestDescription}
                       onChange={(e) => setSaveRequestDescription(e.target.value)}
                       placeholder="Describe what this request does..."
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
+                      className="w-full rounded border border-[#34343b] bg-[#202024] px-3 py-2 text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc] focus:ring-2 focus:ring-[#6d5dfc]/20"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Collection</label>
+                    <label className="mb-1 block text-sm font-medium text-[#d7d7dc]">Collection</label>
                     <select
                       value={selectedCollectionId}
                       onChange={(e) => setSelectedCollectionId(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
+                      className="w-full rounded border border-[#34343b] bg-[#202024] px-3 py-2 text-[#f4f4f5] outline-none focus:border-[#6d5dfc] focus:ring-2 focus:ring-[#6d5dfc]/20"
                     >
                       <option value="">Select a collection</option>
                       {collections.map((collection) => (
@@ -2940,132 +3213,125 @@ print(response.json())`,
                   </div>
 
                   {collections.length === 0 && (
-                    <p className="text-sm text-yellow-600 bg-yellow-50 p-3 rounded">
+                    <p className="rounded border border-amber-300/25 bg-amber-300/10 p-3 text-sm text-amber-100">
                       No collections available. Create one first!
                     </p>
                   )}
                 </div>
 
-                <div className="flex justify-end gap-2 mt-6">
+                <div className="mt-6 flex justify-end gap-2">
                   <button
-                    onClick={() => {
-                      setShowSaveDialog(false);
-                      setSaveRequestName('');
-                      setSaveRequestDescription('');
-                  setSelectedCollectionId('');
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                    onClick={closeSaveDialog}
+                className="rounded border border-[#34343b] bg-[#202024] px-4 py-2 text-sm font-medium text-[#d7d7dc] transition-colors hover:bg-[#27272d]"
               >
                 Cancel
               </button>
               <button
                 onClick={saveCurrentRequestToCollection}
                 disabled={!saveRequestName.trim() || !selectedCollectionId}
-                className="px-4 py-2 text-sm font-medium bg-[#2563eb] text-white rounded hover:bg-[#0550ae] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                className="rounded bg-[#6d5dfc] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#5948f2] disabled:cursor-not-allowed disabled:bg-[#2f2f36] disabled:text-[#777781]"
               >
                 Save Request
               </button>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* New Collection Dialog */}
       {showNewCollectionDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Collection</h3>
-            
+        <ModalShell
+          onClose={closeNewCollectionDialog}
+          label="Create new collection"
+          overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          panelClassName="w-full max-w-md rounded-lg border border-[#2b2b31] bg-[#171719] p-6 shadow-2xl outline-none"
+        >
+            <h3 className="mb-4 text-lg font-semibold text-[#f4f4f5]">Create New Collection</h3>
+
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Collection Name</label>
+                <label className="mb-1 block text-sm font-medium text-[#d7d7dc]">Collection Name</label>
                 <input
                   type="text"
                   value={newCollectionName}
                   onChange={(e) => setNewCollectionName(e.target.value)}
                   placeholder="e.g., User API, Payment Endpoints"
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
+                  className="w-full rounded border border-[#34343b] bg-[#202024] px-3 py-2 text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc] focus:ring-2 focus:ring-[#6d5dfc]/20"
                   autoFocus
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
+                <label className="mb-1 block text-sm font-medium text-[#d7d7dc]">Description (Optional)</label>
                 <textarea
                   value={newCollectionDescription}
                   onChange={(e) => setNewCollectionDescription(e.target.value)}
                   placeholder="Describe this collection..."
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
+                  className="w-full rounded border border-[#34343b] bg-[#202024] px-3 py-2 text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc] focus:ring-2 focus:ring-[#6d5dfc]/20"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 mt-6">
+            <div className="mt-6 flex justify-end gap-2">
               <button
-                onClick={() => {
-                  setShowNewCollectionDialog(false);
-                  setNewCollectionName('');
-                  setNewCollectionDescription('');
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                onClick={closeNewCollectionDialog}
+                className="rounded border border-[#34343b] bg-[#202024] px-4 py-2 text-sm font-medium text-[#d7d7dc] transition-colors hover:bg-[#27272d]"
               >
                 Cancel
               </button>
               <button
                 onClick={createCollection}
                 disabled={!newCollectionName.trim()}
-                className="px-4 py-2 text-sm font-medium bg-[#2563eb] text-white rounded hover:bg-[#0550ae] disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                className="rounded bg-[#6d5dfc] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#5948f2] disabled:cursor-not-allowed disabled:bg-[#2f2f36] disabled:text-[#777781]"
               >
                 Create Collection
               </button>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* New Workspace Dialog */}
       {showNewWorkspaceDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-2xl">
+        <ModalShell
+          onClose={closeNewWorkspaceDialog}
+          label="Create workspace"
+          overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          panelClassName="w-full max-w-md rounded-lg border border-[#2b2b31] bg-[#171719] p-6 shadow-2xl outline-none"
+        >
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Create workspace</h3>
-                <p className="mt-1 text-sm text-gray-600">Use workspaces to separate team collections, environments, and generated docs.</p>
+                <h3 className="text-lg font-semibold text-[#f4f4f5]">Create workspace</h3>
+                <p className="mt-1 text-sm text-[#a4a4ad]">Use workspaces to separate team collections, environments, and generated docs.</p>
               </div>
-              <button onClick={() => setShowNewWorkspaceDialog(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={closeNewWorkspaceDialog} className="rounded p-1 text-[#85858e] hover:bg-[#24242a] hover:text-white">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Workspace name</label>
+            <label className="mb-1 block text-sm font-medium text-[#d7d7dc]">Workspace name</label>
             <input
               type="text"
               value={newWorkspaceName}
               onChange={(event) => setNewWorkspaceName(event.target.value)}
               placeholder="e.g., Backend Team"
-              className="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#2563eb]"
+              className="w-full rounded border border-[#34343b] bg-[#202024] px-3 py-2 text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc] focus:ring-2 focus:ring-[#6d5dfc]/20"
               autoFocus
             />
             <div className="mt-6 flex justify-end gap-2">
               <button
-                onClick={() => {
-                  setShowNewWorkspaceDialog(false);
-                  setNewWorkspaceName('');
-                }}
-                className="rounded bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+                onClick={closeNewWorkspaceDialog}
+                className="rounded border border-[#34343b] bg-[#202024] px-4 py-2 text-sm font-medium text-[#d7d7dc] hover:bg-[#27272d]"
               >
                 Cancel
               </button>
               <button
                 onClick={createWorkspaceFromDialog}
                 disabled={!newWorkspaceName.trim()}
-                className="rounded bg-[#2563eb] px-4 py-2 text-sm font-medium text-white hover:bg-[#0550ae] disabled:cursor-not-allowed disabled:bg-gray-300"
+                className="rounded bg-[#6d5dfc] px-4 py-2 text-sm font-medium text-white hover:bg-[#5948f2] disabled:cursor-not-allowed disabled:bg-[#2f2f36] disabled:text-[#777781]"
               >
                 Create workspace
               </button>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* Token Detection Notification */}
@@ -3113,19 +3379,20 @@ print(response.json())`,
 
       {/* Bearer Token Setup Wizard */}
       {showBearerSetupWizard && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full mx-4 shadow-2xl">
+        <ModalShell
+          onClose={closeBearerSetupWizard}
+          label="Bearer token quick setup"
+          overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          panelClassName="w-full max-w-lg rounded-lg border border-[#2b2b31] bg-[#171719] p-6 shadow-2xl outline-none"
+        >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                <LightBulbIcon className="h-6 w-6 text-indigo-600" />
+              <h3 className="flex items-center gap-2 text-xl font-bold text-[#f4f4f5]">
+                <LightBulbIcon className="h-6 w-6 text-[#8f83ff]" />
                 Bearer Token Quick Setup
               </h3>
               <button
-                onClick={() => {
-                  setShowBearerSetupWizard(false);
-                  setBearerSetupStep(1);
-                }}
-                className="text-gray-400 hover:text-gray-600"
+                onClick={closeBearerSetupWizard}
+                className="rounded p-1 text-[#85858e] hover:bg-[#24242a] hover:text-white"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -3135,16 +3402,16 @@ print(response.json())`,
             <div className="flex items-center justify-between mb-8">
               {[1, 2, 3].map((step) => (
                 <div key={step} className="flex items-center flex-1">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold ${
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-full font-bold ${
                     bearerSetupStep >= step
-                      ? 'bg-[#2563eb] text-white'
-                      : 'bg-gray-200 text-gray-500'
+                      ? 'bg-[#6d5dfc] text-white'
+                      : 'bg-[#252529] text-[#85858e]'
                   }`}>
                     {step}
                   </div>
                   {step < 3 && (
-                    <div className={`flex-1 h-1 mx-2 ${
-                      bearerSetupStep > step ? 'bg-[#2563eb]' : 'bg-gray-200'
+                    <div className={`mx-2 h-1 flex-1 ${
+                      bearerSetupStep > step ? 'bg-[#6d5dfc]' : 'bg-[#252529]'
                     }`} />
                   )}
                 </div>
@@ -3155,7 +3422,7 @@ print(response.json())`,
             {bearerSetupStep === 1 && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="mb-2 block text-sm font-semibold text-[#d7d7dc]">
                     Step 1: Enter Login API Endpoint
                   </label>
                   <input
@@ -3163,10 +3430,10 @@ print(response.json())`,
                     value={wizardLoginUrl}
                     onChange={(e) => setWizardLoginUrl(e.target.value)}
                     placeholder="https://api.example.com/auth/login"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-[#2563eb]"
+                    className="w-full rounded-lg border border-[#34343b] bg-[#202024] px-4 py-3 text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc] focus:ring-2 focus:ring-[#6d5dfc]/20"
                     autoFocus
                   />
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="mt-2 text-sm text-[#85858e]">
                     Enter the URL of your login/authentication endpoint
                   </p>
                 </div>
@@ -3177,18 +3444,18 @@ print(response.json())`,
             {bearerSetupStep === 2 && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="mb-2 block text-sm font-semibold text-[#d7d7dc]">
                     Step 2: Enter Login Payload (JSON)
                   </label>
                   <textarea
                     value={wizardRequestPayload}
                     onChange={(e) => setWizardRequestPayload(e.target.value)}
                     placeholder='{"username": "your_username", "password": "your_password"}'
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-[#2563eb] font-mono text-sm"
+                    className="w-full rounded-lg border border-[#34343b] bg-[#202024] px-4 py-3 font-mono text-sm text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc] focus:ring-2 focus:ring-[#6d5dfc]/20"
                     rows={8}
                     autoFocus
                   />
-                  <p className="text-sm text-gray-500 mt-2">
+                  <p className="mt-2 text-sm text-[#85858e]">
                     This JSON payload will be sent in the login request body. It will be saved for auto-login when token expires.
                   </p>
                 </div>
@@ -3199,7 +3466,7 @@ print(response.json())`,
             {bearerSetupStep === 3 && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <label className="mb-2 block text-sm font-semibold text-[#d7d7dc]">
                     Step 3: Token Field Name
                   </label>
                   <input
@@ -3207,13 +3474,13 @@ print(response.json())`,
                     value={wizardTokenPath}
                     onChange={(e) => setWizardTokenPath(e.target.value)}
                     placeholder="access_token"
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2563eb] focus:border-[#2563eb]"
+                    className="w-full rounded-lg border border-[#34343b] bg-[#202024] px-4 py-3 text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc] focus:ring-2 focus:ring-[#6d5dfc]/20"
                   />
-                  <p className="text-sm text-gray-500 mt-2">
-                    Where is the token in the response? Examples: <code className="bg-gray-100 px-1.5 py-0.5 rounded">access_token</code>, <code className="bg-gray-100 px-1.5 py-0.5 rounded">data.token</code>, <code className="bg-gray-100 px-1.5 py-0.5 rounded">result.jwt</code>
+                  <p className="mt-2 text-sm text-[#85858e]">
+                    Where is the token in the response? Examples: <code className="rounded bg-[#202024] px-1.5 py-0.5 text-[#d7d7dc]">access_token</code>, <code className="rounded bg-[#202024] px-1.5 py-0.5 text-[#d7d7dc]">data.token</code>, <code className="rounded bg-[#202024] px-1.5 py-0.5 text-[#d7d7dc]">result.jwt</code>
                   </p>
-                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p className="text-sm text-blue-800 flex items-start gap-2">
+                  <div className="mt-3 rounded-lg border border-[#2b2b31] bg-[#101011] p-3">
+                    <p className="flex items-start gap-2 text-sm text-[#a4a4ad]">
                       <LightBulbIcon className="h-5 w-5 flex-shrink-0 mt-0.5" />
                       <span><strong>Auto-detection:</strong> If not found at this path, we'll automatically search common token fields</span>
                     </p>
@@ -3229,37 +3496,36 @@ print(response.json())`,
                   if (bearerSetupStep > 1) {
                     setBearerSetupStep(bearerSetupStep - 1);
                   } else {
-                    setShowBearerSetupWizard(false);
+                    closeBearerSetupWizard();
                   }
                 }}
-                className="px-6 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                className="rounded-lg border border-[#34343b] bg-[#202024] px-6 py-3 text-sm font-medium text-[#d7d7dc] transition-colors hover:bg-[#27272d]"
               >
                 {bearerSetupStep === 1 ? 'Cancel' : 'Back'}
               </button>
               <button
                 onClick={setupBearerTokenWizard}
-                className="px-6 py-3 text-sm font-bold bg-[#2563eb] text-white rounded-lg hover:bg-[#0550ae] transition-colors shadow-sm hover:shadow-md"
+                className="rounded-lg bg-[#6d5dfc] px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#5948f2]"
               >
                 {bearerSetupStep === 3 ? 'Test & Configure' : 'Next'}
               </button>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* Token Setup Confirmation Dialog */}
       {showTokenSetupConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
+        <ModalShell
+          onClose={closeTokenSetupConfirm}
+          label="Setup bearer token"
+          overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          panelClassName="w-full max-w-md rounded-lg border border-[#2b2b31] bg-[#171719] p-6 shadow-2xl outline-none"
+        >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">🔐 Setup Bearer Token</h3>
+              <h3 className="text-xl font-bold text-[#f4f4f5]">🔐 Setup Bearer Token</h3>
               <button
-                onClick={() => {
-                  setShowTokenSetupConfirm(false);
-                  setClickedTokenValue('');
-                  setClickedTokenPath('');
-                }}
-                className="text-gray-400 hover:text-gray-600"
+                onClick={closeTokenSetupConfirm}
+                className="rounded p-1 text-[#85858e] hover:bg-[#24242a] hover:text-white"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -3267,33 +3533,33 @@ print(response.json())`,
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="mb-2 block text-sm font-semibold text-[#d7d7dc]">
                   Token Field
                 </label>
-                <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg font-mono text-sm text-blue-600">
+                <div className="rounded-lg border border-[#2b2b31] bg-[#101011] px-4 py-2 font-mono text-sm text-[#8f83ff]">
                   {clickedTokenPath}
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="mb-2 block text-sm font-semibold text-[#d7d7dc]">
                   Token Value
                 </label>
-                <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg font-mono text-xs text-gray-700 break-all">
+                <div className="break-all rounded-lg border border-[#2b2b31] bg-[#101011] px-4 py-2 font-mono text-xs text-[#d7d7dc]">
                   {clickedTokenValue && clickedTokenValue.length > 100 
                     ? `${clickedTokenValue.substring(0, 50)}...${clickedTokenValue.substring(clickedTokenValue.length - 50)}`
                     : clickedTokenValue}
                 </div>
               </div>
 
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-800 mb-2">
+              <div className="rounded-lg border border-[#2b2b31] bg-[#101011] p-4">
+                <p className="mb-2 text-sm text-[#d7d7dc]">
                   <strong>Auto-Login Configuration:</strong>
                 </p>
-                <ul className="text-xs text-blue-700 space-y-1">
+                <ul className="space-y-1 text-xs text-[#a4a4ad]">
                   <li className="flex items-start gap-1.5">
                     <CheckIcon className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-                    <span>Login URL: <code className="bg-blue-100 px-1 py-0.5 rounded">{currentTab.url || 'Current URL'}</code></span>
+                    <span>Login URL: <code className="rounded bg-[#202024] px-1 py-0.5 text-[#d7d7dc]">{currentTab.url || 'Current URL'}</code></span>
                   </li>
                   <li className="flex items-start gap-1.5">
                     <CheckIcon className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
@@ -3306,27 +3572,22 @@ print(response.json())`,
                 </ul>
               </div>
 
-              <div className="flex gap-3 mt-6">
+              <div className="mt-6 flex gap-3">
                 <button
-                  onClick={() => {
-                    setShowTokenSetupConfirm(false);
-                    setClickedTokenValue('');
-                    setClickedTokenPath('');
-                  }}
-                  className="flex-1 px-4 py-3 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  onClick={closeTokenSetupConfirm}
+                  className="flex-1 rounded-lg border border-[#34343b] bg-[#202024] px-4 py-3 text-sm font-medium text-[#d7d7dc] transition-colors hover:bg-[#27272d]"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmTokenSetup}
-                  className="flex-1 px-4 py-3 text-sm font-bold bg-[#2563eb] text-white rounded-lg hover:bg-[#0550ae] transition-colors shadow-sm hover:shadow-md"
+                  className="flex-1 rounded-lg bg-[#6d5dfc] px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#5948f2]"
                 >
                   Configure Bearer Auth
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* Request Tabs */}
@@ -3466,6 +3727,15 @@ print(response.json())`,
                 'Send'
               )}
             </button>
+            {loading && (
+              <button
+                onClick={cancelRequest}
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-[#34343b] bg-[#202024] px-4 text-[13px] font-semibold text-[#d7d7dc] transition-colors hover:bg-[#27272d] hover:text-white"
+                title="Cancel the in-flight request"
+              >
+                Cancel
+              </button>
+            )}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-[#a4a4ad]">
             <span className="rounded-md border border-[#34343b] bg-[#202024] px-2.5 py-1">
@@ -3491,17 +3761,17 @@ print(response.json())`,
             )}
           </div>
           {missingEnvironmentVariables.length > 0 && (
-            <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+            <div className="mt-3 rounded-md border border-amber-300/25 bg-amber-300/10 p-3 text-sm text-amber-100">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <p className="font-semibold">Set missing variable{missingEnvironmentVariables.length === 1 ? '' : 's'}</p>
-                  <p className="mt-0.5 text-xs text-amber-800">
+                  <p className="mt-0.5 text-xs text-amber-200/80">
                     These values are replaced before the request is sent.
                   </p>
                 </div>
                 <button
                   onClick={() => setShowVariables(true)}
-                  className="rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-amber-950 shadow-sm hover:bg-amber-100"
+                  className="rounded-md border border-amber-300/30 bg-amber-300/10 px-3 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-300/20"
                 >
                   Advanced variables
                 </button>
@@ -3509,7 +3779,7 @@ print(response.json())`,
               <div className="mt-3 grid gap-2">
                 {missingEnvironmentVariables.map((key) => (
                   <div key={key} className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <code className="rounded border border-amber-200 bg-white px-2 py-2 text-xs text-amber-950 sm:w-56">
+                    <code className="rounded border border-amber-300/25 bg-[#101011] px-2 py-2 text-xs text-amber-100 sm:w-56">
                       {'{{'}{key}{'}}'}
                     </code>
                     <input
@@ -3517,38 +3787,38 @@ print(response.json())`,
                       value={getEnvironmentVariableValue(key)}
                       onChange={(event) => setEnvironmentVariableValue(key, event.target.value)}
                       placeholder="https://api.example.com"
-                      className="min-w-0 flex-1 rounded border border-amber-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+                      className="min-w-0 flex-1 rounded border border-amber-300/25 bg-[#101011] px-3 py-2 text-sm text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-amber-300/60 focus:ring-2 focus:ring-amber-300/20"
                     />
                   </div>
                 ))}
               </div>
               {error && error.startsWith('Missing environment variable') && (
-                <p className="mt-2 text-xs text-amber-800">{error}</p>
+                <p className="mt-2 text-xs text-amber-200/80">{error}</p>
               )}
             </div>
           )}
           
           {/* Error Display */}
           {error && !error.startsWith('Missing environment variable') && (
-            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded text-red-800 text-sm">
+            <div className="mt-3 rounded border border-rose-400/25 bg-rose-400/10 p-3 text-sm text-rose-100">
               <div className="flex items-start gap-2">
                 <XMarkIcon className="h-5 w-5 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <p className="font-medium">Error</p>
                   <p className="mt-1">{error}</p>
                   {networkHint && (
-                    <div className="mt-3 rounded-md border border-red-200 bg-white p-3 text-red-900">
+                    <div className="mt-3 rounded-md border border-rose-400/25 bg-[#101011] p-3 text-rose-100">
                       <p className="font-semibold">{networkHint.title}</p>
                       <p className="mt-1 text-xs leading-5">{networkHint.message}</p>
                       <div className="mt-3 flex items-center gap-2">
                         <button
                           onClick={() => copyToClipboard(networkHint.curl)}
-                          className="inline-flex items-center gap-1.5 rounded-md bg-red-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-800"
+                          className="inline-flex items-center gap-1.5 rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-500"
                         >
                           <ClipboardIcon className="h-3.5 w-3.5" />
                           Copy cURL
                         </button>
-                        <code className="truncate rounded bg-red-50 px-2 py-1 text-[11px] text-red-950 max-w-[520px]">
+                        <code className="max-w-[520px] truncate rounded bg-[#171719] px-2 py-1 text-[11px] text-rose-100">
                           {networkHint.curl}
                         </code>
                       </div>
@@ -3560,7 +3830,7 @@ print(response.json())`,
                     setError('');
                     setNetworkHint(null);
                   }}
-                  className="text-red-600 hover:text-red-800"
+                  className="text-rose-200 hover:text-white"
                 >
                   <XMarkIcon className="h-4 w-4" />
                 </button>
@@ -4140,14 +4410,18 @@ response time below 1000`}</pre>
 
       {/* Environment Variables Section */}
       {showVariables && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 px-4">
-        <div className="w-full max-w-3xl rounded-lg border border-gray-200 bg-white shadow-2xl">
-          <div className="p-4 border-b border-gray-200 bg-white rounded-t-lg">
+        <ModalShell
+          onClose={() => setShowVariables(false)}
+          label="Environment variables"
+          overlayClassName="fixed inset-0 z-40 flex items-center justify-center bg-black/60 px-4"
+          panelClassName="w-full max-w-3xl rounded-lg border border-[#2b2b31] bg-[#171719] shadow-2xl outline-none"
+        >
+          <div className="rounded-t-lg border-b border-[#2b2b31] bg-[#171719] p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CodeBracketIcon className="h-5 w-5 text-gray-600" />
-                <h3 className="text-lg font-medium text-gray-900">Environment Variables</h3>
-                <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                <CodeBracketIcon className="h-5 w-5 text-[#85858e]" />
+                <h3 className="text-lg font-medium text-[#f4f4f5]">Environment Variables</h3>
+                <span className="rounded bg-[#202024] px-2 py-1 text-xs text-[#a4a4ad]">
                   Use {'{{variable}}'} in URL, headers, or body
                 </span>
               </div>
@@ -4155,7 +4429,7 @@ response time below 1000`}</pre>
                 <select
                   value={activeEnvironment}
                   onChange={(e) => setActiveEnvironment(e.target.value)}
-                  className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#2563eb]"
+                  className="rounded-lg border border-[#34343b] bg-[#202024] px-3 py-2 text-sm text-[#f4f4f5] outline-none focus:border-[#6d5dfc]"
                 >
                   {environments.map((env) => (
                     <option key={env.name} value={env.name}>{env.name}</option>
@@ -4163,7 +4437,7 @@ response time below 1000`}</pre>
                 </select>
                 <button
                   onClick={() => setShowVariables(false)}
-                  className="p-2 text-gray-500 hover:text-gray-700"
+                  className="rounded p-2 text-[#85858e] hover:bg-[#24242a] hover:text-white"
                   title="Close variables"
                 >
                   <XMarkIcon className="h-5 w-5" />
@@ -4185,7 +4459,7 @@ response time below 1000`}</pre>
                       setEnvironments(newEnvironments);
                     }}
                     placeholder="Variable name (e.g., api_url)"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#2563eb]"
+                    className="flex-1 rounded-lg border border-[#34343b] bg-[#202024] px-3 py-2 text-sm text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc]"
                   />
                   <input
                     type="text"
@@ -4197,7 +4471,7 @@ response time below 1000`}</pre>
                       setEnvironments(newEnvironments);
                     }}
                     placeholder="Value (e.g., https://api.example.com)"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#2563eb]"
+                    className="flex-1 rounded-lg border border-[#34343b] bg-[#202024] px-3 py-2 text-sm text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc]"
                   />
                   <button
                     onClick={() => {
@@ -4206,7 +4480,7 @@ response time below 1000`}</pre>
                       newEnvironments[envIndex].variables = newEnvironments[envIndex].variables.filter((_, i) => i !== index);
                       setEnvironments(newEnvironments);
                     }}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded"
+                    className="rounded p-2 text-rose-300 hover:bg-rose-400/10"
                     title="Remove variable"
                   >
                     <XMarkIcon className="h-5 w-5" />
@@ -4214,8 +4488,8 @@ response time below 1000`}</pre>
                 </div>
               ))}
               {environments.find(env => env.name === activeEnvironment)?.variables.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <CodeBracketIcon className="h-12 w-12 mx-auto mb-2 text-gray-400" />
+                <div className="py-8 text-center text-[#85858e]">
+                  <CodeBracketIcon className="mx-auto mb-2 h-12 w-12 text-[#4b4b52]" />
                   <p className="text-sm">No variables yet. Add one to get started!</p>
                   <p className="text-xs mt-1">Variables help you reuse values across requests</p>
                 </div>
@@ -4227,14 +4501,13 @@ response time below 1000`}</pre>
                   newEnvironments[envIndex].variables.push({ key: '', value: '' });
                   setEnvironments(newEnvironments);
                 }}
-                className="w-full px-4 py-2 text-sm font-medium text-[#2563eb] bg-blue-50 rounded-lg hover:bg-blue-100 border border-blue-200"
+                className="w-full rounded-lg border border-[#34343b] bg-[#202024] px-4 py-2 text-sm font-medium text-[#d7d7dc] hover:bg-[#27272d]"
               >
                 + Add Variable
               </button>
             </div>
           </div>
-        </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* Response Section */}
@@ -4453,8 +4726,14 @@ response time below 1000`}</pre>
                     </div>
                   </div>
                   
+                  {responseFormat === 'pretty' && responseBodyIsObject && !canRenderClickableJson && (
+                    <p className="rounded-lg border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs text-amber-200">
+                      This response is too large for the interactive view. Showing raw JSON instead.
+                    </p>
+                  )}
+
                   <div className="max-h-[560px] overflow-auto rounded-xl border border-[#2b2b31] bg-[#101011]">
-                    {response && responseFormat === 'pretty' && typeof response.data === 'object' && response.data !== null ? (
+                    {response && responseFormat === 'pretty' && canRenderClickableJson ? (
                       <div className="p-4 font-mono text-[12px] leading-5 text-[#d7d7dc]">
                         {renderClickableJSON(response.data)}
                       </div>
@@ -4648,12 +4927,12 @@ response time below 1000`}</pre>
 
       {/* Additional Panels */}
       {showAuthConfig && (
-        <div className="bg-white p-4 rounded-lg border border-gray-200 max-w-[1600px] mx-auto mb-4">
+        <div className="mx-auto mb-4 max-w-[1600px] rounded-lg border border-[#25252b] bg-[#171719] p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-gray-900">Authentication</h3>
+            <h3 className="text-lg font-medium text-[#f4f4f5]">Authentication</h3>
             <button
               onClick={() => setShowAuthConfig(false)}
-              className="p-2 text-gray-500 hover:text-gray-700"
+              className="rounded p-2 text-[#85858e] hover:bg-[#24242a] hover:text-white"
               title="Close authentication"
             >
               <XMarkIcon className="h-5 w-5" />
@@ -4663,7 +4942,7 @@ response time below 1000`}</pre>
             <select
               value={authConfig.type}
               onChange={(e) => setAuthConfig({ ...authConfig, type: e.target.value as AuthType })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              className="w-full rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 text-[#f4f4f5] outline-none focus:border-[#6d5dfc]"
             >
               <option value="none">None</option>
               <option value="basic">Basic Auth</option>
@@ -4678,14 +4957,14 @@ response time below 1000`}</pre>
                   placeholder="Username"
                   value={authConfig.username || ''}
                   onChange={(e) => setAuthConfig({ ...authConfig, username: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc]"
                 />
                 <input
                   type="password"
                   placeholder="Password"
                   value={authConfig.password || ''}
                   onChange={(e) => setAuthConfig({ ...authConfig, password: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc]"
                 />
               </div>
             )}
@@ -4705,11 +4984,11 @@ response time below 1000`}</pre>
                       tokenExpiry: decoded?.exp
                     });
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                  className="w-full rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 font-mono text-sm text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc]"
                 />
-                
+
                 {authConfig.token && decodeJWT(authConfig.token) && (
-                  <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                  <div className="rounded bg-[#101011] p-2 text-xs text-[#a4a4ad]">
                     {(() => {
                       const decoded = decodeJWT(authConfig.token!);
                       if (decoded?.exp) {
@@ -4721,17 +5000,17 @@ response time below 1000`}</pre>
                         return (
                           <div className="flex items-center gap-2">
                             {isExpired ? (
-                              <span className="text-red-600 font-medium flex items-center gap-1.5">
+                              <span className="flex items-center gap-1.5 font-medium text-rose-300">
                                 <XMarkIcon className="h-4 w-4" />
                                 Token expired
                               </span>
                             ) : minutesUntilExpiry < 5 ? (
-                              <span className="text-blue-600 font-medium flex items-center gap-1.5">
+                              <span className="flex items-center gap-1.5 font-medium text-amber-200">
                                 <ClockIcon className="h-4 w-4" />
                                 Expires in {minutesUntilExpiry} minutes
                               </span>
                             ) : (
-                              <span className="text-emerald-800 font-medium flex items-center gap-1.5">
+                              <span className="flex items-center gap-1.5 font-medium text-emerald-300">
                                 <CheckIcon className="h-4 w-4" />
                                 Valid until {expiryDate.toLocaleString()}
                               </span>
@@ -4747,15 +5026,15 @@ response time below 1000`}</pre>
                 <button
                   type="button"
                   onClick={() => setShowAdvancedAuth(!showAdvancedAuth)}
-                  className="text-sm font-medium text-[#2563eb] hover:text-[#0550ae]"
+                  className="text-sm font-medium text-[#8f83ff] hover:text-[#c8c2ff]"
                 >
                   {showAdvancedAuth ? 'Hide advanced token automation' : 'Show advanced token automation'}
                 </button>
 
                 {showAdvancedAuth && (
-                  <div className="space-y-3 border-t border-gray-200 pt-3">
+                  <div className="space-y-3 border-t border-[#25252b] pt-3">
                     <div>
-                      <label className="flex items-center gap-2 text-sm text-gray-700 mb-2">
+                      <label className="mb-2 flex items-center gap-2 text-sm text-[#d7d7dc]">
                         <input
                           type="checkbox"
                           checked={authConfig.autoRefresh || false}
@@ -4772,18 +5051,18 @@ response time below 1000`}</pre>
                             placeholder="Refresh Token URL"
                             value={authConfig.refreshTokenUrl || ''}
                             onChange={(e) => setAuthConfig({ ...authConfig, refreshTokenUrl: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                            className="w-full rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 text-sm text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc]"
                           />
                           <input
                             type="text"
                             placeholder="Refresh Token"
                             value={authConfig.refreshToken || ''}
                             onChange={(e) => setAuthConfig({ ...authConfig, refreshToken: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm"
+                            className="w-full rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 font-mono text-sm text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc]"
                           />
                           <button
                             onClick={refreshAccessToken}
-                            className="px-3 py-1.5 bg-[#2563eb] hover:bg-[#0550ae] text-white text-sm rounded"
+                            className="rounded bg-[#6d5dfc] px-3 py-1.5 text-sm text-white hover:bg-[#5948f2]"
                           >
                             Refresh Token Now
                           </button>
@@ -4791,8 +5070,8 @@ response time below 1000`}</pre>
                       )}
                     </div>
 
-                    <div className="border-t border-gray-200 pt-3">
-                      <label className="flex items-center gap-2 text-sm text-gray-700 mb-2">
+                    <div className="border-t border-[#25252b] pt-3">
+                      <label className="mb-2 flex items-center gap-2 text-sm text-[#d7d7dc]">
                         <input
                           type="checkbox"
                           checked={authConfig.autoLogin || false}
@@ -4802,51 +5081,51 @@ response time below 1000`}</pre>
                         <span className="font-medium">Auto-login when token expires</span>
                       </label>
                       
-                      <p className="text-xs text-gray-500 mb-3 ml-6">
+                      <p className="mb-3 ml-6 text-xs text-[#85858e]">
                         Automatically login and get a new token when API returns 401/403 error
                       </p>
                       
                       {authConfig.autoLogin && (
-                        <div className="space-y-2 ml-6 bg-blue-50 p-3 rounded border border-blue-200">
-                          <div className="text-xs font-medium text-blue-900 mb-2">Login Configuration</div>
+                        <div className="ml-6 space-y-2 rounded border border-[#2b2b31] bg-[#101011] p-3">
+                          <div className="mb-2 text-xs font-medium text-[#f4f4f5]">Login Configuration</div>
                           <input
                             type="text"
                             placeholder="Login URL (e.g., https://api.example.com/auth/login)"
                             value={authConfig.loginUrl || ''}
                             onChange={(e) => setAuthConfig({ ...authConfig, loginUrl: e.target.value })}
-                            className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm"
+                            className="w-full rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 text-sm text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc]"
                           />
                           <input
                             type="text"
                             placeholder="Username or Email"
                             value={authConfig.loginUsername || ''}
                             onChange={(e) => setAuthConfig({ ...authConfig, loginUsername: e.target.value })}
-                            className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm"
+                            className="w-full rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 text-sm text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc]"
                           />
                           <input
                             type="password"
                             placeholder="Password"
                             value={authConfig.loginPassword || ''}
                             onChange={(e) => setAuthConfig({ ...authConfig, loginPassword: e.target.value })}
-                            className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm"
+                            className="w-full rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 text-sm text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc]"
                           />
                           <input
                             type="text"
                             placeholder="Token Path in Response (e.g., data.token or access_token)"
                             value={authConfig.tokenPath || ''}
                             onChange={(e) => setAuthConfig({ ...authConfig, tokenPath: e.target.value })}
-                            className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm font-mono"
+                            className="w-full rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 font-mono text-sm text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc]"
                           />
-                          <div className="text-xs text-blue-700 mt-2">
+                          <div className="mt-2 text-xs text-[#a4a4ad]">
                             <p className="font-medium mb-1 flex items-center gap-1.5">
                               <LightBulbIcon className="h-4 w-4" />
                               Common token paths:
                             </p>
                             <ul className="list-disc ml-4 space-y-1">
-                              <li><code className="bg-blue-100 px-1 rounded">access_token</code> - Root level</li>
-                              <li><code className="bg-blue-100 px-1 rounded">token</code> - Root level</li>
-                              <li><code className="bg-blue-100 px-1 rounded">data.token</code> - Nested in data</li>
-                              <li><code className="bg-blue-100 px-1 rounded">data.access_token</code> - Nested in data</li>
+                              <li><code className="rounded bg-[#202024] px-1 text-[#d7d7dc]">access_token</code> - Root level</li>
+                              <li><code className="rounded bg-[#202024] px-1 text-[#d7d7dc]">token</code> - Root level</li>
+                              <li><code className="rounded bg-[#202024] px-1 text-[#d7d7dc]">data.token</code> - Nested in data</li>
+                              <li><code className="rounded bg-[#202024] px-1 text-[#d7d7dc]">data.access_token</code> - Nested in data</li>
                             </ul>
                           </div>
                           <button
@@ -4856,7 +5135,7 @@ response time below 1000`}</pre>
                                 showWorkbenchNotice({ type: 'success', message: 'Login successful', detail: 'Token acquired.' });
                               }
                             }}
-                            className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded"
+                            className="w-full rounded bg-[#6d5dfc] px-3 py-2 text-sm font-medium text-white hover:bg-[#5948f2]"
                           >
                             Test Login Now
                           </button>
@@ -4875,13 +5154,13 @@ response time below 1000`}</pre>
                   placeholder="API Key"
                   value={authConfig.apiKey || ''}
                   onChange={(e) => setAuthConfig({ ...authConfig, apiKey: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  className="w-full rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc]"
                 />
                 <div className="flex space-x-4">
                   <select
                     value={authConfig.apiKeyLocation || 'header'}
                     onChange={(e) => setAuthConfig({ ...authConfig, apiKeyLocation: e.target.value as 'header' | 'query' })}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+                    className="flex-1 rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 text-[#f4f4f5] outline-none focus:border-[#6d5dfc]"
                   >
                     <option value="header">Header</option>
                     <option value="query">Query Parameter</option>
@@ -4891,7 +5170,7 @@ response time below 1000`}</pre>
                     placeholder="Key Name"
                     value={authConfig.apiKeyName || ''}
                     onChange={(e) => setAuthConfig({ ...authConfig, apiKeyName: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+                    className="flex-1 rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc]"
                   />
                 </div>
               </div>
@@ -4901,51 +5180,51 @@ response time below 1000`}</pre>
       )}
 
       {showSettings && (
-        <div className="bg-white p-4 rounded-lg border border-gray-200 max-w-[1600px] mx-auto mb-4">
+        <div className="mx-auto mb-4 max-w-[1600px] rounded-lg border border-[#25252b] bg-[#171719] p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-gray-900">Settings</h3>
+            <h3 className="text-lg font-medium text-[#f4f4f5]">Settings</h3>
             <button
               onClick={() => setShowSettings(false)}
-              className="p-2 text-gray-500 hover:text-gray-700"
+              className="rounded p-2 text-[#85858e] hover:bg-[#24242a] hover:text-white"
             >
               <XMarkIcon className="h-5 w-5" />
             </button>
           </div>
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between rounded-lg border border-[#25252b] bg-[#101011] p-3">
               <div>
-                <label className="text-sm font-medium text-gray-700">Auto-format JSON</label>
-                <p className="text-xs text-gray-500 mt-0.5">Automatically format JSON in request body</p>
+                <label className="text-sm font-medium text-[#d7d7dc]">Auto-format JSON</label>
+                <p className="mt-0.5 text-xs text-[#85858e]">Automatically format JSON in request body</p>
               </div>
               <input
                 type="checkbox"
                 checked={autoFormat}
                 onChange={(e) => setAutoFormat(e.target.checked)}
-                className="rounded border-gray-300 text-[#2563eb] focus:ring-[#2563eb] w-4 h-4"
+                className="h-4 w-4 rounded border-[#34343b] bg-[#202024] text-[#6d5dfc] focus:ring-[#6d5dfc]"
               />
             </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between rounded-lg border border-[#25252b] bg-[#101011] p-3">
               <div>
-                <label className="text-sm font-medium text-gray-700">Auto-save changes</label>
-                <p className="text-xs text-gray-500 mt-0.5">Save requests automatically to localStorage</p>
+                <label className="text-sm font-medium text-[#d7d7dc]">Auto-save changes</label>
+                <p className="mt-0.5 text-xs text-[#85858e]">Save requests automatically to localStorage</p>
               </div>
               <input
                 type="checkbox"
                 checked={autoSave}
                 onChange={(e) => setAutoSave(e.target.checked)}
-                className="rounded border-gray-300 text-[#2563eb] focus:ring-[#2563eb] w-4 h-4"
+                className="h-4 w-4 rounded border-[#34343b] bg-[#202024] text-[#6d5dfc] focus:ring-[#6d5dfc]"
               />
             </div>
-            <div className="flex items-center justify-between p-3 bg-amber-50 border border-amber-200 rounded-lg">
+            <div className="flex items-center justify-between rounded-lg border border-amber-300/25 bg-amber-300/10 p-3">
               <div>
-                <label className="text-sm font-medium text-amber-950">Private mode</label>
-                <p className="text-xs text-amber-800 mt-0.5">Do not save tabs, history, auth tokens, passwords, or environment secrets locally.</p>
+                <label className="text-sm font-medium text-amber-100">Private mode</label>
+                <p className="mt-0.5 text-xs text-amber-200/80">Do not save tabs, history, auth tokens, passwords, or environment secrets locally.</p>
               </div>
               <input
                 type="checkbox"
                 checked={privateMode}
                 onChange={(e) => setPrivateMode(e.target.checked)}
-                className="rounded border-amber-300 text-[#2563eb] focus:ring-[#2563eb] w-4 h-4"
+                className="h-4 w-4 rounded border-amber-300/40 bg-[#202024] text-[#6d5dfc] focus:ring-[#6d5dfc]"
               />
             </div>
           </div>
@@ -5011,29 +5290,29 @@ response time below 1000`}</pre>
 
       {/* API Documentation Panel */}
       {showDocsPanel && (
-        <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-2xl flex-col border-l border-[#e4e4e7] bg-white shadow-2xl">
-          <div className="flex items-start justify-between gap-3 border-b border-[#e4e4e7] px-5 py-4">
+        <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-2xl flex-col border-l border-[#2b2b31] bg-[#151516] text-[#d7d7dc] shadow-2xl">
+          <div className="flex items-start justify-between gap-3 border-b border-[#2b2b31] px-5 py-4">
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.16em] text-[#71717a]">API docs</p>
-              <h3 className="mt-1 text-lg font-semibold text-[#09090b]">Generate documentation</h3>
-              <p className="mt-1 text-sm text-[#71717a]">Generate Markdown or OpenAPI from the selected collection, or from the active request.</p>
+              <p className="font-mono text-xs uppercase tracking-[0.16em] text-[#85858e]">API docs</p>
+              <h3 className="mt-1 text-lg font-semibold text-[#f4f4f5]">Generate documentation</h3>
+              <p className="mt-1 text-sm text-[#a4a4ad]">Generate Markdown or OpenAPI from the selected collection, or from the active request.</p>
             </div>
             <button
               onClick={() => setShowDocsPanel(false)}
-              className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+              className="rounded p-1 text-[#85858e] hover:bg-[#24242a] hover:text-white"
               aria-label="Close API documentation panel"
             >
               <XMarkIcon className="h-5 w-5" />
             </button>
           </div>
-          <div className="border-b border-[#e4e4e7] px-5 py-3">
+          <div className="border-b border-[#2b2b31] px-5 py-3">
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="text-sm font-medium text-[#09090b]">
+              <label className="text-sm font-medium text-[#f4f4f5]">
                 Source
                 <select
                   value={selectedCollectionId}
                   onChange={(event) => setSelectedCollectionId(event.target.value)}
-                  className="mt-1 w-full rounded-md border border-[#e4e4e7] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 text-sm text-[#f4f4f5] outline-none focus:border-[#6d5dfc]"
                 >
                   <option value="">Active request</option>
                   {collections.map((collection) => (
@@ -5041,12 +5320,12 @@ response time below 1000`}</pre>
                   ))}
                 </select>
               </label>
-              <label className="text-sm font-medium text-[#09090b]">
+              <label className="text-sm font-medium text-[#f4f4f5]">
                 Format
                 <select
                   value={apiDocFormat}
                   onChange={(event) => setApiDocFormat(event.target.value as 'markdown' | 'openapi')}
-                  className="mt-1 w-full rounded-md border border-[#e4e4e7] px-3 py-2 text-sm"
+                  className="mt-1 w-full rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 text-sm text-[#f4f4f5] outline-none focus:border-[#6d5dfc]"
                 >
                   <option value="markdown">Markdown</option>
                   <option value="openapi">OpenAPI 3.1 JSON</option>
@@ -5056,7 +5335,7 @@ response time below 1000`}</pre>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 onClick={() => copyToClipboard(generateApiDocumentation())}
-                className="inline-flex items-center gap-1.5 rounded-md bg-[#09090b] px-3 py-2 text-sm font-semibold text-white hover:bg-[#32383f]"
+                className="inline-flex items-center gap-1.5 rounded-md bg-[#f4f4f5] px-3 py-2 text-sm font-semibold text-[#101011] hover:bg-white"
               >
                 <ClipboardIcon className="h-4 w-4" />
                 Copy
@@ -5071,14 +5350,14 @@ response time below 1000`}</pre>
                   link.click();
                   URL.revokeObjectURL(link.href);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm font-semibold text-[#09090b] hover:bg-[#fafafa]"
+                className="inline-flex items-center gap-1.5 rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 text-sm font-semibold text-[#d7d7dc] hover:bg-[#27272d]"
               >
                 <ArrowDownOnSquareIcon className="h-4 w-4" />
                 Download
               </button>
             </div>
           </div>
-          <pre className="min-h-0 flex-1 overflow-auto bg-[#0f172a] p-5 font-mono text-xs leading-6 text-[#e5e7eb]">
+          <pre className="min-h-0 flex-1 overflow-auto bg-[#0f0f10] p-5 font-mono text-xs leading-6 text-[#e8e8ec]">
             {generateApiDocumentation()}
           </pre>
         </div>
@@ -5086,58 +5365,58 @@ response time below 1000`}</pre>
 
       {/* AI Context Side Panel */}
       {showAiContextPanel && (
-        <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-xl flex-col border-l border-[#e4e4e7] bg-white shadow-2xl">
-          <div className="flex items-start justify-between gap-3 border-b border-[#e4e4e7] px-5 py-4">
+        <div className="fixed inset-y-0 right-0 z-50 flex w-full max-w-xl flex-col border-l border-[#2b2b31] bg-[#151516] text-[#d7d7dc] shadow-2xl">
+          <div className="flex items-start justify-between gap-3 border-b border-[#2b2b31] px-5 py-4">
             <div>
-              <p className="font-mono text-xs uppercase tracking-[0.16em] text-[#71717a]">AI context</p>
-              <h3 className="mt-1 text-lg font-semibold text-[#09090b]">Debug brief</h3>
-              <p className="mt-1 text-sm text-[#71717a]">Prepare a redacted context package for your own AI provider or teammate.</p>
+              <p className="font-mono text-xs uppercase tracking-[0.16em] text-[#85858e]">AI context</p>
+              <h3 className="mt-1 text-lg font-semibold text-[#f4f4f5]">Debug brief</h3>
+              <p className="mt-1 text-sm text-[#a4a4ad]">Prepare a redacted context package for your own AI provider or teammate.</p>
             </div>
             <button
               onClick={() => setShowAiContextPanel(false)}
-              className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+              className="rounded p-1 text-[#85858e] hover:bg-[#24242a] hover:text-white"
               aria-label="Close AI context panel"
             >
               <XMarkIcon className="h-5 w-5" />
             </button>
           </div>
-          <div className="space-y-3 border-b border-[#e4e4e7] px-5 py-4">
-            <label className="block text-sm font-medium text-[#09090b]">
+          <div className="space-y-3 border-b border-[#2b2b31] px-5 py-4">
+            <label className="block text-sm font-medium text-[#f4f4f5]">
               Environment
               <input
                 type="text"
                 value={aiContextEnvironment}
                 onChange={(event) => setAiContextEnvironment(event.target.value)}
-                className="mt-1 w-full rounded-md border border-[#e4e4e7] px-3 py-2 text-sm"
+                className="mt-1 w-full rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 text-sm text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc]"
                 placeholder="Production, staging, local..."
               />
             </label>
-            <label className="block text-sm font-medium text-[#09090b]">
+            <label className="block text-sm font-medium text-[#f4f4f5]">
               Notes
               <textarea
                 value={aiContextNotes}
                 onChange={(event) => setAiContextNotes(event.target.value)}
-                className="mt-1 h-28 w-full rounded-md border border-[#e4e4e7] px-3 py-2 text-sm"
+                className="mt-1 h-28 w-full rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 text-sm text-[#f4f4f5] outline-none placeholder:text-[#777781] focus:border-[#6d5dfc]"
                 placeholder="What changed, what you expected, affected user, deploy/version..."
               />
             </label>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => copyToClipboard(generateAiContext())}
-                className="inline-flex items-center gap-1.5 rounded-md bg-[#09090b] px-3 py-2 text-sm font-semibold text-white hover:bg-[#32383f]"
+                className="inline-flex items-center gap-1.5 rounded-md bg-[#f4f4f5] px-3 py-2 text-sm font-semibold text-[#101011] hover:bg-white"
               >
                 <ClipboardIcon className="h-4 w-4" />
                 Copy context
               </button>
               <button
                 onClick={() => setAiContextNotes('')}
-                className="rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm font-semibold text-[#09090b] hover:bg-[#fafafa]"
+                className="rounded-md border border-[#34343b] bg-[#202024] px-3 py-2 text-sm font-semibold text-[#d7d7dc] hover:bg-[#27272d]"
               >
                 Clear notes
               </button>
             </div>
           </div>
-          <pre className="min-h-0 flex-1 overflow-auto bg-[#0f172a] p-5 font-mono text-xs leading-6 text-[#e5e7eb]">
+          <pre className="min-h-0 flex-1 overflow-auto bg-[#0f0f10] p-5 font-mono text-xs leading-6 text-[#e8e8ec]">
             {generateAiContext()}
           </pre>
         </div>
@@ -5145,42 +5424,46 @@ response time below 1000`}</pre>
 
       {/* Auth Modal */}
       {showAuthModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-xl font-bold text-gray-900">Cloud Sync</h3>
+        <ModalShell
+          onClose={() => setShowAuthModal(false)}
+          label="Cloud sync"
+          overlayClassName="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+          panelClassName="w-full max-w-md rounded-lg border border-[#2b2b31] bg-[#171719] p-6 shadow-2xl outline-none"
+        >
+            <div className="mb-4 flex items-start justify-between">
+              <h3 className="text-xl font-bold text-[#f4f4f5]">Cloud Sync</h3>
               <button
                 onClick={() => setShowAuthModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="rounded p-1 text-[#85858e] hover:bg-[#24242a] hover:text-white"
               >
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
-            
-            <p className="text-gray-600 mb-6 text-sm">
+
+            <p className="mb-6 text-sm text-[#a4a4ad]">
               API Workbench works fully without login. Connect Google only if you want collection sync across devices.
             </p>
 
             {/* Benefits */}
             <div className="mb-6 space-y-2.5">
               <div className="flex items-start gap-2.5">
-                <CheckIcon className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-gray-700">Keep using the local workspace with no account required</p>
+                <CheckIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-400" />
+                <p className="text-sm text-[#d7d7dc]">Keep using the local workspace with no account required</p>
               </div>
               <div className="flex items-start gap-2.5">
-                <CheckIcon className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-gray-700">Sync selected collections across all devices</p>
+                <CheckIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-400" />
+                <p className="text-sm text-[#d7d7dc]">Sync selected collections across all devices</p>
               </div>
               <div className="flex items-start gap-2.5">
-                <CheckIcon className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-gray-700">Avoid vendor lock-in with JSON import and export</p>
+                <CheckIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-400" />
+                <p className="text-sm text-[#d7d7dc]">Avoid vendor lock-in with JSON import and export</p>
               </div>
             </div>
 
             {/* Google Sign In Button */}
             <button
               onClick={() => signIn('google', { callbackUrl: window.location.pathname })}
-              className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm"
+              className="flex w-full items-center justify-center gap-3 rounded-lg border border-[#34343b] bg-[#202024] px-6 py-3 shadow-sm transition-all hover:border-[#3f3f48] hover:bg-[#27272d]"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
@@ -5200,29 +5483,28 @@ response time below 1000`}</pre>
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-                <span className="font-semibold text-gray-700">Enable Cloud Sync with Google</span>
+                <span className="font-semibold text-[#f4f4f5]">Enable Cloud Sync with Google</span>
             </button>
 
             {/* Info Note */}
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
-              <p className="text-xs text-blue-800">
+            <div className="mt-4 rounded-lg border border-[#2b2b31] bg-[#101011] p-3">
+              <p className="text-xs text-[#a4a4ad]">
                 <span className="font-semibold">Local-first:</span> Skip this and the tester still sends requests, imports collections, and saves locally in this browser.
               </p>
             </div>
 
             {/* Footer */}
-            <p className="mt-4 text-center text-xs text-gray-500">
+            <p className="mt-4 text-center text-xs text-[#85858e]">
               By connecting, you agree to our{' '}
-              <a href="/terms-of-service" className="text-[#2563eb] hover:underline">
+              <a href="/terms-of-service" className="text-[#8f83ff] hover:underline">
                 Terms of Service
               </a>
               {' '}and{' '}
-              <a href="/privacy-policy" className="text-[#2563eb] hover:underline">
+              <a href="/privacy-policy" className="text-[#8f83ff] hover:underline">
                 Privacy Policy
               </a>
             </p>
-          </div>
-        </div>
+        </ModalShell>
       )}
       </div>
       </div>

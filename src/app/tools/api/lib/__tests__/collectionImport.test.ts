@@ -141,6 +141,28 @@ describe('parseImportedCollection', () => {
     });
   });
 
+  it('leaves OpenAPI query placeholders substitutable instead of percent-encoding them', () => {
+    const collection = parseImportedCollection({
+      openapi: '3.1.0',
+      info: { title: 'Search API' },
+      servers: [{ url: 'https://api.example.com' }],
+      paths: {
+        '/search': {
+          get: {
+            summary: 'Search',
+            parameters: [
+              { name: 'id', in: 'query' },
+              { name: 'q', in: 'query', example: 'blue shoes' },
+            ],
+          },
+        },
+      },
+    });
+
+    expect(collection.requests[0].url).toBe('https://api.example.com/search?id={{id}}&q=blue%20shoes');
+    expect(collection.requests[0].url).not.toContain('%7B%7B');
+  });
+
   it('imports Insomnia request exports', () => {
     const collection = parseImportedCollection({
       __export_format: 4,

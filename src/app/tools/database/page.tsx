@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import {
   ArrowDownTrayIcon,
@@ -14,6 +14,13 @@ import {
 } from "@heroicons/react/24/outline";
 // @ts-expect-error - sql.js ships no bundled types for this entry point
 import initSqlJs from "sql.js";
+import {
+  findNumericColumnIndex,
+  formatRowsAffected,
+  numericValue,
+  parseHistory,
+  validateDatabaseFile,
+} from "./sqlite-helpers";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
@@ -28,9 +35,13 @@ type DbComparisonRow = {
   removedColumns: string[];
 };
 type TablePreview = { name: string; columns: string[]; rows: unknown[][] } | null;
+type ResultSet = { columns: string[]; values: unknown[][] };
 type ActiveTab = "results" | "schema" | "insights" | "compare";
 
 const LOCAL_HISTORY_KEY = "sqlite_query_history";
+// Stable identities so the memos below do not rerun while there is no result set.
+const NO_COLUMNS: string[] = [];
+const NO_ROWS: unknown[][] = [];
 const SQL_WASM_PATH = "/vendor/sql.js/";
 
 const SAMPLE_QUERIES = [
@@ -131,13 +142,17 @@ INSERT INTO feature_flags VALUES
 const quoteIdentifier = (identifier: string) => `"${identifier.replace(/"/g, '""')}"`;
 
 function saveHistory(history: string[]) {
-  localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(history));
+  try {
+    localStorage.setItem(LOCAL_HISTORY_KEY, JSON.stringify(history));
+  } catch {
+    // Private mode or a full quota must not take the query down with it.
+  }
 }
 
 function loadHistory(): string[] {
   if (typeof window === "undefined") return [];
   try {
-    return JSON.parse(localStorage.getItem(LOCAL_HISTORY_KEY) || "[]");
+    return parseHistory(localStorage.getItem(LOCAL_HISTORY_KEY));
   } catch {
     return [];
   }
@@ -160,19 +175,18 @@ function downloadTextFile(filename: string, content: string, type: string) {
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
+  // Firefox ignores clicks on detached links and cancels downloads whose blob URL
+  // is revoked in the same tick.
+  document.body.appendChild(link);
   link.click();
-  URL.revokeObjectURL(url);
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function cellText(value: unknown) {
   if (value === null || value === undefined) return "NULL";
   if (value instanceof Uint8Array) return `BLOB ${value.byteLength} bytes`;
   return String(value);
-}
-
-function numericValue(value: unknown) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function readDatabaseStructure(database: any): DbTable[] {
@@ -208,8 +222,8 @@ export default function DatabaseQueryTool() {
   const [db, setDb] = useState<any>(null);
   const [dbName, setDbName] = useState("No database loaded");
   const [query, setQuery] = useState(SAMPLE_QUERIES[0].query);
-  const [results, setResults] = useState<unknown[][]>([]);
-  const [columns, setColumns] = useState<string[]>([]);
+  const [resultSets, setResultSets] = useState<ResultSet[]>([]);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -222,6 +236,11 @@ export default function DatabaseQueryTool() {
   const [lastRunMs, setLastRunMs] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const compareFileInputRef = useRef<HTMLInputElement>(null);
+  const dbRef = useRef<any>(null);
+
+  // Exports, metrics and insights still work off the first result set.
+  const columns = resultSets[0]?.columns ?? NO_COLUMNS;
+  const results = resultSets[0]?.values ?? NO_ROWS;
 
   const filteredStructure = useMemo(
     () =>
@@ -237,7 +256,7 @@ export default function DatabaseQueryTool() {
   const compareChangedCount = useMemo(() => compareRows.filter((row) => row.status !== "Same").length, [compareRows]);
 
   const insightRows = useMemo(() => {
-    const numericColumnIndex = columns.findIndex((column, index) => results.some((row) => numericValue(row[index]) !== null));
+    const numericColumnIndex = findNumericColumnIndex(columns.length, results);
     if (numericColumnIndex >= 0) {
       const labelIndex = columns.findIndex((_, index) => index !== numericColumnIndex);
       const rows = results
@@ -260,26 +279,43 @@ export default function DatabaseQueryTool() {
     setHistory(loadHistory());
   }, []);
 
+  const refreshStructure = useCallback((database: any) => {
+    if (!database) {
+      setDbStructure([]);
+      return;
+    }
+
+    try {
+      setDbStructure(readDatabaseStructure(database));
+    } catch (err: any) {
+      setDbStructure([]);
+      setError(`Failed to read database structure: ${err?.message || "unknown error"}`);
+    }
+  }, []);
+
   useEffect(() => {
+    dbRef.current = db;
     if (!db) {
       setDbStructure([]);
       setTablePreview(null);
       return;
     }
 
-    try {
-      setDbStructure(readDatabaseStructure(db));
-    } catch {
-      setDbStructure([]);
-    }
-  }, [db]);
+    refreshStructure(db);
+  }, [db, refreshStructure]);
+
+  // Free the WASM heap when the user navigates away from the tool.
+  useEffect(() => () => dbRef.current?.close?.(), []);
 
   const setDatabase = (database: any, name: string) => {
-    setDb(database);
+    setDb((previous: any) => {
+      if (previous && previous !== database) previous.close?.();
+      return database;
+    });
     setDbName(name);
     setError(null);
-    setColumns([]);
-    setResults([]);
+    setResultSets([]);
+    setStatusMessage(null);
     setTablePreview(null);
     setLastRunMs(null);
     setActiveTab("schema");
@@ -301,14 +337,29 @@ export default function DatabaseQueryTool() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const sizeError = validateDatabaseFile(file);
+    if (sizeError) {
+      setError(sizeError);
+      event.target.value = "";
+      return;
+    }
+
+    let database: any = null;
     try {
       const buffer = await file.arrayBuffer();
       const SQL = await initSqlJs({ locateFile: (item: string) => `${SQL_WASM_PATH}${item}` });
-      const database = new SQL.Database(new Uint8Array(buffer));
+      database = new SQL.Database(new Uint8Array(buffer));
+      // sql.js accepts any byte array and only fails on first use, so probe here
+      // rather than letting a non-SQLite file look like an empty database.
+      database.exec("SELECT count(*) FROM sqlite_master;");
       setDatabase(database, file.name);
-    } catch {
-      setError("Failed to load database. Upload a valid SQLite .sqlite or .db file.");
-      setDb(null);
+    } catch (err: any) {
+      database?.close?.();
+      setError(`Failed to load ${file.name}: ${err?.message || "not a valid SQLite database"}.`);
+      setDb((previous: any) => {
+        previous?.close?.();
+        return null;
+      });
       setDbName("No database loaded");
     } finally {
       event.target.value = "";
@@ -319,27 +370,38 @@ export default function DatabaseQueryTool() {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    const sizeError = validateDatabaseFile(file);
+    if (sizeError) {
+      setError(sizeError);
+      event.target.value = "";
+      return;
+    }
+
+    let database: any = null;
     try {
       const buffer = await file.arrayBuffer();
       const SQL = await initSqlJs({ locateFile: (item: string) => `${SQL_WASM_PATH}${item}` });
-      const database = new SQL.Database(new Uint8Array(buffer));
+      database = new SQL.Database(new Uint8Array(buffer));
       setCompareStructure(readDatabaseStructure(database));
       setCompareDbName(file.name);
       setActiveTab("compare");
       setError(null);
-    } catch {
-      setError("Failed to load comparison database. Upload a valid SQLite .sqlite or .db file.");
+    } catch (err: any) {
+      setError(`Failed to load comparison database ${file.name}: ${err?.message || "not a valid SQLite database"}.`);
       setCompareStructure([]);
       setCompareDbName("No comparison database");
     } finally {
+      // Only the structure snapshot is kept, so the database itself can go now.
+      database?.close?.();
       event.target.value = "";
     }
   };
 
   const handleSampleCompareDatabase = async () => {
+    let database: any = null;
     try {
       const SQL = await initSqlJs({ locateFile: (file: string) => `${SQL_WASM_PATH}${file}` });
-      const database = new SQL.Database();
+      database = new SQL.Database();
       database.run(SAMPLE_COMPARE_SQL);
       setCompareStructure(readDatabaseStructure(database));
       setCompareDbName("sample-debugtools-v2.sqlite");
@@ -347,10 +409,12 @@ export default function DatabaseQueryTool() {
       setError(null);
     } catch (err: any) {
       setError(`Failed to create comparison sample: ${err.message}`);
+    } finally {
+      database?.close?.();
     }
   };
 
-  const runQuery = (sql = query) => {
+  const runQuery = async (sql = query) => {
     if (!db) {
       setError("Load a SQLite database first, or use the sample database.");
       return;
@@ -360,20 +424,23 @@ export default function DatabaseQueryTool() {
     if (!trimmed) return;
 
     setLoading(true);
+    // sql.js blocks the main thread, so hand the browser a frame to paint the busy
+    // state before the query starts. (A worker would be the real fix.)
+    await new Promise((resolve) => {
+      if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => setTimeout(resolve, 0));
+      else setTimeout(resolve, 0);
+    });
     const startedAt = performance.now();
 
     try {
-      const response = db.exec(trimmed);
-      if (response.length > 0) {
-        setColumns(response[0].columns);
-        setResults(response[0].values);
-      } else {
-        setColumns([]);
-        setResults([]);
-      }
+      const response: ResultSet[] = db.exec(trimmed);
+      setResultSets(response);
+      // Non-SELECT statements return no result set; report what they changed instead.
+      setStatusMessage(response.length === 0 ? formatRowsAffected(db.getRowsModified()) : null);
       setLastRunMs(Math.max(1, Math.round(performance.now() - startedAt)));
       setError(null);
       setActiveTab("results");
+      refreshStructure(db);
       setHistory((previous) => {
         const updated = [trimmed, ...previous.filter((item) => item !== trimmed)].slice(0, 12);
         saveHistory(updated);
@@ -381,6 +448,9 @@ export default function DatabaseQueryTool() {
       });
     } catch (err: any) {
       setError(err.message || "Query failed.");
+      setStatusMessage(null);
+      // A failed statement can still be a partially applied script.
+      refreshStructure(db);
     } finally {
       setLoading(false);
     }
@@ -396,8 +466,10 @@ export default function DatabaseQueryTool() {
         rows: response[0]?.values || [],
       });
       setActiveTab("schema");
-    } catch {
-      setTablePreview({ name: table, columns: [], rows: [] });
+    } catch (err: any) {
+      setTablePreview(null);
+      setError(`Failed to preview ${table}: ${err?.message || "unknown error"}`);
+      setActiveTab("schema");
     }
   };
 
@@ -492,7 +564,7 @@ export default function DatabaseQueryTool() {
               <ArrowsRightLeftIcon className="h-4 w-4" />
               Compare DB
             </button>
-            <button type="button" onClick={() => runQuery()} disabled={!db || loading} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#09090b] px-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
+            <button type="button" onClick={() => void runQuery()} disabled={!db || loading} className="inline-flex h-9 items-center gap-2 rounded-md bg-[#09090b] px-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">
               <PlayIcon className="h-4 w-4" />
               {loading ? "Running" : "Run"}
             </button>
@@ -504,8 +576,8 @@ export default function DatabaseQueryTool() {
               <ArrowDownTrayIcon className="h-4 w-4" />
               JSON
             </button>
-            <input ref={fileInputRef} type="file" accept=".sqlite,.db" onChange={handleFileUpload} className="hidden" />
-            <input ref={compareFileInputRef} type="file" accept=".sqlite,.db" onChange={handleCompareFileUpload} className="hidden" />
+            <input ref={fileInputRef} type="file" accept=".sqlite,.sqlite3,.db,.db3,.sdb,.s3db,.sqlitedb,application/vnd.sqlite3,application/x-sqlite3,application/octet-stream" onChange={handleFileUpload} className="hidden" />
+            <input ref={compareFileInputRef} type="file" accept=".sqlite,.sqlite3,.db,.db3,.sdb,.s3db,.sqlitedb,application/vnd.sqlite3,application/x-sqlite3,application/octet-stream" onChange={handleCompareFileUpload} className="hidden" />
           </div>
         </div>
       </header>
@@ -534,6 +606,7 @@ export default function DatabaseQueryTool() {
               <input
                 value={structureSearch}
                 onChange={(event) => setStructureSearch(event.target.value)}
+                aria-label="Search tables or columns"
                 placeholder="Search tables or columns"
                 className="mb-3 h-9 w-full rounded-md border border-[#e4e4e7] bg-white px-3 font-mono text-sm outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15"
               />
@@ -574,7 +647,7 @@ export default function DatabaseQueryTool() {
               {history.length === 0 && <p className="text-sm text-[#71717a]">Queries appear here after running.</p>}
               {history.map((sql) => (
                 <div key={sql} className="group flex items-start gap-2 rounded-md border border-[#e4e4e7] p-2">
-                  <button type="button" onClick={() => { setQuery(sql); runQuery(sql); }} className="line-clamp-2 flex-1 text-left font-mono text-xs text-[#2563eb]">
+                  <button type="button" onClick={() => { setQuery(sql); void runQuery(sql); }} className="line-clamp-2 flex-1 text-left font-mono text-xs text-[#2563eb]">
                     {sql}
                   </button>
                   <button type="button" onClick={() => deleteHistoryItem(sql)} className="text-[#8c959f] opacity-0 group-hover:opacity-100">
@@ -608,9 +681,18 @@ export default function DatabaseQueryTool() {
           </div>
 
           <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 border-b border-[#e4e4e7] bg-white px-3 py-2">
-            <div className="flex gap-1">
+            <div className="flex gap-1" role="tablist" aria-label="Database workbench views">
               {(["results", "schema", "insights", "compare"] as ActiveTab[]).map((tab) => (
-                <button key={tab} type="button" onClick={() => setActiveTab(tab)} className={`rounded-md px-3 py-1.5 text-sm font-semibold capitalize ${activeTab === tab ? "bg-[#09090b] text-white" : "text-[#71717a] hover:bg-[#fafafa]"}`}>
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  id={`db-tab-${tab}`}
+                  aria-selected={activeTab === tab}
+                  aria-controls={`db-panel-${tab}`}
+                  onClick={() => setActiveTab(tab)}
+                  className={`rounded-md px-3 py-1.5 text-sm font-semibold capitalize ${activeTab === tab ? "bg-[#09090b] text-white" : "text-[#71717a] hover:bg-[#fafafa]"}`}
+                >
                   {tab}
                 </button>
               ))}
@@ -623,6 +705,7 @@ export default function DatabaseQueryTool() {
                 </span>
               )}
               <span>{columns.length ? `${results.length} rows / ${columns.length} cols` : "No result set"}</span>
+              {resultSets.length > 1 && <span>{resultSets.length} result sets</span>}
             </div>
           </div>
 
@@ -630,11 +713,28 @@ export default function DatabaseQueryTool() {
 
           <div className="relative z-20 min-h-[420px] bg-white p-3">
             {activeTab === "results" && (
-              <ResultTable columns={columns} rows={results} emptyText={db ? "Run a query to view results." : "Upload a SQLite database or load the sample."} />
+              <div className="space-y-3" role="tabpanel" id="db-panel-results" aria-labelledby="db-tab-results">
+                {statusMessage && (
+                  <p className="rounded-md border border-[#e4e4e7] bg-[#fafafa] p-3 font-mono text-sm text-[#71717a]">{statusMessage}</p>
+                )}
+                {resultSets.length === 0 && !statusMessage && (
+                  <ResultTable columns={[]} rows={[]} emptyText={db ? "Run a query to view results." : "Upload a SQLite database or load the sample."} />
+                )}
+                {resultSets.map((resultSet, index) => (
+                  <section key={index} className="space-y-2">
+                    {resultSets.length > 1 && (
+                      <p className="font-mono text-xs font-semibold uppercase tracking-[0.08em] text-[#71717a]">
+                        Result set {index + 1} of {resultSets.length} · {resultSet.values.length} rows
+                      </p>
+                    )}
+                    <ResultTable columns={resultSet.columns} rows={resultSet.values} emptyText="No rows returned." />
+                  </section>
+                ))}
+              </div>
             )}
 
             {activeTab === "schema" && (
-              <div className="space-y-3">
+              <div className="space-y-3" role="tabpanel" id="db-panel-schema" aria-labelledby="db-tab-schema">
                 {tablePreview ? (
                   <section className="rounded-md border border-[#e4e4e7]">
                     <div className="flex items-center justify-between border-b border-[#e4e4e7] px-3 py-2">
@@ -652,7 +752,7 @@ export default function DatabaseQueryTool() {
             )}
 
             {activeTab === "insights" && (
-              <div className="space-y-2">
+              <div className="space-y-2" role="tabpanel" id="db-panel-insights" aria-labelledby="db-tab-insights">
                 {insightRows.length === 0 && <p className="rounded-md border border-dashed border-[#e4e4e7] p-6 text-sm text-[#71717a]">Run a numeric query or load a database to see quick bars.</p>}
                 {insightRows.map((row) => (
                   <div key={row.label} className="grid gap-2 rounded-md border border-[#e4e4e7] p-3 sm:grid-cols-[220px_minmax(0,1fr)_80px] sm:items-center">
@@ -667,7 +767,7 @@ export default function DatabaseQueryTool() {
             )}
 
             {activeTab === "compare" && (
-              <div className="space-y-3">
+              <div className="space-y-3" role="tabpanel" id="db-panel-compare" aria-labelledby="db-tab-compare">
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[#e4e4e7] bg-[#fafafa] p-3">
                   <div>
                     <p className="text-sm font-semibold">Compare schema and row counts</p>
