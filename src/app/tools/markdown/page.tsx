@@ -23,8 +23,6 @@ import 'prismjs/themes/prism.css';
 
 // Keyboard shortcuts
 const keyboardShortcuts = [
-  { key: 'Ctrl+S / Cmd+S', description: 'Save markdown' },
-  { key: 'Ctrl+R / Cmd+R', description: 'Reset markdown' },
   { key: 'Ctrl+C / Cmd+C', description: 'Copy markdown' },
   { key: 'Ctrl+H / Cmd+H', description: 'Show/hide help' },
   { key: 'Ctrl+P / Cmd+P', description: 'Toggle preview mode' }
@@ -73,7 +71,6 @@ function hello() {
 export default function MarkdownPreviewPage() {
   const [markdown, setMarkdown] = useState(sampleMarkdown);
   const [showHelp, setShowHelp] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
   const [previewMode, setPreviewMode] = useState<'split' | 'preview' | 'edit'>('split');
 
@@ -84,9 +81,13 @@ export default function MarkdownPreviewPage() {
   };
 
   // Copy markdown to clipboard
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(markdown);
-    showNotification('Markdown copied to clipboard', 'success');
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(markdown);
+      showNotification('Markdown copied to clipboard', 'success');
+    } catch {
+      showNotification('Failed to copy to clipboard', 'error');
+    }
   };
 
   // Reset markdown
@@ -102,25 +103,19 @@ export default function MarkdownPreviewPage() {
         return;
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        // Save functionality will be added
-        showNotification('Markdown saved', 'success');
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
-        e.preventDefault();
-        resetMarkdown();
-      }
-
       if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        // A real selection (e.g. in the preview) must copy itself, not the
+        // whole source document.
+        if (window.getSelection()?.toString()) {
+          return;
+        }
         e.preventDefault();
         copyToClipboard();
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
         e.preventDefault();
-        setShowHelp(!showHelp);
+        setShowHelp(prev => !prev);
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
@@ -141,7 +136,7 @@ export default function MarkdownPreviewPage() {
     <div className="container mx-auto p-4">
       {/* Notification */}
       {notification && (
-        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+        <div role="status" aria-live="polite" className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
           notification.type === 'success' ? 'bg-green-500 text-white' :
           notification.type === 'error' ? 'bg-red-500 text-white' :
           'bg-blue-500 text-white'
@@ -264,19 +259,22 @@ export default function MarkdownPreviewPage() {
           }`}>
             {(previewMode === 'split' || previewMode === 'edit') && (
               <div>
-                <label className="block text-sm font-medium mb-1">Editor</label>
+                <label htmlFor="markdown-editor" className="block text-sm font-medium mb-1">Editor</label>
                 <textarea
+                  id="markdown-editor"
                   value={markdown}
                   onChange={(e) => setMarkdown(e.target.value)}
-                  className="w-full h-[500px] p-4 border rounded-md font-mono resize-none"
+                  className="w-full h-[500px] p-4 border rounded-md font-mono resize-none bg-white text-gray-900"
                   placeholder="Write your Markdown here..."
                 />
               </div>
             )}
             {(previewMode === 'split' || previewMode === 'preview') && (
               <div>
-                <label className="block text-sm font-medium mb-1">Preview</label>
-                <div className="w-full h-[500px] p-4 border rounded-md overflow-auto prose dark:prose-invert max-w-none [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:py-2 [&_.katex-display]:text-[0.95em] [&_.katex]:max-w-full">
+                {/* The preview is a region, not a form control, so it is
+                    associated by aria-labelledby rather than htmlFor. */}
+                <span id="markdown-preview-label" className="block text-sm font-medium mb-1">Preview</span>
+                <div role="region" aria-labelledby="markdown-preview-label" className="w-full h-[500px] p-4 border rounded-md overflow-auto prose max-w-none [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:py-2 [&_.katex-display]:text-[0.95em] [&_.katex]:max-w-full">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm, remarkMath]}
                     rehypePlugins={[rehypeKatex, rehypePrism]}

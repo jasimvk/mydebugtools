@@ -104,6 +104,18 @@ CREATE TABLE IF NOT EXISTS api_request_history (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Tool History table. Stores route-level usage only, never pasted payloads, tokens, or request bodies.
+CREATE TABLE IF NOT EXISTS tool_history (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  tool_slug TEXT NOT NULL,
+  tool_name TEXT NOT NULL,
+  tool_path TEXT NOT NULL,
+  event_type TEXT NOT NULL DEFAULT 'visit' CHECK (event_type IN ('visit', 'open', 'run')),
+  metadata JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- User preferences table
 CREATE TABLE IF NOT EXISTS user_preferences (
   user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -115,6 +127,65 @@ CREATE TABLE IF NOT EXISTS user_preferences (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Workspaces table. Personal workspaces are created automatically; team workspaces can be added later.
+CREATE TABLE IF NOT EXISTS workspaces (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  plan TEXT DEFAULT 'free' CHECK (plan IN ('free', 'team', 'enterprise')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Workspace members and roles
+CREATE TABLE IF NOT EXISTS workspace_members (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'developer' CHECK (role IN ('owner', 'admin', 'developer', 'viewer')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'invited', 'disabled')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(workspace_id, user_id)
+);
+
+-- Workspace-owned debug reports for future AI/debugging flows
+CREATE TABLE IF NOT EXISTS debug_reports (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  source_type TEXT DEFAULT 'api' CHECK (source_type IN ('api', 'log', 'trace', 'crash', 'build', 'manual')),
+  summary TEXT,
+  context JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Lifetime ad-free purchases powered by Dodo Payments
+CREATE TABLE IF NOT EXISTS ad_free_purchases (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  email TEXT,
+  dodo_payment_id TEXT UNIQUE,
+  dodo_checkout_session_id TEXT,
+  dodo_customer_id TEXT,
+  dodo_product_id TEXT,
+  webhook_id TEXT UNIQUE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'failed', 'cancelled', 'refunded')),
+  amount_cents INT NOT NULL DEFAULT 300,
+  currency TEXT NOT NULL DEFAULT 'USD',
+  purchased_at TIMESTAMPTZ,
+  raw_event JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Backward-compatible workspace linkage for existing API collections.
+ALTER TABLE api_collections ADD COLUMN IF NOT EXISTS workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE;
+ALTER TABLE api_requests ADD COLUMN IF NOT EXISTS description TEXT DEFAULT '';
+
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
@@ -125,6 +196,17 @@ CREATE INDEX IF NOT EXISTS idx_api_requests_user_id ON api_requests(user_id);
 CREATE INDEX IF NOT EXISTS idx_api_environments_user_id ON api_environments(user_id);
 CREATE INDEX IF NOT EXISTS idx_api_request_history_user_id ON api_request_history(user_id);
 CREATE INDEX IF NOT EXISTS idx_api_request_history_created_at ON api_request_history(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tool_history_user_id ON tool_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_tool_history_created_at ON tool_history(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_tool_history_tool_slug ON tool_history(tool_slug);
+CREATE INDEX IF NOT EXISTS idx_workspaces_owner_id ON workspaces(owner_id);
+CREATE INDEX IF NOT EXISTS idx_workspace_members_workspace_id ON workspace_members(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_workspace_members_user_id ON workspace_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_api_collections_workspace_id ON api_collections(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_debug_reports_workspace_id ON debug_reports(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_ad_free_purchases_user_id ON ad_free_purchases(user_id);
+CREATE INDEX IF NOT EXISTS idx_ad_free_purchases_email ON ad_free_purchases(LOWER(email));
+CREATE INDEX IF NOT EXISTS idx_ad_free_purchases_status ON ad_free_purchases(status);
 
 -- Row Level Security (RLS) Policies
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
@@ -134,7 +216,12 @@ ALTER TABLE api_collections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_environments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE api_request_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tool_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workspaces ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workspace_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE debug_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ad_free_purchases ENABLE ROW LEVEL SECURITY;
 
 -- Users can read their own data
 CREATE POLICY "Users can view own profile"
@@ -209,6 +296,19 @@ CREATE POLICY "Users can delete own history"
   ON api_request_history FOR DELETE
   USING (auth.uid()::uuid = user_id);
 
+-- Tool history policies
+CREATE POLICY "Users can view own tool history"
+  ON tool_history FOR SELECT
+  USING (auth.uid()::uuid = user_id);
+
+CREATE POLICY "Users can create own tool history"
+  ON tool_history FOR INSERT
+  WITH CHECK (auth.uid()::uuid = user_id);
+
+CREATE POLICY "Users can delete own tool history"
+  ON tool_history FOR DELETE
+  USING (auth.uid()::uuid = user_id);
+
 -- Preferences policies
 CREATE POLICY "Users can view own preferences"
   ON user_preferences FOR SELECT
@@ -220,6 +320,84 @@ CREATE POLICY "Users can create own preferences"
 
 CREATE POLICY "Users can update own preferences"
   ON user_preferences FOR UPDATE
+  USING (auth.uid()::uuid = user_id);
+
+-- Workspace policies
+CREATE POLICY "Members can view their workspaces"
+  ON workspaces FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM workspace_members
+      WHERE workspace_members.workspace_id = workspaces.id
+        AND workspace_members.user_id = auth.uid()::uuid
+        AND workspace_members.status = 'active'
+    )
+  );
+
+CREATE POLICY "Users can create owned workspaces"
+  ON workspaces FOR INSERT
+  WITH CHECK (auth.uid()::uuid = owner_id);
+
+CREATE POLICY "Owners can update workspaces"
+  ON workspaces FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM workspace_members
+      WHERE workspace_members.workspace_id = workspaces.id
+        AND workspace_members.user_id = auth.uid()::uuid
+        AND workspace_members.role IN ('owner', 'admin')
+        AND workspace_members.status = 'active'
+    )
+  );
+
+CREATE POLICY "Members can view workspace members"
+  ON workspace_members FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM workspace_members viewer
+      WHERE viewer.workspace_id = workspace_members.workspace_id
+        AND viewer.user_id = auth.uid()::uuid
+        AND viewer.status = 'active'
+    )
+  );
+
+CREATE POLICY "Owners and admins can manage workspace members"
+  ON workspace_members FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM workspace_members manager
+      WHERE manager.workspace_id = workspace_members.workspace_id
+        AND manager.user_id = auth.uid()::uuid
+        AND manager.role IN ('owner', 'admin')
+        AND manager.status = 'active'
+    )
+  );
+
+CREATE POLICY "Members can view debug reports"
+  ON debug_reports FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM workspace_members
+      WHERE workspace_members.workspace_id = debug_reports.workspace_id
+        AND workspace_members.user_id = auth.uid()::uuid
+        AND workspace_members.status = 'active'
+    )
+  );
+
+CREATE POLICY "Contributors can create debug reports"
+  ON debug_reports FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM workspace_members
+      WHERE workspace_members.workspace_id = debug_reports.workspace_id
+        AND workspace_members.user_id = auth.uid()::uuid
+        AND workspace_members.role IN ('owner', 'admin', 'developer')
+        AND workspace_members.status = 'active'
+    )
+  );
+
+CREATE POLICY "Users can view own ad-free purchases"
+  ON ad_free_purchases FOR SELECT
   USING (auth.uid()::uuid = user_id);
 
 -- Functions for updated_at timestamp
@@ -248,4 +426,16 @@ CREATE TRIGGER update_api_environments_updated_at BEFORE UPDATE ON api_environme
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_user_preferences_updated_at BEFORE UPDATE ON user_preferences
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_workspaces_updated_at BEFORE UPDATE ON workspaces
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_workspace_members_updated_at BEFORE UPDATE ON workspace_members
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_debug_reports_updated_at BEFORE UPDATE ON debug_reports
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_ad_free_purchases_updated_at BEFORE UPDATE ON ad_free_purchases
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

@@ -191,11 +191,95 @@ const statusCodes: StatusCodes = {
       description: 'The requested resource is no longer available and has been permanently removed.',
       likelyCause: 'Resource was intentionally removed and won\'t be available again.',
     },
-    { 
-      code: 429, 
-      name: 'Too Many Requests', 
+    {
+      code: 429,
+      name: 'Too Many Requests',
       description: 'The user has sent too many requests in a given amount of time.',
       likelyCause: 'Rate limiting, API quota exceeded, or DDoS protection triggered.',
+    },
+    {
+      code: 402,
+      name: 'Payment Required',
+      description: 'Reserved for future use; used by some APIs to signal a billing or quota problem.',
+      likelyCause: 'Subscription lapsed, spending cap reached, or a paid tier is required for this endpoint.',
+    },
+    {
+      code: 407,
+      name: 'Proxy Authentication Required',
+      description: 'The client must authenticate with the proxy before the request can be served.',
+      likelyCause: 'A corporate or intercepting proxy needs credentials that were not supplied.',
+    },
+    {
+      code: 412,
+      name: 'Precondition Failed',
+      description: 'A precondition given in the request headers evaluated to false on the server.',
+      likelyCause: 'A conditional request (If-Match, If-Unmodified-Since) lost a write race — the resource changed first.',
+    },
+    {
+      code: 413,
+      name: 'Content Too Large',
+      description: 'The request body is larger than the server is willing or able to process.',
+      likelyCause: 'Upload exceeds the server or proxy body-size limit (nginx client_max_body_size is the usual culprit).',
+    },
+    {
+      code: 414,
+      name: 'URI Too Long',
+      description: 'The request URI is longer than the server is willing to interpret.',
+      likelyCause: 'Query parameters that should be a POST body, or an accidental redirect loop appending parameters.',
+    },
+    {
+      code: 415,
+      name: 'Unsupported Media Type',
+      description: 'The payload format is not supported by the server for this resource.',
+      likelyCause: 'Missing or wrong Content-Type header — commonly sending JSON without application/json.',
+    },
+    {
+      code: 418,
+      name: "I'm a teapot",
+      description: 'An April Fools joke from RFC 2324, returned by some servers as a deliberate refusal.',
+      likelyCause: 'A honeypot, a bot filter, or an endpoint refusing the request on purpose.',
+    },
+    {
+      code: 421,
+      name: 'Misdirected Request',
+      description: 'The request was directed at a server that cannot produce a response for it.',
+      likelyCause: 'HTTP/2 connection coalescing sent the request to a host whose certificate covers it but whose config does not.',
+    },
+    {
+      code: 422,
+      name: 'Unprocessable Content',
+      description: 'The request was well-formed but could not be processed due to semantic errors.',
+      likelyCause: 'Validation failure — the JSON parsed fine but a field was missing, malformed, or out of range.',
+    },
+    {
+      code: 423,
+      name: 'Locked',
+      description: 'The resource being accessed is locked.',
+      likelyCause: 'A WebDAV lock, or an application-level lock held by another user or process.',
+    },
+    {
+      code: 426,
+      name: 'Upgrade Required',
+      description: 'The server refuses to perform the request using the current protocol.',
+      likelyCause: 'Endpoint requires a protocol upgrade, typically to TLS or to WebSocket.',
+    },
+    {
+      code: 428,
+      name: 'Precondition Required',
+      description: 'The origin server requires the request to be conditional.',
+      likelyCause: 'The API mandates an If-Match header to prevent lost updates, and none was sent.',
+    },
+    {
+      code: 431,
+      name: 'Request Header Fields Too Large',
+      description: 'The server refuses to process the request because its header fields are too large.',
+      likelyCause: 'Oversized cookies or a very long Authorization header exceeding the server header limit.',
+    },
+    {
+      code: 451,
+      name: 'Unavailable For Legal Reasons',
+      description: 'The resource is unavailable due to a legal demand.',
+      likelyCause: 'Geo-blocking, a takedown notice, or regulatory restriction in the requesting region.',
     },
   ],
   'Server Error (5xx)': [
@@ -229,11 +313,29 @@ const statusCodes: StatusCodes = {
       description: 'The upstream server failed to send a request in the time allowed by the server.',
       likelyCause: 'Backend server took too long to respond to the proxy server.',
     },
-    { 
-      code: 505, 
-      name: 'HTTP Version Not Supported', 
+    {
+      code: 505,
+      name: 'HTTP Version Not Supported',
       description: 'The server does not support the HTTP protocol version used in the request.',
       likelyCause: 'Client is using an HTTP version that the server doesn\'t support.',
+    },
+    {
+      code: 507,
+      name: 'Insufficient Storage',
+      description: 'The server cannot store the representation needed to complete the request.',
+      likelyCause: 'Disk full on the origin or upload target.',
+    },
+    {
+      code: 508,
+      name: 'Loop Detected',
+      description: 'The server detected an infinite loop while processing the request.',
+      likelyCause: 'Circular references in a WebDAV traversal or a self-referencing rewrite rule.',
+    },
+    {
+      code: 511,
+      name: 'Network Authentication Required',
+      description: 'The client needs to authenticate to gain network access.',
+      likelyCause: 'A captive portal on public Wi-Fi intercepting the request.',
     },
   ],
 };
@@ -242,18 +344,29 @@ function HttpStatusContent() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<StatusCodeCategory | null>(null);
 
-  // Filter status codes based on search
+  // Normalize once. The query used to be matched raw, so a code pasted from a
+  // log line ("404 ") matched nothing and the page claimed no such code exists.
+  const query = search.trim().toLowerCase();
+
   const filteredStatusCodes = Object.entries(statusCodes).reduce((acc, [category, codes]) => {
-    const filteredCodes = codes.filter(code => 
-      code.code.toString().includes(search) ||
-      code.name.toLowerCase().includes(search.toLowerCase()) ||
-      code.description.toLowerCase().includes(search.toLowerCase())
-    );
+    const filteredCodes = query
+      ? codes.filter(code =>
+          code.code.toString().includes(query) ||
+          code.name.toLowerCase().includes(query) ||
+          code.description.toLowerCase().includes(query) ||
+          // Also searchable: the cause text and the category, so "rate limit"
+          // finds 429 and "client error" / "4xx" narrow to a class.
+          code.likelyCause.toLowerCase().includes(query) ||
+          category.toLowerCase().includes(query)
+        )
+      : codes;
     if (filteredCodes.length > 0) {
       acc[category] = filteredCodes;
     }
     return acc;
   }, {} as StatusCodes);
+
+  const resultCount = Object.values(filteredStatusCodes).reduce((sum, codes) => sum + codes.length, 0);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -278,10 +391,14 @@ function HttpStatusContent() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search HTTP status codes"
             placeholder="Search status codes, names, or descriptions..."
             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
           />
         </div>
+        <p aria-live="polite" className="mt-2 text-sm text-gray-600">
+          {query ? `${resultCount} status ${resultCount === 1 ? 'code' : 'codes'} match “${search.trim()}”.` : ''}
+        </p>
       </div>
 
       {/* Status code categories */}

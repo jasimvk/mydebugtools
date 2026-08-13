@@ -1,64 +1,65 @@
 import type { Metadata, Viewport } from "next";
+import { GeistSans } from "geist/font/sans";
+import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 import GoogleAnalytics from "./components/GoogleAnalytics";
-import AnalyticsProvider from "./components/AnalyticsProvider";
 import AuthProvider from "./components/AuthProvider";
 import Providers from "./providers";
-import Script from "next/script";
+import SiteDevTools from "./components/SiteDevTools";
 
 const SITE_URL = 'https://debugtools.org';
-const SITE_NAME = 'DEBUGTOOLS';
-const SITE_DESCRIPTION = 'Open-source AI debugging toolkit for logs, stack traces, crashes, API failures, HAR files, build errors, and production issues.';
+const SITE_NAME = 'DebugTools';
+const SITE_DESCRIPTION = 'Open-source debugging toolkit for logs, traces, APIs, auth, CI, mobile, Kubernetes, OpenTelemetry, and production issues.';
 const CORE_TOOLS = [
   {
-    name: 'API Tester',
+    name: 'API Workbench',
     url: '/tools/api/',
-    description: 'Send HTTP requests from the browser, set headers and auth, and inspect status, headers, timing, and response bodies.',
+    description: 'Send HTTP requests from the browser, set headers and auth, import collections, and inspect status, timing, and responses.',
   },
   {
-    name: 'JSON Formatter',
-    url: '/tools/json/',
-    description: 'Format, validate, repair, and inspect JSON payloads locally in the browser.',
+    name: 'Stack Trace Explainer',
+    url: '/tools/stack-trace/',
+    description: 'Paste stack traces and get the likely failing frame, root-cause clues, fixes, and follow-up checks.',
+  },
+  {
+    name: 'Log Trace Rebuilder',
+    url: '/tools/log-trace/',
+    description: 'Turn messy logs into a timeline with highlighted errors, warnings, services, and next debugging steps.',
+  },
+  {
+    name: 'HAR Analyzer / HTTP Profiler',
+    url: '/tools/http-profiler/',
+    description: 'Inspect HAR files and HTTP traffic for slow requests, failures, duplicate calls, payload size, and cache hints.',
+  },
+  {
+    name: 'CI / GitHub Actions Debugger',
+    url: '/tools/ci-debugger/',
+    description: 'Analyze CI logs and workflow YAML to find failed steps, classify errors, and suggest debug flags or fixes.',
+  },
+  {
+    name: 'Security Headers + CORS Inspector',
+    url: '/tools/security-headers/',
+    description: 'Review pasted response headers for security gaps, CORS risks, caching issues, and hardening recommendations.',
+  },
+  {
+    name: 'Kubernetes Debug Helper',
+    url: '/tools/k8s-debug/',
+    description: 'Parse kubectl output, pod states, events, and common cluster failure clues into a practical debug report.',
+  },
+  {
+    name: 'OpenTelemetry Trace Viewer',
+    url: '/tools/otel-trace-viewer/',
+    description: 'Inspect local OpenTelemetry traces for slow spans, errors, service paths, and incident-analysis hints.',
   },
   {
     name: 'JWT Decoder',
     url: '/tools/jwt/',
-    description: 'Decode JWT headers and payload claims locally without sending tokens to a debugtools server.',
-  },
-  {
-    name: 'Base64 Encoder and Decoder',
-    url: '/tools/base64/',
-    description: 'Encode and decode Base64 text and files for debugging text-safe payloads.',
-  },
-  {
-    name: 'Hash Generator',
-    url: '/tools/hash/',
-    description: 'Generate SHA hashes in the browser for text, payloads, and checksum comparison.',
-  },
-  {
-    name: 'Code Diff Tool',
-    url: '/tools/code-diff/',
-    description: 'Compare two snippets side by side and review additions, removals, and changed lines.',
-  },
-  {
-    name: 'URL Encoder and Decoder',
-    url: '/tools/url/',
-    description: 'Encode, decode, and inspect URLs, URI components, and query strings.',
-  },
-  {
-    name: 'HTTP Status Codes',
-    url: '/tools/http-status/',
-    description: 'Look up HTTP status codes with concise categories and API debugging context.',
-  },
-  {
-    name: 'AI Debug Assistant',
-    url: '/tools/ai/',
-    description: 'Use optional OpenAI BYOK debugging for errors, API responses, stack traces, and JSON issues.',
+    description: 'Decode JWT headers and payload claims locally as an SEO entry utility for auth debugging.',
   },
 ] as const;
 
 export const viewport: Viewport = {
-  themeColor: '#24292f',
+  themeColor: '#ffffff',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
@@ -66,12 +67,12 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'DEBUGTOOLS - Open-source AI debugging toolkit for developers',
+    default: 'DebugTools - Open-source debugging toolkit for modern developers',
     template: '%s',
   },
   description: SITE_DESCRIPTION,
   metadataBase: new URL(SITE_URL),
-  keywords: "DEBUGTOOLS, debugtools, open-source AI debugging toolkit, stack trace explainer, log analyzer, API tester, HAR analyzer, crash report analyzer, build error debugger, JSON formatter, JWT decoder, local-first developer tools",
+  keywords: "DebugTools, debugtools, open-source debugging toolkit, stack trace explainer, log analyzer, HAR analyzer, GitHub Actions debugger, OpenTelemetry trace viewer, Kubernetes debug helper, Android logcat analyzer, SAML OIDC debugger, certificate viewer, API debugging, auth debugging, local-first developer tools",
   applicationName: SITE_NAME,
   authors: [{ name: 'Jasim VK', url: 'https://x.com/jasimvk' }],
   creator: 'Jasim VK',
@@ -80,7 +81,7 @@ export const metadata: Metadata = {
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',
-    apple: '/favicon.svg',
+    apple: '/apple-touch-icon.png',
   },
   robots: {
     index: true,
@@ -101,15 +102,15 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: SITE_URL,
     siteName: SITE_NAME,
-    title: 'DEBUGTOOLS - Open-source AI debugging toolkit for developers',
+    title: 'DebugTools - Open-source debugging toolkit for modern developers',
     description: SITE_DESCRIPTION,
     images: [
       {
-        url: `${SITE_URL}/og-image.svg`,
+        url: `${SITE_URL}/og-image.png`,
         width: 1200,
         height: 630,
-        alt: `${SITE_NAME} - Open-source AI debugging toolkit for developers`,
-        type: 'image/svg+xml',
+        alt: `${SITE_NAME} - Open-source debugging toolkit for modern developers`,
+        type: 'image/png',
       },
     ],
   },
@@ -117,9 +118,9 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     site: '@jasimvk',
     creator: '@jasimvk',
-    title: 'DEBUGTOOLS - Open-source AI debugging toolkit for developers',
+    title: 'DebugTools - Open-source debugging toolkit for modern developers',
     description: SITE_DESCRIPTION,
-    images: [`${SITE_URL}/og-image.svg`],
+    images: [`${SITE_URL}/og-image.png`],
   },
 };
 
@@ -166,8 +167,8 @@ export default function RootLayout({
       {
         '@type': 'ItemList',
         '@id': `${SITE_URL}/#core-tools`,
-        name: 'Core DEBUGTOOLS developer tools',
-        description: 'A concise index of local-first utilities for API, data, encoding, hashing, diff, URL, HTTP, and optional OpenAI BYOK debugging work.',
+        name: 'Core DebugTools debugging workflows',
+        description: 'A concise index of local-first debugging workflows for logs, stack traces, HAR files, CI failures, security headers, Kubernetes output, OpenTelemetry traces, APIs, and auth issues.',
         itemListElement: CORE_TOOLS.map((tool, index) => ({
           '@type': 'ListItem',
           position: index + 1,
@@ -180,30 +181,21 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="en">
-      <body className="antialiased bg-white text-gray-900 min-h-screen flex flex-col">
+    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`}>
+      <body className="antialiased bg-background text-foreground min-h-screen flex flex-col font-sans">
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteJsonLd) }}
         />
-        {process.env.NEXT_PUBLIC_ADSENSE_CLIENT && (
-          <Script
-            id="adsbygoogle-init"
-            strategy="afterInteractive"
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NEXT_PUBLIC_ADSENSE_CLIENT}`}
-            crossOrigin="anonymous"
-          />
-        )}
         {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
           <GoogleAnalytics measurementId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
         )}
         <AuthProvider>
-          <AnalyticsProvider>
-            <Providers>
-              {children}
-            </Providers>
-          </AnalyticsProvider>
+          <Providers>
+            {children}
+          </Providers>
         </AuthProvider>
+        <SiteDevTools />
       </body>
     </html>
   );

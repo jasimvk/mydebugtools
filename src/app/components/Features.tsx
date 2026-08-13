@@ -8,6 +8,11 @@ import {
 
 const features = [
   {
+    name: 'API Workbench',
+    description: 'Test APIs, manage auth, and inspect responses from the flagship workspace.',
+    icon: WrenchIcon,
+  },
+  {
     name: 'JSON Formatter & Beautifier',
     description: 'Format, validate, and beautify your JSON data with ease.',
     icon: CodeBracketIcon,
@@ -21,11 +26,6 @@ const features = [
     name: 'Base64 Tools',
     description: 'Encode and decode Base64 strings with a single click.',
     icon: CommandLineIcon,
-  },
-  {
-    name: 'API Tester',
-    description: 'Test your APIs with a lightweight, fast interface.',
-    icon: WrenchIcon,
   },
   {
     name: 'Icon Finder',

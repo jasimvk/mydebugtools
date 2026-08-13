@@ -7,7 +7,7 @@ export const metadata: Metadata = buildMetadata({
   title: 'Developer Tool Answers | debugtools',
   description: 'Concise answers for common developer debugging tasks, with direct links to open-source debugtools utilities.',
   path: '/answers/',
-  keywords: ['developer tool answers', 'json formatter answer', 'jwt decoder guide', 'api tester guide'],
+  keywords: ['developer tool answers', 'json formatter answer', 'jwt decoder guide', 'api workbench guide'],
 })
 
 export default function AnswersPage() {
@@ -27,15 +27,15 @@ export default function AnswersPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f8fa] px-4 py-10 text-[#24292f] sm:px-6">
+    <main className="min-h-screen bg-[#fafafa] px-4 py-10 text-[#09090b] sm:px-6">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <div className="mx-auto max-w-5xl">
-        <p className="font-mono text-xs text-[#57606a]">debugtools / answers</p>
+        <p className="font-mono text-xs text-[#71717a]">debugtools / answers</p>
         <h1 className="mt-2 text-4xl font-semibold">Developer tool answers</h1>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-[#57606a]">
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-[#71717a]">
           Short, source-friendly answers for common debugging, formatting, and inspection workflows.
         </p>
 
@@ -44,11 +44,11 @@ export default function AnswersPage() {
             <Link
               key={page.slug}
               href={`/answers/${page.slug}/`}
-              className="rounded-md border border-[#d0d7de] bg-white p-5 hover:border-[#0969da] hover:bg-[#f6f8fa]"
+              className="rounded-md border border-[#e4e4e7] bg-white p-5 hover:border-[#2563eb] hover:bg-[#fafafa]"
             >
-              <h2 className="text-lg font-semibold text-[#0969da]">{page.title}</h2>
-              <p className="mt-3 text-sm leading-6 text-[#57606a]">{page.shortAnswer}</p>
-              <div className="mt-4 text-sm font-semibold text-[#0969da]">Read answer</div>
+              <h2 className="text-lg font-semibold text-[#2563eb]">{page.title}</h2>
+              <p className="mt-3 text-sm leading-6 text-[#71717a]">{page.shortAnswer}</p>
+              <div className="mt-4 text-sm font-semibold text-[#2563eb]">Read answer</div>
             </Link>
           ))}
         </div>

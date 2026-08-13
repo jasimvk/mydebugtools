@@ -4,20 +4,20 @@ import type { ComponentType } from 'react';
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { signOut, useSession } from 'next-auth/react';
 import {
   Bars3Icon,
   BeakerIcon,
-  BoltIcon,
   ChevronDownIcon,
   CommandLineIcon,
   DocumentTextIcon,
+  HashtagIcon,
   InformationCircleIcon,
-  PencilSquareIcon,
-  SparklesIcon,
   WrenchIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
-import { Braces, Coffee, Github, GitPullRequest, Hash, KeyRound, Terminal } from 'lucide-react';
+import { Braces, Database, Github, KeyRound, Link2, LogOut, Palette, Terminal, UserRound } from 'lucide-react';
+import GitHubStars from './GitHubStars';
 
 type IconComponent = ComponentType<{ className?: string }>;
 
@@ -27,33 +27,32 @@ const primaryNav: Array<{
   icon: IconComponent;
   activeRoot?: string;
 }> = [
-  { name: 'API Tester', href: '/tools/api', icon: BeakerIcon },
-  { name: 'All Tools', href: '/tools/all', icon: WrenchIcon, activeRoot: '/tools' },
+  { name: 'API Workbench', href: '/tools/api', icon: BeakerIcon },
+  { name: 'Utilities', href: '/tools/all', icon: WrenchIcon, activeRoot: '/tools' },
   { name: 'Docs', href: '/answers', icon: InformationCircleIcon },
 ];
 
 const toolNav: Array<{ name: string; href: string; icon: IconComponent }> = [
-  { name: 'API', href: '/tools/api', icon: BeakerIcon },
-  { name: 'AI Debug', href: '/tools/ai', icon: SparklesIcon },
-  { name: 'Stack', href: '/tools/stack-trace', icon: BoltIcon },
-  { name: 'Logs', href: '/tools/log-trace', icon: DocumentTextIcon },
+  { name: 'API Workbench', href: '/tools/api', icon: BeakerIcon },
   { name: 'JSON', href: '/tools/json', icon: Braces },
   { name: 'JWT', href: '/tools/jwt', icon: KeyRound },
-  { name: 'Hash', href: '/tools/hash', icon: Hash },
-  { name: 'Diff', href: '/tools/code-diff', icon: CommandLineIcon },
   { name: 'Base64', href: '/tools/base64', icon: DocumentTextIcon },
-  { name: 'All tools', href: '/tools/all', icon: WrenchIcon },
+  { name: 'Hash', href: '/tools/hash', icon: HashtagIcon },
+  { name: 'URL', href: '/tools/url', icon: Link2 },
+  { name: 'Regex', href: '/tools/regex', icon: CommandLineIcon },
+  { name: 'HTML', href: '/tools/html', icon: DocumentTextIcon },
+  { name: 'Color', href: '/tools/color', icon: Palette },
+  { name: 'SQLite', href: '/tools/database', icon: Database },
+  { name: 'More utilities', href: '/tools/all', icon: WrenchIcon },
 ];
 
 const projectLinks = [
+  { name: 'Workspaces', href: '/workspace' },
   { name: 'Roadmap', href: '/roadmap' },
   { name: 'Releases', href: '/releases' },
   { name: 'Changelog', href: '/changelog' },
-];
-
-const directProjectActions = [
-  { name: 'Report issue', href: 'https://github.com/jasimvkarim/mydebugtools/issues/new', icon: PencilSquareIcon },
-  { name: 'Contribute', href: '/contributing', icon: GitPullRequest },
+  { name: 'Contribute', href: '/contributing' },
+  { name: 'Report issue', href: 'https://github.com/jasimvkarim/mydebugtools/issues/new' },
 ];
 
 interface SiteHeaderProps {
@@ -70,8 +69,11 @@ export default function SiteHeader({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProjectOpen, setIsProjectOpen] = useState(false);
   const pathname = usePathname() || '';
+  const { data: session, status } = useSession();
   const mobileMenuId = showToolRail ? 'tools-navigation-menu' : 'primary-navigation-menu';
   const menuName = mobileLabel === 'tools' ? 'tools navigation' : 'main menu';
+  const callbackUrl = encodeURIComponent(pathname || '/tools/api');
+  const isAuthenticated = status === 'authenticated';
 
   const isActivePath = (path: string) => {
     if (path === '/') return pathname === path;
@@ -89,23 +91,20 @@ export default function SiteHeader({
   const mobileItems = showToolRail ? toolNav : primaryNav;
 
   return (
-    <nav className="sticky top-0 z-40 border-b border-[#d0d7de] bg-white/95 shadow-[0_1px_0_rgba(27,31,36,0.04)] backdrop-blur supports-[backdrop-filter]:bg-white/85">
+    <nav className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 shadow-[0_8px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl supports-[backdrop-filter]:bg-white/75">
       <div className={`mx-auto ${maxWidth} px-4 sm:px-6`}>
-        <div className="flex h-14 items-center justify-between gap-4">
+        <div className="flex h-16 items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-6">
-            <Link href="/" className="group flex min-w-0 items-center gap-3 text-[#24292f] hover:text-[#24292f]">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[#d0d7de] bg-[#f6f8fa] text-[#24292f] transition-colors group-hover:border-[#8c959f]">
+            <Link href="/" className="group flex shrink-0 items-center gap-3 text-slate-950 hover:text-slate-950">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl border border-slate-200 bg-slate-950 text-white shadow-[0_10px_25px_rgba(15,23,42,0.18)] transition-transform group-hover:-translate-y-0.5">
                 <Terminal className="h-4 w-4" />
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-[15px] font-semibold leading-5 tracking-tight">DEBUGTOOLS</span>
-                <span className="hidden font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-[#6e7781] xl:block">
-                  local-first oss
-                </span>
+                <span className="block truncate text-[15px] font-semibold leading-5 tracking-tight">DebugTools</span>
               </span>
             </Link>
 
-            <div className="hidden items-center gap-1 lg:flex">
+            <div className="hidden items-center gap-1 rounded-full border border-slate-200 bg-slate-50/80 p-1 lg:flex">
               {primaryNav.map((item) => {
                 const Icon = item.icon;
                 const active = isPrimaryActive(item);
@@ -113,10 +112,10 @@ export default function SiteHeader({
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition-colors ${
                       active
-                        ? 'bg-[#f6f8fa] text-[#24292f] shadow-[inset_0_0_0_1px_#d0d7de]'
-                        : 'text-[#57606a] hover:bg-[#f6f8fa] hover:text-[#24292f]'
+                        ? 'bg-white text-slate-950 shadow-sm ring-1 ring-slate-200'
+                        : 'text-slate-500 hover:bg-white hover:text-slate-950'
                     }`}
                     aria-current={isActivePath(item.href) ? 'page' : undefined}
                   >
@@ -129,43 +128,18 @@ export default function SiteHeader({
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="hidden items-center gap-2 xl:flex">
-              {directProjectActions.map((item) => {
-                const Icon = item.icon;
-                const isExternal = item.href.startsWith('http');
-                const className = "inline-flex items-center gap-1.5 rounded-md border border-[#d0d7de] bg-white px-3 py-1.5 text-sm font-semibold text-[#24292f] transition-colors hover:bg-[#f6f8fa] hover:text-[#24292f]";
-
-                return isExternal ? (
-                  <a
-                    key={item.href}
-                    href={item.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={className}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {item.name}
-                  </a>
-                ) : (
-                  <Link key={item.href} href={item.href} className={className}>
-                    <Icon className="h-3.5 w-3.5" />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </div>
             <div className="relative hidden lg:block">
               <button
                 type="button"
                 onClick={() => setIsProjectOpen(!isProjectOpen)}
-                className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold text-[#57606a] transition-colors hover:bg-[#f6f8fa] hover:text-[#24292f]"
+                className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-950"
                 aria-expanded={isProjectOpen}
               >
                 Project
                 <ChevronDownIcon className="h-4 w-4" />
               </button>
               {isProjectOpen && (
-                <div className="absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-md border border-[#d0d7de] bg-white py-1 shadow-lg">
+                <div className="absolute right-0 top-full z-50 mt-2 w-48 overflow-hidden rounded-2xl border border-slate-200 bg-white py-1.5 shadow-[0_18px_45px_rgba(15,23,42,0.14)]">
                   {projectLinks.map((link) => (
                     <Link
                       key={link.href}
@@ -173,7 +147,7 @@ export default function SiteHeader({
                       target={link.href.startsWith('http') ? '_blank' : undefined}
                       rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
                       onClick={() => setIsProjectOpen(false)}
-                      className="block px-3 py-2 text-sm font-medium text-[#57606a] hover:bg-[#f6f8fa] hover:text-[#24292f]"
+                      className="block px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                     >
                       {link.name}
                     </Link>
@@ -181,27 +155,39 @@ export default function SiteHeader({
                 </div>
               )}
             </div>
-            <a
-              href="https://buymeacoffee.com/jasimvk"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden items-center gap-1.5 rounded-md border border-[#d0d7de] bg-white px-3 py-1.5 text-sm font-semibold text-[#24292f] transition-colors hover:bg-[#f6f8fa] hover:text-[#24292f] 2xl:inline-flex"
-            >
-              <Coffee className="h-3.5 w-3.5" />
-              Sponsor
-            </a>
-            <a
-              href="https://github.com/jasimvkarim/mydebugtools"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden items-center gap-2 rounded-md bg-[#24292f] px-3.5 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[#32383f] hover:text-white lg:inline-flex"
-            >
-              <Github className="h-4 w-4" />
-              GitHub
-            </a>
+            <GitHubStars className="hidden items-center gap-2 rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 hover:text-white lg:inline-flex" />
+            <div className="hidden items-center gap-2 lg:flex">
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={() => signOut({ callbackUrl: '/' })}
+                  className="inline-flex max-w-[180px] items-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950"
+                  title={session?.user?.email || 'Signed in'}
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  <span className="truncate">Sign out</span>
+                </button>
+              ) : (
+                <>
+                  <Link
+                    href={`/auth/signin?callbackUrl=${callbackUrl}`}
+                    className="inline-flex whitespace-nowrap items-center gap-1.5 rounded-full border border-slate-200 bg-white/80 px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950"
+                  >
+                    <UserRound className="h-3.5 w-3.5" />
+                    Sign in
+                  </Link>
+                  <Link
+                    href={`/auth/signup?callbackUrl=${callbackUrl}`}
+                    className="inline-flex whitespace-nowrap items-center gap-1.5 rounded-full bg-blue-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 hover:text-white"
+                  >
+                    Sign up
+                  </Link>
+                </>
+              )}
+            </div>
             <button
               type="button"
-              className="rounded-md border border-[#d0d7de] p-2 text-[#57606a] hover:bg-[#f6f8fa] lg:hidden"
+              className="rounded-full border border-slate-200 bg-white/80 p-2 text-slate-600 hover:bg-slate-50 lg:hidden"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label={isMenuOpen ? `Close ${menuName}` : `Open ${menuName}`}
               aria-expanded={isMenuOpen}
@@ -243,7 +229,7 @@ export default function SiteHeader({
       )}
 
       {isMenuOpen && (
-        <div id={mobileMenuId} className="border-t border-[#d0d7de] bg-white lg:hidden">
+        <div id={mobileMenuId} className="border-t border-slate-200 bg-white lg:hidden">
           <div className="grid gap-1 px-4 py-3">
             {mobileItems.map((item) => {
               const Icon = item.icon;
@@ -252,10 +238,10 @@ export default function SiteHeader({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium ${
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium ${
                     active
-                      ? 'bg-[#eaeef2] text-[#24292f]'
-                      : 'text-[#57606a] hover:bg-[#f6f8fa] hover:text-[#24292f]'
+                      ? 'bg-slate-100 text-slate-950'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
                   }`}
                   aria-current={active ? 'page' : undefined}
                   onClick={() => setIsMenuOpen(false)}
@@ -271,61 +257,53 @@ export default function SiteHeader({
                 href={link.href}
                 target={link.href.startsWith('http') ? '_blank' : undefined}
                 rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-[#57606a] hover:bg-[#f6f8fa] hover:text-[#24292f]"
+                className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                 onClick={() => setIsMenuOpen(false)}
               >
                 {link.name}
               </Link>
             ))}
-            {directProjectActions.map((item) => {
-              const Icon = item.icon;
-              const isExternal = item.href.startsWith('http');
-              const className = "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-[#57606a] hover:bg-[#f6f8fa] hover:text-[#24292f]";
-
-              return isExternal ? (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={className}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.name}
-                </a>
-              ) : (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={className}
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.name}
-                </Link>
-              );
-            })}
             <a
               href="https://github.com/jasimvkarim/mydebugtools"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-[#57606a] hover:bg-[#f6f8fa] hover:text-[#24292f]"
+              className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-950"
               onClick={() => setIsMenuOpen(false)}
             >
               <Github className="h-4 w-4" />
               GitHub
             </a>
-            <a
-              href="https://buymeacoffee.com/jasimvk"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-[#57606a] hover:bg-[#f6f8fa] hover:text-[#24292f]"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <Coffee className="h-4 w-4" />
-              Sponsor
-            </a>
+            {isAuthenticated ? (
+              <button
+                type="button"
+                className="flex items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-950"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  signOut({ callbackUrl: '/' });
+                }}
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </button>
+            ) : (
+              <>
+                <Link
+                  href={`/auth/signin?callbackUrl=${callbackUrl}`}
+                  className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-950"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <UserRound className="h-4 w-4" />
+                  Sign in
+                </Link>
+                <Link
+                  href={`/auth/signup?callbackUrl=${callbackUrl}`}
+                  className="flex items-center gap-3 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 hover:text-white"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

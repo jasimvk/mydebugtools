@@ -14,6 +14,7 @@ import {
   XMarkIcon,
   ArrowUpTrayIcon
 } from '@heroicons/react/24/outline';
+import { jsonrepair } from 'jsonrepair';
 
 type JsonValue = any;
 
@@ -22,17 +23,21 @@ interface JSONTreeNodeProps {
   data: any;
   name?: string;
   path?: string;
+  // Structured key chain for this node. Unlike `path` it survives keys that
+  // themselves contain '.', '[' or ']', so lookups never have to re-parse.
+  keys?: Array<string | number>;
   level?: number;
   searchTerm?: string;
-  onSelect?: (path: string, node: any) => void;
+  onSelect?: (path: string, node: any, keys: Array<string | number>) => void;
   expandAll?: boolean;
 }
 
-const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({ 
-  data, 
-  name, 
-  path = '', 
-  level = 0, 
+const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
+  data,
+  name,
+  path = '',
+  keys = [],
+  level = 0,
   searchTerm = '',
   onSelect,
   expandAll = false
@@ -70,7 +75,7 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
 
   const handleClick = () => {
     if (onSelect && path) {
-      onSelect(path, data);
+      onSelect(path, data, keys);
     }
   };
 
@@ -216,6 +221,7 @@ const JSONTreeNode: React.FC<JSONTreeNodeProps> = ({
                     data={value}
                     name={String(key)}
                     path={childPath}
+                    keys={[...keys, key as string | number]}
                     level={level + 1}
                     searchTerm={searchTerm}
                     onSelect={onSelect}
@@ -262,7 +268,6 @@ export default function JSONTools() {
   }
 }`);
   const [parsedJson, setParsedJson] = useState<JsonValue>({});
-  const [treeCollapsed, setTreeCollapsed] = useState<number | boolean>(2);
   const [expandAll, setExpandAll] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [copied, setCopied] = useState(false);
@@ -271,6 +276,7 @@ export default function JSONTools() {
   const [isPretty, setIsPretty] = useState(true);
   const [loadingUrl, setLoadingUrl] = useState(false);
   const [selectedPath, setSelectedPath] = useState<string>('');
+  const [selectedKeys, setSelectedKeys] = useState<Array<string | number>>([]);
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [jsonStats, setJsonStats] = useState({ lines: 0, chars: 0, size: '0 B' });
   const [isValid, setIsValid] = useState(true);
@@ -287,8 +293,7 @@ export default function JSONTools() {
       setParsedJson(parsed);
       setError('');
       setIsValid(true);
-      setTreeCollapsed(2);
-      
+
       // Update stats
       const lines = input.split('\n').length;
       const chars = input.length;
@@ -303,21 +308,6 @@ export default function JSONTools() {
     }
   }, [jsonInput]);
 
-  // Update jsonInput text when parsedJson changes (for tree edits)
-  const updateJsonInputFromParsed = useCallback(
-    (json: JsonValue) => {
-      try {
-        const text = isPretty ? JSON.stringify(json, null, 2) : JSON.stringify(json);
-        setJsonInput(text);
-        setParsedJson(json);
-        setError('');
-      } catch (e) {
-        setError('Error updating JSON text: ' + (e as Error).message);
-      }
-    },
-    [isPretty]
-  );
-
   // On initial load parse the default JSON input
   useEffect(() => {
     parseJsonInput();
@@ -331,10 +321,15 @@ export default function JSONTools() {
   }, [activeTab, parseJsonInput]);
 
   // Copy text to clipboard
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  const handleCopy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setError('');
+      setTimeout(() => setCopied(false), 1500);
+    } catch (e) {
+      setError('Failed to copy to clipboard: ' + (e as Error).message);
+    }
   };
 
   // Download JSON file
@@ -345,10 +340,14 @@ export default function JSONTools() {
       const a = document.createElement('a');
       a.href = url;
       a.download = 'json-data.json';
+      // Firefox only honours the click when the anchor is in the document, and
+      // revoking the URL synchronously cancels the download in flight.
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      // ignore
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) {
+      setError('Failed to download JSON: ' + (e as Error).message);
     }
   };
 
@@ -391,20 +390,6 @@ export default function JSONTools() {
   // Expand or collapse all in tree view
   const toggleExpandCollapse = () => {
     setExpandAll(!expandAll);
-    // Force re-render by toggling the state
-    if (expandAll) {
-      setTreeCollapsed(1); // Collapse to level 1
-    } else {
-      setTreeCollapsed(false); // Expand all levels
-    }
-  };
-
-  // Handle edits in tree view
-  const handleTreeEdit = (edit: any) => {
-    if (!edit.updated_src) return;
-    updateJsonInputFromParsed(edit.updated_src);
-    // Update the right panel by updating parsed JSON
-    setParsedJson(edit.updated_src);
   };
 
   // Pretty or minify toggle
@@ -450,6 +435,21 @@ export default function JSONTools() {
     }
   };
 
+  const handleRepair = () => {
+    try {
+      const repaired = jsonrepair(jsonInput);
+      const parsed = JSON.parse(repaired);
+      const formatted = JSON.stringify(parsed, null, 2);
+      setJsonInput(formatted);
+      parseJsonInput(formatted);
+      setIsPretty(true);
+      setActiveTab('text');
+      setError('');
+    } catch (e) {
+      setError('Repair failed: ' + (e as Error).message);
+    }
+  };
+
   // Paste from clipboard
   const handlePasteFromClipboard = async () => {
     try {
@@ -473,9 +473,17 @@ export default function JSONTools() {
 
   // Keyboard shortcuts
   useEffect(() => {
+    // True while the user is typing somewhere — the URL field, the editor, etc.
+    // Hijacking clipboard/format shortcuts there clobbers what they are editing.
+    const isEditing = () => {
+      const el = document.activeElement as HTMLElement | null;
+      if (!el) return false;
+      return el.tagName === 'TEXTAREA' || el.tagName === 'INPUT' || el.isContentEditable;
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ctrl/Cmd + F for format
-      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f' && !isEditing()) {
         e.preventDefault();
         handleFormat();
       }
@@ -484,13 +492,13 @@ export default function JSONTools() {
         e.preventDefault();
         handleRemoveWhiteSpace();
       }
-      // Ctrl/Cmd + V when not in textarea
-      if ((e.ctrlKey || e.metaKey) && e.key === 'v' && document.activeElement?.tagName !== 'TEXTAREA') {
+      // Ctrl/Cmd + V when not editing
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v' && !isEditing()) {
         e.preventDefault();
         handlePasteFromClipboard();
       }
       // Ctrl/Cmd + C for copy
-      if ((e.ctrlKey || e.metaKey) && e.key === 'c' && document.activeElement?.tagName !== 'TEXTAREA') {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c' && !isEditing()) {
         e.preventDefault();
         handleCopy(jsonInput);
       }
@@ -585,25 +593,14 @@ export default function JSONTools() {
     return count;
   };
 
-  // Count expandable nodes (objects and arrays)
-  const countExpandableNodes = (obj: any): number => {
-    if (!obj || typeof obj !== 'object') return 0;
-    let count = 0;
-
-    const countRecursive = (value: any): void => {
-      if (typeof value !== 'object' || value === null) return;
-      
-      count++; // This node itself is expandable
-      
-      if (Array.isArray(value)) {
-        value.forEach(countRecursive);
-      } else {
-        Object.values(value).forEach(countRecursive);
-      }
-    };
-
-    countRecursive(obj);
-    return count;
+  // Count every object key in the document (arrays contribute their items' keys)
+  const countTotalKeys = (value: any): number => {
+    if (value === null || typeof value !== 'object') return 0;
+    if (Array.isArray(value)) {
+      return value.reduce((sum: number, item) => sum + countTotalKeys(item), 0);
+    }
+    return Object.keys(value).length +
+      Object.values(value).reduce((sum: number, item) => sum + countTotalKeys(item), 0);
   };
 
   // Highlight matching keys and values in react-json-view by overriding style
@@ -634,7 +631,6 @@ export default function JSONTools() {
     setError('');
     setSearchTerm('');
     setActiveTab('tree');
-    setTreeCollapsed(2);
   };
 
   // Handle paste in tree view area
@@ -659,249 +655,110 @@ export default function JSONTools() {
     return Object.entries(obj);
   };
 
-  // Extract keys and values for side panel
-  const extractKeysAndValues = (obj: any, prefix = '', showOnlyImmediate = false): Array<{ path: string; value: any; type: string }> => {
-    const result: Array<{ path: string; value: any; type: string }> = [];
-    
-    if (obj === null || obj === undefined) {
-      result.push({ path: prefix || '(null)', value: obj, type: 'null' });
-      return result;
-    }
-
-    const type = Array.isArray(obj) ? 'array' : typeof obj;
-
-    // If we only want immediate children and this is an object/array
-    if (showOnlyImmediate && (type === 'object' || type === 'array')) {
-      if (type === 'array') {
-        obj.forEach((item: any, index: number) => {
-          if (item === null || item === undefined) {
-            result.push({ 
-              path: `[${index}]`, 
-              value: item, 
-              type: 'null' 
-            });
-          } else {
-            const itemType = Array.isArray(item) ? 'array' : typeof item;
-            const displayValue = itemType === 'object' && item !== null ? `Object(${Object.keys(item).length})` :
-                                itemType === 'array' ? `Array(${item.length})` : item;
-            result.push({ 
-              path: `[${index}]`, 
-              value: displayValue, 
-              type: itemType 
-            });
-          }
-        });
-      } else {
-        Object.keys(obj).forEach(key => {
-          const value = obj[key];
-          if (value === null || value === undefined) {
-            result.push({ 
-              path: key, 
-              value: value, 
-              type: 'null' 
-            });
-          } else {
-            const itemType = Array.isArray(value) ? 'array' : typeof value;
-            const displayValue = itemType === 'object' && value !== null ? `Object(${Object.keys(value).length})` :
-                                itemType === 'array' ? `Array(${value.length})` : value;
-            result.push({ 
-              path: key, 
-              value: displayValue, 
-              type: itemType 
-            });
-          }
-        });
-      }
-      return result;
-    }
-
-    // Original recursive behavior for full tree
-    const traverse = (current: any, currentPath: string) => {
-      if (current === null || current === undefined) {
-        result.push({ path: currentPath, value: current, type: 'null' });
-        return;
-      }
-
-      const type = Array.isArray(current) ? 'array' : typeof current;
-
-      if (type === 'object' || type === 'array') {
-        if (type === 'array') {
-          result.push({ path: currentPath, value: `Array(${current.length})`, type: 'array' });
-          current.forEach((item: any, index: number) => {
-            traverse(item, `${currentPath}[${index}]`);
-          });
-        } else {
-          const keys = Object.keys(current);
-          result.push({ path: currentPath, value: `Object(${keys.length})`, type: 'object' });
-          keys.forEach(key => {
-            traverse(current[key], currentPath ? `${currentPath}.${key}` : key);
-          });
-        }
-      } else {
-        result.push({ path: currentPath, value: current, type });
-      }
-    };
-
-    traverse(obj, prefix);
-    return result;
-  };
-
-  // Handle clicking on a key-value item to navigate and show in right panel
-  const handleSelectPath = (path: string) => {
-    if (!path || path === '(root)') {
+  // Navigate by key chain rather than by parsing a path string, so keys that
+  // contain '.', '[' or ']' still resolve.
+  const handleSelectKeys = (keys: Array<string | number>) => {
+    if (keys.length === 0) {
       setSelectedNode(null);
       setSelectedPath('');
+      setSelectedKeys([]);
       setSearchTerm('');
       return;
     }
 
-    // Navigate to the node using the path
-    let node = parsedJson;
-    const pathParts = path.split(/\.|\[|\]/).filter(p => p !== '');
-    
-    for (const part of pathParts) {
+    let node: any = parsedJson;
+    for (const key of keys) {
       if (node && typeof node === 'object') {
-        node = node[part];
+        node = node[key as keyof typeof node];
       } else {
+        node = undefined;
         break;
       }
     }
-    
-    // Ensure path ends with a dot
-    const finalPath = path.endsWith('.') ? path : `${path}.`;
-    
-    setSelectedNode(node);
-    setSelectedPath(finalPath);
+
+    setSelectedNode(node ?? null);
+    setSelectedKeys(keys);
+    setSelectedPath(keys.join('.'));
     setSearchTerm('');
-    
+
     if (activeTab !== 'tree') {
       setActiveTab('tree');
     }
   };
 
-  // Handle selecting a node in the tree view
-  const handleTreeSelect = (select: any) => {
-    if (!select) {
-      // No selection, show root
-      setSelectedNode(null);
-      setSelectedPath('');
-      return;
-    }
-
-    // Build the full path and navigate to the node
-    let fullPath = '';
-    let node = parsedJson;
-    
-    // First navigate through namespace (parent path)
-    if (select.namespace && select.namespace.length > 0) {
-      for (let i = 0; i < select.namespace.length; i++) {
-        const key = select.namespace[i];
-        if (node && typeof node === 'object') {
-          node = node[key];
-          // Build path
-          if (!isNaN(Number(key))) {
-            fullPath += `[${key}]`;
-          } else {
-            // Add dot before property name if needed
-            if (fullPath && !fullPath.endsWith('.')) {
-              fullPath += '.';
-            }
-            fullPath += key;
-          }
-        }
-      }
-    }
-    
-    // Then add the selected name itself
-    if (select.name !== null && select.name !== undefined) {
-      // Build final path
-      if (!isNaN(Number(select.name))) {
-        fullPath += `[${select.name}]`;
-      } else {
-        // Add dot before property name if needed
-        if (fullPath && !fullPath.endsWith('.')) {
-          fullPath += '.';
-        }
-        fullPath += select.name;
-      }
-      
-      // Navigate to the actual node
-      if (node && typeof node === 'object') {
-        node = node[select.name];
-      }
-    }
-
-    // Set the selected node and path
-    setSelectedNode(node);
-    setSelectedPath(fullPath || 'root');
-  };
-
   // Note: Custom click handler removed - using react-json-view's onSelect instead
 
   return (
-    <div className="mx-auto max-w-[1600px] text-[#24292f]">
-      <section className="rounded-md border border-[#d0d7de] bg-white">
-        <div className="flex flex-col justify-between gap-4 border-b border-[#d0d7de] px-5 py-4 lg:flex-row lg:items-end">
+    <div className="mx-auto max-w-[1600px] text-[#09090b]">
+      <section className="rounded-md border border-[#e4e4e7] bg-white">
+        <div className="flex flex-col justify-between gap-4 border-b border-[#e4e4e7] px-5 py-4 lg:flex-row lg:items-end">
           <div>
-            <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-[#6e7781]">
+            <p className="font-mono text-xs font-semibold uppercase tracking-[0.14em] text-[#71717a]">
               tools/json
             </p>
-            <h1 className="mt-2 text-2xl font-semibold text-[#24292f]">JSON Tools</h1>
+            <h1 className="mt-2 text-2xl font-semibold text-[#09090b]">JSON Tools</h1>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button title="Load sample JSON" onClick={handleSample} className="rounded-md border border-[#d0d7de] bg-white px-3 py-2 text-sm font-semibold text-[#24292f] hover:bg-[#f6f8fa]">
+            <button title="Load sample JSON" onClick={handleSample} className="rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm font-semibold text-[#09090b] hover:bg-[#fafafa]">
               Sample
             </button>
-            <button onClick={() => setShowStatsModal(true)} className="rounded-md border border-[#d0d7de] bg-white px-3 py-2 text-sm font-semibold text-[#24292f] hover:bg-[#f6f8fa]">
+            <button onClick={() => setShowStatsModal(true)} className="rounded-md border border-[#e4e4e7] bg-white px-3 py-2 text-sm font-semibold text-[#09090b] hover:bg-[#fafafa]">
               Stats
             </button>
-            <button onClick={handleDownload} className="inline-flex items-center gap-2 rounded-md bg-[#24292f] px-3 py-2 text-sm font-semibold text-white hover:bg-[#32383f]">
+            <button onClick={handleDownload} className="inline-flex items-center gap-2 rounded-md bg-[#09090b] px-3 py-2 text-sm font-semibold text-white hover:bg-[#32383f]">
               <ArrowDownTrayIcon className="h-4 w-4" />
               Download
             </button>
           </div>
         </div>
 
-        <div className="grid gap-3 border-b border-[#d0d7de] bg-[#f6f8fa] px-4 py-3 lg:grid-cols-[1fr_auto] lg:items-center">
+        <div className="grid gap-3 border-b border-[#e4e4e7] bg-[#fafafa] px-4 py-3 lg:grid-cols-[1fr_auto] lg:items-center">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex overflow-hidden rounded-md border border-[#d0d7de] bg-white">
+            <div className="inline-flex overflow-hidden rounded-md border border-[#e4e4e7] bg-white" role="tablist" aria-label="JSON view">
               {(['text', 'tree'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`px-3 py-1.5 text-sm font-semibold capitalize transition-colors ${
                     activeTab === tab
-                      ? 'bg-[#24292f] text-white'
-                      : 'text-[#57606a] hover:bg-[#f6f8fa] hover:text-[#24292f]'
+                      ? 'bg-[#09090b] text-white'
+                      : 'text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]'
                   }`}
                   role="tab"
+                  id={`json-tab-${tab}`}
+                  aria-selected={activeTab === tab}
+                  aria-controls={`json-panel-${tab}`}
                 >
                   {tab}
                 </button>
               ))}
             </div>
-            <button onClick={handlePasteFromClipboard} className="inline-flex items-center gap-1.5 rounded-md border border-[#d0d7de] bg-white px-3 py-1.5 text-sm font-semibold text-[#57606a] hover:bg-white hover:text-[#24292f]">
+            <button onClick={handlePasteFromClipboard} className="inline-flex items-center gap-1.5 rounded-md border border-[#e4e4e7] bg-white px-3 py-1.5 text-sm font-semibold text-[#71717a] hover:bg-white hover:text-[#09090b]">
               <ClipboardDocumentListIcon className="h-4 w-4" />
               Paste
             </button>
-            <button onClick={() => handleCopy(jsonInput)} className="inline-flex items-center gap-1.5 rounded-md border border-[#d0d7de] bg-white px-3 py-1.5 text-sm font-semibold text-[#57606a] hover:bg-white hover:text-[#24292f]">
+            <button onClick={() => handleCopy(jsonInput)} className="inline-flex items-center gap-1.5 rounded-md border border-[#e4e4e7] bg-white px-3 py-1.5 text-sm font-semibold text-[#71717a] hover:bg-white hover:text-[#09090b]">
               <ClipboardIcon className="h-4 w-4" />
               {copied ? 'Copied' : 'Copy'}
             </button>
-            <button onClick={handleFormat} className="inline-flex items-center gap-1.5 rounded-md border border-[#d0d7de] bg-white px-3 py-1.5 text-sm font-semibold text-[#57606a] hover:bg-white hover:text-[#24292f]">
+            <button onClick={handleFormat} className="inline-flex items-center gap-1.5 rounded-md border border-[#e4e4e7] bg-white px-3 py-1.5 text-sm font-semibold text-[#71717a] hover:bg-white hover:text-[#09090b]">
               <DocumentTextIcon className="h-4 w-4" />
               Format
             </button>
-            <button onClick={handleRemoveWhiteSpace} className="inline-flex items-center gap-1.5 rounded-md border border-[#d0d7de] bg-white px-3 py-1.5 text-sm font-semibold text-[#57606a] hover:bg-white hover:text-[#24292f]">
+            <button onClick={handleRemoveWhiteSpace} className="inline-flex items-center gap-1.5 rounded-md border border-[#e4e4e7] bg-white px-3 py-1.5 text-sm font-semibold text-[#71717a] hover:bg-white hover:text-[#09090b]">
               <ArrowsPointingInIcon className="h-4 w-4" />
               Minify
             </button>
-            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-[#d0d7de] bg-white px-3 py-1.5 text-sm font-semibold text-[#57606a] hover:bg-white hover:text-[#24292f]">
+            <button onClick={handleRepair} className="inline-flex items-center gap-1.5 rounded-md border border-[#e4e4e7] bg-white px-3 py-1.5 text-sm font-semibold text-[#71717a] hover:bg-white hover:text-[#09090b]">
+              <DocumentTextIcon className="h-4 w-4" />
+              Repair
+            </button>
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-[#e4e4e7] bg-white px-3 py-1.5 text-sm font-semibold text-[#71717a] hover:bg-white hover:text-[#09090b]">
               <ArrowUpTrayIcon className="h-4 w-4" />
               Load
               <input type="file" ref={fileInputRef} className="hidden" accept=".json,.txt" onChange={handleFileLoad} />
             </label>
-            <button title="Clear input" onClick={handleReset} className="inline-flex items-center gap-1.5 rounded-md border border-[#d0d7de] bg-white px-3 py-1.5 text-sm font-semibold text-[#57606a] hover:bg-white hover:text-[#24292f]">
+            <button title="Clear input" onClick={handleReset} className="inline-flex items-center gap-1.5 rounded-md border border-[#e4e4e7] bg-white px-3 py-1.5 text-sm font-semibold text-[#71717a] hover:bg-white hover:text-[#09090b]">
               <XMarkIcon className="h-4 w-4" />
               Clear
             </button>
@@ -912,9 +769,9 @@ export default function JSONTools() {
               ref={urlInputRef}
               type="url"
               placeholder="Load from URL"
-              className="h-9 min-w-0 flex-1 rounded-md border border-[#d0d7de] bg-white px-3 text-sm text-[#24292f] outline-none focus:border-[#0969da] focus:ring-2 focus:ring-[#0969da]/15 lg:w-72"
+              className="h-9 min-w-0 flex-1 rounded-md border border-[#e4e4e7] bg-white px-3 text-sm text-[#09090b] outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15 lg:w-72"
             />
-            <button onClick={handleLoadUrl} disabled={loadingUrl} className="inline-flex items-center gap-1.5 rounded-md border border-[#d0d7de] bg-white px-3 py-1.5 text-sm font-semibold text-[#57606a] hover:bg-white hover:text-[#24292f] disabled:opacity-60">
+            <button onClick={handleLoadUrl} disabled={loadingUrl} className="inline-flex items-center gap-1.5 rounded-md border border-[#e4e4e7] bg-white px-3 py-1.5 text-sm font-semibold text-[#71717a] hover:bg-white hover:text-[#09090b] disabled:opacity-60">
               <LinkIcon className="h-4 w-4" />
               {loadingUrl ? 'Loading' : 'Load'}
             </button>
@@ -924,42 +781,48 @@ export default function JSONTools() {
         {activeTab === 'text' && (
           <textarea
             data-testid="monaco-editor"
+            id="json-panel-text"
+            role="tabpanel"
+            aria-labelledby="json-tab-text"
+            aria-label="JSON text editor"
             value={jsonInput}
             onChange={(e) => setJsonInput(e.target.value)}
-            className="h-[640px] w-full resize-y border-0 bg-white p-4 font-mono text-sm leading-6 text-[#24292f] outline-none focus:ring-2 focus:ring-[#0969da]/15"
+            className="h-[640px] w-full resize-y border-0 bg-white p-4 font-mono text-sm leading-6 text-[#09090b] outline-none focus:ring-2 focus:ring-[#2563eb]/15"
             placeholder="Paste JSON..."
             spellCheck={false}
             style={{ tabSize: 2 }}
           />
         )}
 
-        {activeTab === 'tree' && parsedJson && (
-          <div>
-            <div className="grid gap-2 border-b border-[#d0d7de] bg-white px-4 py-3 lg:grid-cols-[1fr_auto]">
+        {/* Rendered for any parsed value: falsy-but-valid JSON (0, false, null, "")
+            must still show the tree; invalid JSON falls through to the error box. */}
+        {activeTab === 'tree' && (
+          <div id="json-panel-tree" role="tabpanel" aria-labelledby="json-tab-tree">
+            <div className="grid gap-2 border-b border-[#e4e4e7] bg-white px-4 py-3 lg:grid-cols-[1fr_auto]">
               <div className="relative">
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search keys and values"
-                  className="h-9 w-full rounded-md border border-[#d0d7de] bg-white pl-9 pr-9 text-sm outline-none focus:border-[#0969da] focus:ring-2 focus:ring-[#0969da]/15"
+                  className="h-9 w-full rounded-md border border-[#e4e4e7] bg-white pl-9 pr-9 text-sm outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15"
                 />
-                <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6e7781]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#71717a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 {searchTerm && (
-                  <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded text-[#6e7781] hover:bg-[#f6f8fa]" title="Clear search">
+                  <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded text-[#71717a] hover:bg-[#fafafa]" title="Clear search">
                     <XMarkIcon className="h-4 w-4" />
                   </button>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {searchTerm && (
-                  <span className="font-mono text-xs text-[#6e7781]">
+                  <span className="font-mono text-xs text-[#71717a]">
                     {countSearchResults(parsedJson, searchTerm)} matches
                   </span>
                 )}
-                <button onClick={toggleExpandCollapse} className="inline-flex items-center gap-1.5 rounded-md border border-[#d0d7de] bg-white px-3 py-1.5 text-sm font-semibold text-[#57606a] hover:bg-[#f6f8fa] hover:text-[#24292f]">
+                <button onClick={toggleExpandCollapse} className="inline-flex items-center gap-1.5 rounded-md border border-[#e4e4e7] bg-white px-3 py-1.5 text-sm font-semibold text-[#71717a] hover:bg-[#fafafa] hover:text-[#09090b]">
                   {expandAll ? <ChevronUpIcon className="h-4 w-4" /> : <ChevronDownIcon className="h-4 w-4" />}
                   {expandAll ? 'Collapse' : 'Expand'}
                 </button>
@@ -969,7 +832,7 @@ export default function JSONTools() {
             <div className="grid min-h-[640px] bg-white lg:grid-cols-[minmax(0,1fr)_320px]">
               <div
                 ref={treeContainerRef}
-                className="overflow-auto border-b border-[#d0d7de] p-4 lg:border-b-0 lg:border-r json-tree-container"
+                className="overflow-auto border-b border-[#e4e4e7] p-4 lg:border-b-0 lg:border-r json-tree-container"
                 onPaste={handlePasteInTree}
                 tabIndex={0}
               >
@@ -979,12 +842,13 @@ export default function JSONTools() {
                   <p className="text-xs text-red-600 font-mono">{error}</p>
                 </div>
               ) : (
-                <JSONTreeNode 
-                  data={filteredJson(parsedJson, searchTerm) || {}}
+                <JSONTreeNode
+                  data={filteredJson(parsedJson, searchTerm) ?? {}}
                   searchTerm={searchTerm}
                   expandAll={expandAll}
-                  onSelect={(path, node) => {
+                  onSelect={(path, node, keys) => {
                     setSelectedPath(path);
+                    setSelectedKeys(keys);
                     setSelectedNode(node);
                   }}
                 />
@@ -992,7 +856,7 @@ export default function JSONTools() {
             </div>
 
             {/* Right Panel - Minimalistic Details (Always Visible) */}
-            <div className="bg-[#f6f8fa] overflow-auto">
+            <div className="bg-[#fafafa] overflow-auto">
               {/* Simple Header */}
               <div className="sticky top-0 bg-white border-b border-gray-200 p-3 z-10">
                 <div className="flex items-center justify-between">
@@ -1002,6 +866,7 @@ export default function JSONTools() {
                       onClick={() => {
                         setSelectedNode(null);
                         setSelectedPath('');
+                        setSelectedKeys([]);
                       }}
                       className="p-1 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-600"
                       title="Clear"
@@ -1076,11 +941,7 @@ export default function JSONTools() {
                                     <tr 
                                       key={index} 
                                       className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
-                                      onClick={() => {
-                                        const basePath = selectedPath.endsWith('.') ? selectedPath.slice(0, -1) : selectedPath;
-                                        const newPath = basePath ? `${basePath}.${key}` : key;
-                                        handleSelectPath(newPath);
-                                      }}
+                                      onClick={() => handleSelectKeys([...selectedKeys, Array.isArray(selectedNode) ? Number(key) : key])}
                                     >
                                       <td className="p-2 font-medium text-gray-700">{key}</td>
                                       <td className="p-2 text-gray-600 font-mono truncate max-w-[120px]" title={String(value)}>
@@ -1169,7 +1030,7 @@ export default function JSONTools() {
                   <span className="text-sm font-medium text-gray-700">File Size</span>
                   <span className="text-lg font-bold text-purple-600">{jsonStats.size}</span>
                 </div>
-                <div className="flex justify-between items-center p-3 bg-orange-50 rounded border-l-4 border-orange-500">
+                <div className="flex justify-between items-center p-3 bg-blue-50 rounded border-l-4 border-blue-500">
                   <span className="text-sm font-medium text-gray-700">Status</span>
                   <span className={`text-sm font-bold ${isValid ? 'text-green-600' : 'text-red-600'}`}>
                     {isValid ? '✓ Valid JSON' : '✗ Invalid JSON'}
@@ -1178,7 +1039,7 @@ export default function JSONTools() {
               </div>
 
               {/* Object Stats */}
-              {isValid && parsedJson && (
+              {isValid && parsedJson !== null && typeof parsedJson === 'object' && (
                 <div className="border-t border-gray-200 pt-4">
                   <h4 className="text-sm font-semibold text-gray-700 mb-3">Structure Analysis</h4>
                   <div className="grid grid-cols-2 gap-3">
@@ -1190,7 +1051,7 @@ export default function JSONTools() {
                     </div>
                     <div className="p-3 bg-gray-50 rounded text-center">
                       <div className="text-2xl font-bold text-gray-700">
-                        {JSON.stringify(parsedJson).split(':').length - 1}
+                        {countTotalKeys(parsedJson)}
                       </div>
                       <div className="text-xs text-gray-500 mt-1">Total Keys</div>
                     </div>

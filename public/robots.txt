@@ -7,6 +7,8 @@ Allow: /ads.txt
 
 # AI and answer-engine discovery files
 Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /ai.txt
 
 # Disallow crawling of any private or admin areas (if any exist in the future)
 # Currently no restricted areas

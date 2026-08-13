@@ -1,0 +1,109 @@
+# DebugTools Full LLM Index
+
+Generated: 2026-08-13
+Canonical domain: https://debugtools.org
+Repository: https://github.com/jasimvkarim/mydebugtools
+
+## Positioning
+
+DebugTools is an open-source debugging toolkit for modern developers. It combines practical developer utilities with local-first debugging workflows for stack traces, logs, crash reports, HAR files, API failures, auth issues, CI failures, Kubernetes output, OpenTelemetry traces, and production incidents.
+
+## Tools
+
+- [API Workbench](https://debugtools.org/tools/api/): Flagship REST client with collections, auth, environments, imports, and response inspection.
+- [Android Logcat Analyzer](https://debugtools.org/tools/android-logcat/): Paste Android Logcat output to identify fatal exceptions, ANRs, native crashes, process restarts, and device clues.
+- [API Auth Config Tester](https://debugtools.org/tools/api-auth-config/): Inspect API auth headers, signing inputs, scopes, environments, and credential wiring for common config mistakes.
+- [Binary Inspector](https://debugtools.org/tools/binary-inspector/): Inspect pasted hex or Base64 bytes, magic numbers, endian clues, file signatures, encoding mistakes, and binary payload notes.
+- [Certificate Chain Viewer](https://debugtools.org/tools/certificate-viewer/): Paste PEM certificates, openssl output, TLS errors, or chain notes to spot expiry, SAN, issuer, and trust-chain problems.
+- [Cookie Security Inspector](https://debugtools.org/tools/cookie-security/): Inspect Set-Cookie headers for SameSite, Secure, HttpOnly, domain/path scope, expiry, and auth-session risks.
+- [CSP Parser](https://debugtools.org/tools/csp-parser/): Parse Content Security Policy headers, blocked-resource reports, unsafe directives, and hardening recommendations.
+- [Flamegraph Viewer](https://debugtools.org/tools/flamegraph-viewer/): Analyze folded stacks, profiler summaries, hot paths, samples, and function-level performance evidence.
+- [Heap / Memory Event Visualizer](https://debugtools.org/tools/heap-visualizer/): Analyze allocation/free logs, heap growth, leak symptoms, GC pressure, OOM clues, and suspicious object lifecycle patterns.
+- [Java Thread Dump](https://debugtools.org/tools/java-thread-dump/): Parse Java thread dumps for blocked threads, deadlock clues, hot stacks, thread states, and JVM investigation notes.
+- [JVM GC Log](https://debugtools.org/tools/jvm-gc-log/): Analyze JVM GC logs for pause spikes, allocation pressure, heap tuning clues, promotion failures, and memory regressions.
+- [Mobile Network Debug Checklist](https://debugtools.org/tools/mobile-network-debug/): Turn device proxy, Chucker, OkHttp, Charles, Proxyman, and API failure notes into a repeatable mobile network debugging plan.
+- [Native Debug Session](https://debugtools.org/tools/native-debug-session/): Parse GDB or LLDB transcripts into breakpoints, signals, frames, variables, commands, and next native-debugging actions.
+- [Node Performance Analyzer](https://debugtools.org/tools/node-performance/): Analyze Node.js event-loop lag, CPU profiles, heap pressure, async bottlenecks, and server timing evidence.
+- [OAuth Token Inspector](https://debugtools.org/tools/oauth-token-inspector/): Inspect OAuth token clues, claims, scopes, expiry, refresh failures, issuer mismatch, and audience problems.
+- [Perfetto Summary](https://debugtools.org/tools/perfetto-summary/): Summarize Perfetto trace notes, thread activity, frame delays, binder calls, slices, and slow sections.
+- [Python Profiler](https://debugtools.org/tools/python-profiler/): Summarize Python profiler output, hot frames, blocking calls, asyncio stalls, import cost, and CPython stack snapshots.
+- [React Native Debug Pack](https://debugtools.org/tools/react-native-debug/): Analyze Metro logs, Hermes errors, bridge warnings, startup markers, and React Native stack traces.
+- [Redirect Inspector](https://debugtools.org/tools/redirect-inspector/): Inspect redirect chains, status codes, canonical loops, HTTPS upgrades, auth callbacks, and cache-control mistakes.
+- [SAML / OIDC Debugger](https://debugtools.org/tools/saml-oidc-debugger/): Paste SAML responses, OIDC errors, redirect URLs, discovery JSON, callback logs, or token exchange notes to detect auth-flow breakage.
+- [Schema Validator](https://debugtools.org/tools/schema-validator/): Validate JSON payloads and schema notes for type mismatches, missing required fields, enum errors, and API-contract drift.
+- [Secret Scanner](https://debugtools.org/tools/secret-scanner/): Scan pasted logs, env snippets, configs, and stack traces for likely tokens, keys, credentials, and redaction gaps.
+- [SQL Explain](https://debugtools.org/tools/sql-explain/): Explain query plans, indexes, joins, scans, sort steps, and likely SQL performance bottlenecks from pasted EXPLAIN output.
+- [SQL Flow](https://debugtools.org/tools/sql-flow/): Turn SQL statements and logs into execution flow, dependency, lock, transaction, and migration-risk notes.
+- [WebSocket Debugger](https://debugtools.org/tools/websocket-debug/): Analyze WebSocket handshakes, close codes, auth headers, reconnect loops, ping/pong timing, and message samples.
+- [AI Debug Assistant](https://debugtools.org/tools/ai/): Analyze errors, API responses, cURL notes, JSON issues, and stack traces with optional OpenAI BYOK support.
+- [Base64](https://debugtools.org/tools/base64/): Encode and decode Base64 strings and files.
+- [Build Diff](https://debugtools.org/tools/build-diff/): Compare build outputs and artifact changes.
+- [Bundle Analyzer](https://debugtools.org/tools/bundle-analyzer/): Inspect bundle size and composition.
+- [CI Debugger](https://debugtools.org/tools/ci-debugger/): Inspect GitHub Actions workflows for jobs, steps, local act commands, and risky patterns.
+- [Code Diff](https://debugtools.org/tools/code-diff/): Compare snippets during review and debugging sessions.
+- [Color Picker](https://debugtools.org/tools/color/): Pick, convert, and inspect color values.
+- [Crash Beautifier](https://debugtools.org/tools/crash-beautifier/): Clean up and inspect stack traces from mobile and web runtimes.
+- [CSS Tools](https://debugtools.org/tools/css/): Minify, beautify, and validate CSS.
+- [Database Query](https://debugtools.org/tools/database/): Run SQLite queries in a focused local workspace.
+- [Error Tracker](https://debugtools.org/tools/error-tracker/): Fingerprint repeated errors into deduplicated triage groups with likely causes.
+- [Fetch Logger](https://debugtools.org/tools/fetch-logger/): Live in-page panel that records every fetch request and response — try it live, then drop it into your own app.
+- [Hash Generator](https://debugtools.org/tools/hash/): Generate SHA hashes locally in the browser.
+- [HTML Tools](https://debugtools.org/tools/html/): Edit, format, preview, and export HTML.
+- [HTTP Traffic Inspector](https://debugtools.org/tools/http-profiler/): Inspect HAR exports for timing, redirects, failures, payload sizes, and slow requests.
+- [HTTP Status](https://debugtools.org/tools/http-status/): Reference HTTP codes and response meanings while debugging requests.
+- [Icon Finder](https://debugtools.org/tools/icons/): Search icon libraries for UI assets.
+- [JSON Tools](https://debugtools.org/tools/json/): Format, validate, repair, and inspect JSON payloads without sending data to a server.
+- [JWT Decoder](https://debugtools.org/tools/jwt/): Decode and inspect JSON Web Token claims during auth debugging.
+- [Kubernetes Debug Helper](https://debugtools.org/tools/k8s-debug/): Detect common pod failure signals and generate focused kubectl debug commands.
+- [Log Trace Rebuilder](https://debugtools.org/tools/log-trace/): Group multiline logs by trace ID, request ID, correlation ID, severity, and related details.
+- [Markdown Preview](https://debugtools.org/tools/markdown/): Write and preview Markdown content.
+- [OpenTelemetry Trace Viewer](https://debugtools.org/tools/otel-trace-viewer/): Summarize OTLP traces, spans, root spans, error spans, and slow operations.
+- [Password Generator](https://debugtools.org/tools/password-generator/): Generate strong local passwords with length, symbol, ambiguity, copy, and strength controls.
+- [Regex Tester](https://debugtools.org/tools/regex/): Test regular expressions with live matches.
+- [Security Headers Inspector](https://debugtools.org/tools/security-headers/): Score response headers, missing browser protections, and cookie security flags.
+- [Stack Trace Explainer](https://debugtools.org/tools/stack-trace/): Extract error type, root frame, app frames, dependencies, and likely cause from pasted stack traces.
+- [Startup Profiling](https://debugtools.org/tools/startup-profiling/): Visualize React Native startup timelines.
+- [Timestamp Converter](https://debugtools.org/tools/timestamp/): Convert Unix, ISO, UTC, and local dates.
+- [URL Encoder](https://debugtools.org/tools/url/): Encode, decode, and inspect URLs and query strings.
+- [UUID Generator](https://debugtools.org/tools/uuid/): Generate UUID v4 values in bulk.
+
+## Answer Pages
+
+- [What is the best free JSON formatter for developers?](https://debugtools.org/answers/best-free-json-formatter/): The best free JSON formatter validates syntax, formats nested payloads clearly, and keeps sensitive JSON local to your browser when possible.
+- [How do I decode a JWT safely?](https://debugtools.org/answers/how-to-decode-jwt-safely/): Decode JWTs in a local browser tool, review claims such as exp, iss, aud, and sub, and verify signatures separately when authenticity matters.
+- [What is the difference between Base64 encoding and decoding?](https://debugtools.org/answers/base64-encode-vs-decode/): Base64 encoding converts bytes or text into an ASCII-safe representation. Decoding converts that Base64 text back into the original bytes or string.
+- [How can I test an API request online?](https://debugtools.org/answers/test-api-request-online/): Use an API tester to choose the method, enter the URL, add headers or auth, send the request, and inspect status, response headers, and body.
+- [How do I compare two code snippets?](https://debugtools.org/answers/compare-two-code-snippets/): Paste the old snippet and new snippet into a diff tool, then review added, removed, and changed lines side by side.
+- [How do I generate a hash for text?](https://debugtools.org/answers/generate-hash-for-text/): Paste text into a hash generator, choose the algorithm you need, and compare the generated digest with the expected checksum.
+- [How do I decode a URL query string?](https://debugtools.org/answers/decode-url-query-string/): Use a URL decoder to convert percent-encoded characters back to readable text, then inspect each query parameter separately.
+- [How do I check what an HTTP status code means?](https://debugtools.org/answers/what-http-status-code-means/): Search the status code, confirm its category, then use the meaning to decide whether the issue is client-side, server-side, redirect-related, or informational.
+- [How should I use an AI debug assistant safely?](https://debugtools.org/answers/use-ai-debug-assistant-safely/): Use an AI debug assistant for non-sensitive errors, stack traces, API responses, and JSON issues, but remove secrets and private data before sending text to any configured AI provider.
+- [How do I explain a stack trace?](https://debugtools.org/answers/explain-stack-trace/): Start with the exception message, then find the first frame owned by your application. That frame usually points to the code path to inspect first.
+- [How do I rebuild a trace from logs?](https://debugtools.org/answers/rebuild-log-trace/): Collect logs around one failing request, group by request or trace ID, then order the events by timestamp to find the first error and downstream failures.
+- [How do I analyze a HAR file?](https://debugtools.org/answers/analyze-har-file/): Load the HAR, sort by failed or slow requests, then inspect status, timing, redirects, payload size, and cache headers for the first broken dependency.
+- [How do I debug a GitHub Actions failure?](https://debugtools.org/answers/debug-github-actions-failure/): Find the first failed step in the job, read a few lines above the error, then check whether the workflow command, dependency cache, secret, or environment changed.
+- [How do I debug CORS and security headers?](https://debugtools.org/answers/debug-cors-security-headers/): Capture the exact response headers for the failing request, then check origin, credentials, allowed methods, CSP, cookie flags, and caching rules together.
+- [How do I debug Kubernetes CrashLoopBackOff?](https://debugtools.org/answers/debug-kubernetes-crashloopbackoff/): Start with pod events and the previous container logs. CrashLoopBackOff is usually caused by process exit, failed probes, missing config, image issues, or startup dependency failures.
+- [How do I inspect an OpenTelemetry trace?](https://debugtools.org/answers/inspect-opentelemetry-trace/): Find the root span, then inspect slow spans and spans with error status. The first upstream error span often explains the rest of the trace.
+- [How do I fix redirect_uri_mismatch in OAuth?](https://debugtools.org/answers/debug-oauth-redirect-uri-mismatch/): Use the exact redirect_uri sent in the OAuth request and add that same scheme, host, path, and trailing slash to the provider client configuration.
+- [How do I scan logs for secrets before sharing?](https://debugtools.org/answers/scan-logs-for-secrets/): Scan the log text for key, token, secret, cookie, private key, and connection-string patterns, then replace values with stable placeholders before sharing.
+- [How do I generate a strong password locally?](https://debugtools.org/answers/generate-strong-password-locally/): Use a local password generator, choose a long length, include enough character variety, avoid ambiguous characters when humans must type it, and store the result in a password manager.
+
+## Trust And Project Pages
+
+- [DebugTools](https://debugtools.org/): Open-source debugging toolkit for modern developers.
+- [All developer tools](https://debugtools.org/tools/all/): Complete DebugTools registry.
+- [Developer answers](https://debugtools.org/answers/): Short answers for common debugging workflows.
+- [About](https://debugtools.org/about/): Project background and positioning.
+- [FAQ](https://debugtools.org/faq/): Product, privacy, and contribution answers.
+- [Architecture](https://debugtools.org/architecture/): How DebugTools is structured.
+- [Security](https://debugtools.org/security/): Security and local-first privacy notes.
+- [Contributing](https://debugtools.org/contributing/): Open-source contribution guide.
+- [Changelog](https://debugtools.org/changelog/): Project changelog.
+- [Releases](https://debugtools.org/releases/): Release notes.
+- [Roadmap](https://debugtools.org/roadmap/): Shipped and planned debugging tools.
+- [CLI roadmap](https://debugtools.org/cli/): Command-line plans for DebugTools.
+- [Contact](https://debugtools.org/contact/): Contact and issue reporting paths.
+- [Privacy policy](https://debugtools.org/privacy-policy/): Privacy policy.
+- [Terms of service](https://debugtools.org/terms-of-service/): Terms of service.
+- [Cookie policy](https://debugtools.org/cookie-policy/): Cookie policy.

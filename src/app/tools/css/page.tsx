@@ -23,13 +23,11 @@ import {
   MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import beautify from 'js-beautify';
-import w3cValidator from 'w3c-css-validator';
 
 // Keyboard shortcuts
 const keyboardShortcuts = [
   { key: 'Ctrl+B / Cmd+B', description: 'Beautify CSS' },
   { key: 'Ctrl+M / Cmd+M', description: 'Minify CSS' },
-  { key: 'Ctrl+V / Cmd+V', description: 'Validate CSS' },
   { key: 'Ctrl+C / Cmd+C', description: 'Copy CSS' },
   { key: 'Ctrl+R / Cmd+R', description: 'Reset CSS' },
   { key: 'Ctrl+H / Cmd+H', description: 'Show/hide help' }
@@ -42,14 +40,6 @@ const exportFormats = [
   { value: 'less', label: 'LESS File', icon: '📝' },
   { value: 'html', label: 'HTML with CSS', icon: '🌐' },
   { value: 'json', label: 'JSON Report', icon: '📊' }
-];
-
-// CSS processors
-const processors = [
-  { value: 'autoprefixer', label: 'Add Vendor Prefixes', icon: '🔧' },
-  { value: 'cssnano', label: 'Advanced Minify', icon: '⚡' },
-  { value: 'purge', label: 'Remove Unused CSS', icon: '🗑️' },
-  { value: 'rtl', label: 'RTL Conversion', icon: '🔄' }
 ];
 
 // Sample CSS
@@ -96,16 +86,140 @@ p {
   background-color: #0056b3;
 }`;
 
+interface CssIssue {
+  line: number;
+  message: string;
+}
+
+// Blanks out comments, string literals and url() payloads (keeping offsets and newlines intact)
+// so the structural checks below never trip over braces or colons that live inside them.
+const stripCssNoise = (source: string): { stripped: string; unterminatedCommentAt: number | null } => {
+  let stripped = '';
+  let unterminatedCommentAt: number | null = null;
+  let i = 0;
+
+  const blank = (from: number, to: number) => {
+    for (let k = from; k < to; k++) {
+      stripped += source[k] === '\n' ? '\n' : ' ';
+    }
+  };
+
+  while (i < source.length) {
+    const char = source[i];
+
+    if (char === '/' && source[i + 1] === '*') {
+      const end = source.indexOf('*/', i + 2);
+      if (end === -1) unterminatedCommentAt = i;
+      const stop = end === -1 ? source.length : end + 2;
+      blank(i, stop);
+      i = stop;
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      const quote = char;
+      let j = i + 1;
+      while (j < source.length && source[j] !== quote) {
+        j += source[j] === '\\' ? 2 : 1;
+      }
+      const stop = Math.min(j + 1, source.length);
+      blank(i, stop);
+      i = stop;
+      continue;
+    }
+
+    if (/^url\(/i.test(source.slice(i, i + 4))) {
+      const end = source.indexOf(')', i + 4);
+      const stop = end === -1 ? source.length : end + 1;
+      blank(i, stop);
+      i = stop;
+      continue;
+    }
+
+    stripped += char;
+    i += 1;
+  }
+
+  return { stripped, unterminatedCommentAt };
+};
+
+// Local structural validation — the CSS never leaves the browser.
+const validateCssStructure = (source: string): { valid: boolean; errors: CssIssue[]; warnings: CssIssue[] } => {
+  const errors: CssIssue[] = [];
+  const warnings: CssIssue[] = [];
+  const { stripped, unterminatedCommentAt } = stripCssNoise(source);
+  const lineAt = (index: number) => source.slice(0, index).split('\n').length;
+
+  if (unterminatedCommentAt !== null) {
+    errors.push({ line: lineAt(unterminatedCommentAt), message: 'Unclosed comment — missing "*/"' });
+  }
+
+  const checkDeclarations = (body: string, bodyStart: number) => {
+    let offset = 0;
+    const segments = body.split(';');
+
+    segments.forEach((segment, index) => {
+      const isLast = index === segments.length - 1;
+      const segmentStart = bodyStart + offset + (segment.length - segment.trimStart().length);
+      offset += segment.length + 1;
+
+      const trimmed = segment.trim();
+      if (!trimmed) return;
+
+      const colons = (trimmed.match(/:/g) || []).length;
+      if (colons === 0) {
+        errors.push({ line: lineAt(segmentStart), message: `Declaration is missing ":" — "${trimmed.split('\n')[0].slice(0, 40)}"` });
+      } else if (colons > 1) {
+        errors.push({ line: lineAt(segmentStart), message: 'Missing ";" between declarations' });
+      } else if (isLast) {
+        warnings.push({ line: lineAt(segmentStart), message: 'Last declaration is not terminated with ";"' });
+      }
+    });
+  };
+
+  const openBraces: number[] = [];
+  for (let i = 0; i < stripped.length; i += 1) {
+    const char = stripped[i];
+
+    if (char === '{') {
+      openBraces.push(i);
+      continue;
+    }
+
+    if (char !== '}') continue;
+
+    const start = openBraces.pop();
+    if (start === undefined) {
+      errors.push({ line: lineAt(i), message: 'Unexpected "}" with no matching "{"' });
+      continue;
+    }
+
+    const body = stripped.slice(start + 1, i);
+    if (!body.trim()) {
+      warnings.push({ line: lineAt(start), message: 'Empty rule — the block has no declarations' });
+    } else if (!body.includes('{')) {
+      // Only leaf blocks hold declarations; at-rule bodies are checked via their inner blocks.
+      checkDeclarations(body, start + 1);
+    }
+  }
+
+  openBraces.forEach((index) => {
+    errors.push({ line: lineAt(index), message: 'Unclosed block — missing "}"' });
+  });
+
+  return { valid: errors.length === 0, errors, warnings };
+};
+
 export default function CSSToolsPage() {
   const [css, setCSS] = useState(sampleCSS);
   const [showHelp, setShowHelp] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error' | 'info'} | null>(null);
   const [validationResults, setValidationResults] = useState<{
     valid: boolean;
-    errors: any[];
-    warnings: any[];
+    errors: CssIssue[];
+    warnings: CssIssue[];
   } | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
   const [showExportPanel, setShowExportPanel] = useState(false);
   const [cssStats, setCssStats] = useState<{
     selectors: number;
@@ -115,7 +229,6 @@ export default function CSSToolsPage() {
     colors: string[];
   } | null>(null);
   const [showPreview, setShowPreview] = useState(false);
-  const [activeProcessor, setActiveProcessor] = useState('');
 
   // Show notification
   const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
@@ -147,21 +260,15 @@ export default function CSSToolsPage() {
   // Beautify CSS
   const beautifyCSS = () => {
     try {
-      const beautified = beautify(css, {
+      const beautified = beautify.css(css, {
         indent_size: 2,
         indent_char: ' ',
         max_preserve_newlines: 2,
         preserve_newlines: true,
-        keep_array_indentation: false,
-        break_chained_methods: false,
-        brace_style: 'collapse',
-        space_before_conditional: true,
-        unescape_strings: false,
-        jslint_happy: false,
         end_with_newline: true,
         wrap_line_length: 0,
-        comma_first: false,
-        e4x: false
+        newline_between_rules: true,
+        selector_separator_newline: true
       });
       setCSS(beautified);
       showNotification('CSS beautified', 'success');
@@ -173,8 +280,33 @@ export default function CSSToolsPage() {
   // Minify CSS
   const minifyCSS = () => {
     try {
-      const minified = css
-        .replace(/\/\*[\s\S]*?\*\/|([^:]|^)\/\/.*$/gm, '') // Remove comments
+      // Spacing inside url()/calc()/var()/min()/max()/clamp() is significant, so those spans are
+      // pulled out behind placeholders and put back untouched after the whitespace passes.
+      const preserved: string[] = [];
+      const functionStart = /\b(?:url|calc|min|max|clamp|var)\(/gi;
+      const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
+
+      let guarded = '';
+      let cursor = 0;
+      let match: RegExpExecArray | null;
+
+      while ((match = functionStart.exec(withoutComments)) !== null) {
+        let depth = 1;
+        let end = match.index + match[0].length;
+        while (end < withoutComments.length && depth > 0) {
+          if (withoutComments[end] === '(') depth += 1;
+          else if (withoutComments[end] === ')') depth -= 1;
+          end += 1;
+        }
+
+        guarded += withoutComments.slice(cursor, match.index) + `__CSSMIN${preserved.length}__`;
+        preserved.push(withoutComments.slice(match.index, end));
+        cursor = end;
+        functionStart.lastIndex = end;
+      }
+      guarded += withoutComments.slice(cursor);
+
+      const minified = guarded
         .replace(/\s+/g, ' ') // Replace multiple spaces with single space
         .replace(/\s*{\s*/g, '{') // Remove spaces around {
         .replace(/\s*}\s*/g, '}') // Remove spaces around }
@@ -188,7 +320,8 @@ export default function CSSToolsPage() {
         .replace(/\s*\]\s*/g, ']') // Remove spaces around ]
         .replace(/\s*\(\s*/g, '(') // Remove spaces around (
         .replace(/\s*\)\s*/g, ')') // Remove spaces around )
-        .trim();
+        .trim()
+        .replace(/__CSSMIN(\d+)__/g, (_full, index: string) => preserved[Number(index)]);
       setCSS(minified);
       showNotification('CSS minified', 'success');
     } catch (error) {
@@ -197,28 +330,37 @@ export default function CSSToolsPage() {
   };
 
   // Validate CSS
-  const validateCSS = async () => {
-    try {
-      const results = await w3cValidator.validateText(css);
-      setValidationResults({
-        valid: results.valid,
-        errors: results.errors || [],
-        warnings: results.warnings || []
-      });
-      if (results.valid) {
-        showNotification('CSS is valid', 'success');
-      } else {
-        showNotification('CSS has validation errors', 'error');
+  const validateCSS = () => {
+    setIsValidating(true);
+    // The scan is synchronous; yield a tick so the pending state paints on large stylesheets.
+    setTimeout(() => {
+      try {
+        const results = validateCssStructure(css);
+        setValidationResults(results);
+        if (results.valid) {
+          showNotification(
+            results.warnings.length > 0 ? `No errors, ${results.warnings.length} warning(s)` : 'CSS is valid',
+            results.warnings.length > 0 ? 'info' : 'success'
+          );
+        } else {
+          showNotification('CSS has validation errors', 'error');
+        }
+      } catch (error) {
+        showNotification('Error validating CSS', 'error');
+      } finally {
+        setIsValidating(false);
       }
-    } catch (error) {
-      showNotification('Error validating CSS', 'error');
-    }
+    }, 0);
   };
 
   // Copy CSS to clipboard
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(css);
-    showNotification('CSS copied to clipboard', 'success');
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(css);
+      showNotification('CSS copied to clipboard', 'success');
+    } catch {
+      showNotification('Could not copy to clipboard', 'error');
+    }
   };
 
   // Reset CSS
@@ -331,16 +473,15 @@ ${css}
         minifyCSS();
       }
       
-      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-        e.preventDefault();
-        validateCSS();
-      }
-      
       if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        // Never hijack a real text selection
+        if (window.getSelection()?.toString()) {
+          return;
+        }
         e.preventDefault();
         copyToClipboard();
       }
-      
+
       if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
         e.preventDefault();
         resetCSS();
@@ -348,13 +489,31 @@ ${css}
       
       if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
         e.preventDefault();
-        setShowHelp(!showHelp);
+        setShowHelp(v => !v);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [css]);
+
+  const previewDoc = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>${css}</style>
+</head>
+<body>
+<div class="space-y-4">
+  <h1>Sample Heading</h1>
+  <p>This is a sample paragraph to demonstrate your CSS styles.</p>
+  <button class="button">Sample Button</button>
+  <div class="container">
+    <p>Container content with your styles applied.</p>
+  </div>
+</div>
+</body>
+</html>`;
 
   return (
     <div className="min-h-screen">
@@ -521,17 +680,14 @@ ${css}
                 <EyeIcon className="h-5 w-5 text-blue-500" />
                 Live CSS Preview
               </h3>
-              <div className="bg-white border rounded-lg p-4" style={{ minHeight: '200px' }}>
-                <style dangerouslySetInnerHTML={{ __html: css }} />
-                <div className="space-y-4">
-                  <h1>Sample Heading</h1>
-                  <p>This is a sample paragraph to demonstrate your CSS styles.</p>
-                  <button className="button">Sample Button</button>
-                  <div className="container">
-                    <p>Container content with your styles applied.</p>
-                  </div>
-                </div>
-              </div>
+              {/* Sandboxed so the edited CSS styles only the preview, never the app itself */}
+              <iframe
+                title="Live CSS preview"
+                srcDoc={previewDoc}
+                sandbox=""
+                className="w-full bg-white border rounded-lg"
+                style={{ minHeight: '200px' }}
+              />
               <div className="mt-3 flex flex-wrap gap-2">
                 <button 
                   onClick={() => setShowPreview(false)}
@@ -562,10 +718,11 @@ ${css}
               </button>
               <button 
                 onClick={validateCSS}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                disabled={isValidating}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium disabled:opacity-60"
               >
                 <CheckIcon className="h-4 w-4" />
-                Validate
+                {isValidating ? 'Validating…' : 'Validate'}
               </button>
               <button 
                 onClick={() => setShowPreview(!showPreview)}
@@ -584,7 +741,7 @@ ${css}
               </button>
               <button 
                 onClick={() => setShowExportPanel(!showExportPanel)}
-                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
               >
                 <ArrowDownTrayIcon className="h-4 w-4" />
                 Export
@@ -613,8 +770,10 @@ ${css}
 
             <div>
               <label className="block text-sm font-medium mb-1">Validation Results</label>
-              <div className="w-full h-[500px] p-4 border rounded-md overflow-auto">
-                {validationResults ? (
+              <div aria-live="polite" aria-busy={isValidating} className="w-full h-[500px] p-4 border rounded-md overflow-auto">
+                {isValidating ? (
+                  <p className="text-gray-500 text-sm">Validating CSS…</p>
+                ) : validationResults ? (
                   <div>
                     <div className={`flex items-center gap-2 mb-4 ${
                       validationResults.valid ? 'text-green-500' : 'text-red-500'

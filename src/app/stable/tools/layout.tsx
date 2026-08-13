@@ -19,7 +19,6 @@ import {
 } from '@heroicons/react/24/outline';
 import { CurlyBracesIcon, Terminal, Github, Bug } from 'lucide-react';
 import { useState } from 'react';
-import AdSlot from '@/app/components/AdSlot';
 
 // Tools organized by category
 const toolCategories = [
@@ -194,11 +193,6 @@ export default function ToolsLayout({
       <main className="flex-1 overflow-auto relative">
         <div className="container mx-auto p-4 md:p-6">
           {children}
-        </div>
-        
-        {/* Ad placement above footer */}
-        <div className="container mx-auto px-4 md:px-6 py-4">
-          <AdSlot adSlot="8212501976" />
         </div>
         
         <footer className="w-full flex flex-col items-center gap-2 py-6 border-t border-gray-200 mt-8 bg-gray-50">

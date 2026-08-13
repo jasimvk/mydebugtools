@@ -1,0 +1,9 @@
+Name: DebugTools
+Canonical: https://debugtools.org
+Repository: https://github.com/jasimvkarim/mydebugtools
+Summary: Open-source debugging toolkit for logs, traces, APIs, auth, CI, mobile, Kubernetes, OpenTelemetry, and production issues.
+Local-first: Basic tools run in the browser. User data is not sent to DebugTools servers for local utilities. Network and AI workflows are explicit.
+Primary workflow: Paste the failure, inspect signals, get a checklist, and move to the smallest reproducible request, log, trace, or command.
+Best pages: https://debugtools.org/tools/api/, https://debugtools.org/tools/stack-trace/, https://debugtools.org/tools/log-trace/, https://debugtools.org/tools/http-profiler/, https://debugtools.org/answers/
+Full index: https://debugtools.org/llms-full.txt
+Sitemap: https://debugtools.org/sitemap.xml

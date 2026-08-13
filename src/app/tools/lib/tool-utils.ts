@@ -1,7 +1,17 @@
+export interface RegexGroupSet {
+  /** 1-based index of the match these captures came from. */
+  matchIndex: number;
+  values: string[];
+}
+
 export interface RegexResults {
   match: boolean;
   matches: string[];
-  groups: string[][];
+  groups: RegexGroupSet[];
+  /** Hit the match cap; results are partial. */
+  truncated: boolean;
+  /** Hit the time budget; results are partial. */
+  timedOut: boolean;
 }
 
 export interface DiffChange {
@@ -33,29 +43,52 @@ export function decodeJwtSegment(segment: string): unknown {
   return JSON.parse(decoded);
 }
 
-export function runRegexTest(pattern: string, testString: string, selectedFlags: string[]): RegexResults {
+export const REGEX_MATCH_LIMIT = 1000;
+export const REGEX_TIME_LIMIT_MS = 1000;
+
+export function buildRegexFlags(selectedFlags: string[]): string {
   const flags = Array.from(new Set(selectedFlags)).join('');
-  const regex = new RegExp(pattern, flags);
-  const match = regex.test(testString);
+  return flags.includes('g') ? flags : `${flags}g`;
+}
+
+export function runRegexTest(pattern: string, testString: string, selectedFlags: string[]): RegexResults {
+  const regex = new RegExp(pattern, buildRegexFlags(selectedFlags));
   const matches: string[] = [];
-  const groups: string[][] = [];
+  const groups: RegexGroupSet[] = [];
+  const startedAt = Date.now();
+  let truncated = false;
+  let timedOut = false;
+  let result: RegExpExecArray | null;
 
-  if (match) {
-    const globalFlags = flags.includes('g') ? flags : `${flags}g`;
-    const regexWithGlobal = new RegExp(pattern, globalFlags);
-    let result: RegExpExecArray | null;
+  while ((result = regex.exec(testString)) !== null) {
+    matches.push(result[0]);
 
-    while ((result = regexWithGlobal.exec(testString)) !== null) {
-      matches.push(result[0]);
-      groups.push(result.slice(1));
+    // Only report captures for patterns that actually have capture groups.
+    if (result.length > 1) {
+      groups.push({
+        matchIndex: matches.length,
+        values: result.slice(1).map((value) => value ?? ''),
+      });
+    }
 
-      if (result[0] === '') {
-        regexWithGlobal.lastIndex += 1;
-      }
+    if (result[0] === '') {
+      regex.lastIndex += 1;
+    }
+
+    if (matches.length >= REGEX_MATCH_LIMIT) {
+      truncated = true;
+      break;
+    }
+
+    // Catastrophic patterns burn time per step; bail out so the tab stays responsive.
+    // (A single exec call still cannot be interrupted once it has started.)
+    if (Date.now() - startedAt > REGEX_TIME_LIMIT_MS) {
+      timedOut = true;
+      break;
     }
   }
 
-  return { match, matches, groups };
+  return { match: matches.length > 0, matches, groups, truncated, timedOut };
 }
 
 export function parseSizeToBytes(rawSize: string, rawUnit = ''): number {

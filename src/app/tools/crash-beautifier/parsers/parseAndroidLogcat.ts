@@ -3,7 +3,6 @@ import { ParsedCrashLine } from '../crashConfig';
 export function parseAndroidLogcat(log: string): ParsedCrashLine[] {
   const lines = log.split('\n');
   const parsedLines: ParsedCrashLine[] = [];
-  let isInException = false;
 
   for (const line of lines) {
     const trimmedLine = line.trim();
@@ -11,7 +10,6 @@ export function parseAndroidLogcat(log: string): ParsedCrashLine[] {
 
     // Fatal exception line
     if (trimmedLine.includes('FATAL EXCEPTION')) {
-      isInException = true;
       parsedLines.push({
         type: 'error',
         content: trimmedLine
@@ -62,13 +60,12 @@ export function parseAndroidLogcat(log: string): ParsedCrashLine[] {
       continue;
     }
 
-    // Any other line within the exception block
-    if (isInException) {
-      parsedLines.push({
-        type: 'info',
-        content: trimmedLine
-      });
-    }
+    // Any other line. Excerpts often omit the literal FATAL EXCEPTION header, and
+    // dropping unmatched lines would lose `Caused by:` and `... 24 more`.
+    parsedLines.push({
+      type: 'info',
+      content: trimmedLine
+    });
   }
 
   return parsedLines;

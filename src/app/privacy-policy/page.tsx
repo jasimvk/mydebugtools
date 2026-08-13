@@ -7,6 +7,9 @@ import { Terminal } from 'lucide-react';
 import PageWrapper from '@/components/PageWrapper';
 import StructuredData from '@/components/StructuredData';
 
+// Bump this by hand whenever the text of this policy changes.
+const LAST_UPDATED = '13 August 2026';
+
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-white">
@@ -34,7 +37,7 @@ export default function PrivacyPolicy() {
               </a>
               <Link 
                 href="/tools"
-                className="px-6 py-2.5 bg-[#FF6C37] hover:bg-[#ff5722] text-white font-semibold rounded-lg transition-colors shadow-lg"
+                className="px-6 py-2.5 bg-[#2563eb] hover:bg-[#0550ae] text-white font-semibold rounded-lg transition-colors shadow-lg"
               >
                 Browse Tools
               </Link>
@@ -46,14 +49,14 @@ export default function PrivacyPolicy() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
       <StructuredData
         title="Privacy Policy | debugtools"
-        description="Privacy Policy for debugtools - AdSense Compliant"
+        description="Privacy Policy for debugtools - how we collect, use, and protect your information."
         toolType="WebPage"
       />
 
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Privacy Policy</h1>
       
       <div className="prose prose-lg max-w-none">
-        <p className="text-sm text-gray-600 mb-6">Last updated: {new Date().toLocaleDateString()}</p>
+        <p className="text-sm text-gray-600 mb-6">Last updated: {LAST_UPDATED}</p>
         
         <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">Introduction</h2>
         <p>
@@ -122,21 +125,9 @@ export default function PrivacyPolicy() {
           </a>.
         </p>
 
-        <h3 className="text-xl font-semibold text-gray-800 mt-6 mb-3">Google AdSense</h3>
         <p>
-          We use Google AdSense to display advertisements on our website. Google AdSense may use cookies 
-          and other tracking technologies to serve ads based on your interests. These ads may be based on:
-        </p>
-        <ul>
-          <li>Your visits to our site and other sites on the Internet</li>
-          <li>Your demographic information</li>
-          <li>Your interests as inferred from your browsing behavior</li>
-        </ul>
-        <p>
-          You can customize your ad preferences or opt out of personalized advertising by visiting 
-          <a href="https://www.google.com/settings/ads" className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">
-            Google Ad Settings
-          </a>.
+          We do not display advertising on this website and we do not use advertising or
+          remarketing networks.
         </p>
 
         <h2 className="text-2xl font-bold text-gray-900 mt-8 mb-4">Cookies and Tracking Technologies</h2>
@@ -147,7 +138,6 @@ export default function PrivacyPolicy() {
         <ul>
           <li><strong>Essential Cookies:</strong> Required for basic website functionality</li>
           <li><strong>Analytics Cookies:</strong> Help us understand how you use our website</li>
-          <li><strong>Advertising Cookies:</strong> Used to show relevant advertisements</li>
         </ul>
         <p>
           You can control cookies through your browser settings, but disabling cookies may affect 
@@ -215,20 +205,20 @@ export default function PrivacyPolicy() {
         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex flex-wrap justify-center md:justify-start gap-4 text-xs">
-              <a href="https://github.com/jasimvkarim/mydebugtools" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">
+              <a href="https://github.com/jasimvkarim/mydebugtools" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#2563eb] transition-colors font-medium">
                 ⭐ Star on GitHub
               </a>
-              <a href="https://github.com/jasimvkarim/mydebugtools/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">
+              <a href="https://github.com/jasimvkarim/mydebugtools/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#2563eb] transition-colors font-medium">
                 MIT License
               </a>
-              <a href="https://github.com/jasimvkarim/mydebugtools/issues" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">Report Issue</a>
-              <a href="https://github.com/jasimvkarim/mydebugtools/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">Contribute</a>
-              <Link href="/contact" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">Contact</Link>
-              <Link href="/faq" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">FAQ</Link>
-              <Link href="/privacy-policy" className="text-gray-600 hover:text-[#FF6C37] transition-colors font-medium">Privacy & Terms</Link>
+              <a href="https://github.com/jasimvkarim/mydebugtools/issues" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#2563eb] transition-colors font-medium">Report Issue</a>
+              <a href="https://github.com/jasimvkarim/mydebugtools/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#2563eb] transition-colors font-medium">Contribute</a>
+              <Link href="/contact" className="text-gray-600 hover:text-[#2563eb] transition-colors font-medium">Contact</Link>
+              <Link href="/faq" className="text-gray-600 hover:text-[#2563eb] transition-colors font-medium">FAQ</Link>
+              <Link href="/privacy-policy" className="text-gray-600 hover:text-[#2563eb] transition-colors font-medium">Privacy & Terms</Link>
             </div>
             <div className="text-xs text-gray-600">
-              Built by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-[#FF6C37] hover:underline font-semibold">@jasimvk</a>
+              Built by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-[#2563eb] hover:underline font-semibold">@jasimvk</a>
             </div>
           </div>
         </div>

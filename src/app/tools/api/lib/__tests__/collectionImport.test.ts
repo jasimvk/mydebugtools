@@ -53,6 +53,10 @@ describe('parseImportedCollection', () => {
                   bearer: [{ key: 'token', value: '{{token}}' }],
                 },
               },
+              event: [
+                { listen: 'prerequest', script: { exec: ['set header X-Debug: true'] } },
+                { listen: 'test', script: { exec: ['status is 200', 'header content-type contains json'] } },
+              ],
             },
           ],
         },
@@ -84,6 +88,8 @@ describe('parseImportedCollection', () => {
       body: '{"email":"user@example.com"}',
       contentType: 'application/json',
       authConfig: { type: 'bearer', token: '{{token}}' },
+      preRequestScript: 'set header X-Debug: true',
+      testScript: 'status is 200\nheader content-type contains json',
     });
     expect(collection.requests[1]).toMatchObject({
       name: 'Products',

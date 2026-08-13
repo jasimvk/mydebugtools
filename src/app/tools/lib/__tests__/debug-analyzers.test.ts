@@ -1,7 +1,11 @@
 import {
   analyzeErrors,
   analyzeHar,
+  analyzeCiWorkflow,
+  analyzeKubernetesDebug,
   analyzeLogs,
+  analyzeOtelTrace,
+  analyzeSecurityHeaders,
   analyzeStackTrace,
 } from '../debug-analyzers';
 
@@ -60,5 +64,67 @@ TimeoutError: Request timed out
     expect(result.issues).toHaveLength(2);
     expect(result.issues[0].count).toBe(2);
     expect(result.summary.totalErrors).toBe(3);
+  });
+
+  it('summarizes OpenTelemetry spans and slow/error spans', () => {
+    const result = analyzeOtelTrace(JSON.stringify({
+      resourceSpans: [{
+        scopeSpans: [{
+          spans: [
+            { name: 'GET /checkout', traceId: 't1', spanId: 's1', startTimeUnixNano: '1000000000', endTimeUnixNano: '1600000000', status: { code: 1 } },
+            { name: 'POST payment', traceId: 't1', spanId: 's2', parentSpanId: 's1', startTimeUnixNano: '1100000000', endTimeUnixNano: '1500000000', status: { code: 2, message: 'card declined' } },
+          ],
+        }],
+      }],
+    }));
+
+    expect(result.totalSpans).toBe(2);
+    expect(result.errorSpans).toHaveLength(1);
+    expect(result.slowest[0].name).toBe('GET /checkout');
+    expect(result.traces[0].spanCount).toBe(2);
+  });
+
+  it('detects Kubernetes crash-loop symptoms and recommends commands', () => {
+    const result = analyzeKubernetesDebug(`Name: api-7d9
+Namespace: prod
+State: Waiting
+Reason: CrashLoopBackOff
+Last State: Terminated
+Exit Code: 137
+Warning BackOff restarting failed container`);
+
+    expect(result.namespace).toBe('prod');
+    expect(result.signals).toContain('CrashLoopBackOff');
+    expect(result.signals).toContain('OOMKilled or memory pressure');
+    expect(result.commands.some((command) => command.includes('kubectl logs'))).toBe(true);
+  });
+
+  it('finds GitHub Actions workflow risks and job structure', () => {
+    const result = analyzeCiWorkflow(`name: ci
+on: [pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm test
+      - run: curl \${{ secrets.DEPLOY_TOKEN }}`);
+
+    expect(result.jobs).toContain('test');
+    expect(result.stepCount).toBe(3);
+    expect(result.risks.some((risk) => risk.includes('secrets'))).toBe(true);
+    expect(result.commands.some((command) => command.includes('act'))).toBe(true);
+  });
+
+  it('scores security headers and reports missing protections', () => {
+    const result = analyzeSecurityHeaders(`HTTP/2 200
+content-security-policy: default-src 'self'
+x-frame-options: DENY
+set-cookie: session=abc; Path=/`);
+
+    expect(result.present).toContain('content-security-policy');
+    expect(result.missing).toContain('strict-transport-security');
+    expect(result.cookieWarnings).toContain('Cookie missing HttpOnly');
+    expect(result.score).toBeLessThan(100);
   });
 });

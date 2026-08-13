@@ -58,7 +58,8 @@ const colorUtils = {
 
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
-    let h = 0, s, l = (max + min) / 2;
+    const l = (max + min) / 2;
+    let h = 0, s;
 
     if (max === min) {
       h = s = 0; // achromatic
@@ -107,10 +108,10 @@ const colorUtils = {
 
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
-    let h = 0, s, v = max;
-
+    const v = max;
     const d = max - min;
-    s = max === 0 ? 0 : d / max;
+    const s = max === 0 ? 0 : d / max;
+    let h = 0;
 
     if (max === min) {
       h = 0; // achromatic
@@ -177,17 +178,6 @@ function ColorPickerContent() {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // Convert color between formats
-  const convertColor = (color: string, fromFormat: string, toFormat: string) => {
-    try {
-      // Basic implementation
-      return color;
-    } catch (error) {
-      showNotification('Error converting color', 'error');
-      return color;
-    }
-  };
-
   // Get color in all formats for the advanced view
   const getColorFormats = (hexColor: string, opacity: number) => {
     const rgb = colorUtils.hexToRgb(hexColor);
@@ -212,9 +202,13 @@ function ColorPickerContent() {
   };
 
   // Copy color to clipboard
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    showNotification('Color copied to clipboard', 'success');
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showNotification('Color copied to clipboard', 'success');
+    } catch {
+      showNotification('Could not copy to clipboard', 'error');
+    }
   };
 
   // Reset color
@@ -232,27 +226,31 @@ function ColorPickerContent() {
     });
   };
 
-  // Handle color change
+  // Handle color change while the picker is being dragged (not yet a real pick)
   const handleColorChange = (newColor: string) => {
     setColor(newColor);
-    addToRecentColors(newColor);
   };
 
-  // Handle format change
-  const handleFormatChange = (newFormat: string) => {
-    setFormat(newFormat);
-    const convertedColor = convertColor(color, format, newFormat);
-    setColor(convertedColor);
+  // Record the color only once the pick is committed, so dragging does not flood history
+  const commitColor = (newColor: string) => {
+    setColor(newColor);
+    addToRecentColors(newColor);
   };
 
   // Handle palette selection
   const handlePaletteSelect = (paletteName: string) => {
     setSelectedPalette(paletteName);
-    const palette = colorPalettes.find(p => p.name === paletteName);
-    if (palette) {
-      setRecentColors(palette.colors);
-    }
   };
+
+  const selectedPaletteColors = colorPalettes.find(p => p.name === selectedPalette)?.colors ?? [];
+
+  // Get all color formats
+  const colorFormatsData = getColorFormats(color, opacity);
+
+  // The value shown and copied, in the currently selected format
+  const formattedColor = colorFormatsData
+    ? (colorFormatsData[format as 'hex' | 'rgb' | 'hsl' | 'cmyk' | 'hsv'] ?? color)
+    : color;
 
   // Handle keyboard shortcuts
   useEffect(() => {
@@ -262,8 +260,12 @@ function ColorPickerContent() {
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        // Never hijack a real text selection
+        if (window.getSelection()?.toString()) {
+          return;
+        }
         e.preventDefault();
-        copyToClipboard(color);
+        copyToClipboard(formattedColor);
       }
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
@@ -273,16 +275,13 @@ function ColorPickerContent() {
 
       if ((e.ctrlKey || e.metaKey) && e.key === 'h') {
         e.preventDefault();
-        setShowHelp(!showHelp);
+        setShowHelp(v => !v);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [color, format]);
-
-  // Get all color formats
-  const colorFormatsData = getColorFormats(color, opacity);
+  }, [formattedColor]);
 
   return (
     <div className="container mx-auto p-4">
@@ -294,7 +293,7 @@ function ColorPickerContent() {
 
       {/* Notification */}
       {notification && (
-        <div className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+        <div role="status" aria-live="polite" className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
           notification.type === 'success' ? 'bg-green-500 text-white' :
           notification.type === 'error' ? 'bg-red-500 text-white' :
           'bg-blue-500 text-white'
@@ -371,12 +370,13 @@ function ColorPickerContent() {
                       type="color"
                       value={color}
                       onChange={(e) => handleColorChange(e.target.value)}
+                      onBlur={(e) => addToRecentColors(e.target.value)}
                       className="w-full h-10"
                       style={{ backgroundColor: 'transparent' }}
                     />
                   </div>
                   <button
-                    onClick={() => copyToClipboard(color)}
+                    onClick={() => copyToClipboard(formattedColor)}
                     className="p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
                     title="Copy color"
                   >
@@ -423,7 +423,7 @@ function ColorPickerContent() {
                 <div className="flex gap-2">
                   <select
                     value={format}
-                    onChange={(e) => handleFormatChange(e.target.value)}
+                    onChange={(e) => setFormat(e.target.value)}
                     className="w-full p-2 border border-gray-300 rounded-md bg-white dark:bg-gray-800 dark:border-gray-600 text-gray-900 dark:text-white"
                   >
                     {colorFormats.map((format) => (
@@ -452,12 +452,12 @@ function ColorPickerContent() {
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      value={color}
+                      value={formattedColor}
                       readOnly
                       className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md font-mono bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                     />
                     <button
-                      onClick={() => copyToClipboard(color)}
+                      onClick={() => copyToClipboard(formattedColor)}
                       className="p-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
                       title="Copy color value"
                     >
@@ -613,7 +613,7 @@ function ColorPickerContent() {
                   {recentColors.map((recentColor, index) => (
                     <button
                       key={index}
-                      onClick={() => handleColorChange(recentColor)}
+                      onClick={() => commitColor(recentColor)}
                       className="w-full aspect-square rounded-lg border border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 transition-colors"
                       style={{ backgroundColor: recentColor }}
                       title={recentColor}
@@ -626,6 +626,23 @@ function ColorPickerContent() {
                   )}
                 </div>
               </div>
+
+              {selectedPalette && selectedPaletteColors.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium mb-2">{selectedPalette} Palette</h3>
+                  <div className="grid grid-cols-5 gap-2">
+                    {selectedPaletteColors.map((paletteColor, index) => (
+                      <button
+                        key={index}
+                        onClick={() => commitColor(paletteColor)}
+                        className="w-full aspect-square rounded-lg border border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 transition-colors"
+                        style={{ backgroundColor: paletteColor }}
+                        title={paletteColor}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -634,9 +651,15 @@ function ColorPickerContent() {
             <h3 className="text-sm font-medium mb-2">Color Palettes</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {colorPalettes.map((palette) => (
-                <div
+                <button
                   key={palette.name}
-                  className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 cursor-pointer transition-colors"
+                  type="button"
+                  aria-pressed={selectedPalette === palette.name}
+                  className={`p-4 text-left border rounded-lg hover:border-blue-500 dark:hover:border-blue-400 cursor-pointer transition-colors ${
+                    selectedPalette === palette.name
+                      ? 'border-blue-500 dark:border-blue-400'
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
                   onClick={() => handlePaletteSelect(palette.name)}
                 >
                   <h4 className="text-sm font-medium mb-2">{palette.name}</h4>
@@ -650,7 +673,7 @@ function ColorPickerContent() {
                       />
                     ))}
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>

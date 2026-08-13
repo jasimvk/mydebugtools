@@ -12,10 +12,15 @@ import {
 } from '@heroicons/react/24/outline';
 import { CurlyBracesIcon, Terminal, Github } from 'lucide-react';
 import { useState } from 'react';
-import AdSlot from '@/app/components/AdSlot';
 
 // Tools organized by category
 const tools = [
+  {
+    name: 'API Workbench',
+    description: 'Test, debug, and inspect REST APIs',
+    path: '/tools/api',
+    icon: BeakerIcon
+  },
   {
     name: 'JSON Tools',
     description: 'Format, validate, and beautify your JSON data with syntax highlighting',
@@ -27,12 +32,6 @@ const tools = [
     description: 'Decode and verify JWT tokens instantly',
     path: '/tools/jwt',
     icon: KeyIcon
-  },
-  {
-    name: 'API Tester',
-    description: 'Test and debug REST APIs',
-    path: '/tools/api',
-    icon: BeakerIcon
   },
   {
     name: 'HTTP Status',
@@ -72,7 +71,7 @@ export default function ToolsLayout({
           <div className="flex items-center justify-between h-14">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <Terminal className="h-5 w-5 text-[#FF6C37]" strokeWidth={2.5} />
+              <Terminal className="h-5 w-5 text-[#0969da]" strokeWidth={2.5} />
               <span className="text-base font-semibold text-gray-900">debugtools</span>
             </Link>
 
@@ -87,7 +86,7 @@ export default function ToolsLayout({
                     href={tool.path}
                     className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded ${
                       active
-                        ? 'bg-[#FF6C37] text-white'
+                        ? 'bg-[#0969da] text-white'
                         : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
@@ -141,7 +140,7 @@ export default function ToolsLayout({
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded ${
                       active
-                        ? 'bg-[#FF6C37] text-white'
+                        ? 'bg-[#0969da] text-white'
                         : 'text-gray-700 hover:bg-gray-100'
                     }`}
                   >
@@ -168,11 +167,6 @@ export default function ToolsLayout({
       <main className="flex-1 bg-gray-50">
         {children}
         
-        {/* Ad placement above footer */}
-        <div className="container mx-auto px-4 md:px-6 py-4">
-          <AdSlot adSlot="8212501976" />
-        </div>
-        
         <footer className="border-t border-gray-200 bg-white mt-12">
           <div className="max-w-7xl mx-auto px-6 py-8">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -195,7 +189,7 @@ export default function ToolsLayout({
                 <Link href="/contact" className="hover:text-gray-900">Contact</Link>
               </div>
               <div className="text-sm text-gray-600">
-                Developed & Maintained by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-gray-900 hover:text-[#FF6C37] font-medium">Jasim</a>
+                Developed & Maintained by <a href="https://x.com/jasimvk" target="_blank" rel="noopener noreferrer" className="text-gray-900 hover:text-[#0969da] font-medium">Jasim</a>
               </div>
             </div>
           </div>

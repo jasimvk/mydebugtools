@@ -13,8 +13,8 @@ export default function Icon() {
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
         <defs>
           <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FF6C37" />
-            <stop offset="100%" stopColor="#ff5722" />
+            <stop offset="0%" stopColor="#0969da" />
+            <stop offset="100%" stopColor="#0550ae" />
           </linearGradient>
         </defs>
         {/* Background */}

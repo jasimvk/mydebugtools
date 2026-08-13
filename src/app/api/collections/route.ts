@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
 import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { assertWorkspaceAccess, ensurePersonalWorkspace, getWritableWorkspaceId } from '@/lib/workspaces';
 
 // GET /api/collections - Get all collections for the current user
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     const session = await getServerSession(authOptions);
@@ -14,6 +15,15 @@ export async function GET() {
     }
 
     const userId = (session.user as any).id;
+    const requestedWorkspaceId = new URL(request.url).searchParams.get('workspaceId');
+    const workspace = requestedWorkspaceId
+      ? { id: requestedWorkspaceId }
+      : await ensurePersonalWorkspace(userId);
+
+    const membership = await assertWorkspaceAccess(userId, workspace.id);
+    if (!membership) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const { data: collections, error } = await supabaseAdmin
       .from('api_collections')
@@ -21,7 +31,7 @@ export async function GET() {
         *,
         api_requests (*)
       `)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspace.id)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -48,19 +58,25 @@ export async function POST(request: Request) {
 
     const userId = (session.user as any).id;
     const body = await request.json();
-    const { name, description, color } = body;
+    const { name, description, color, workspaceId } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'Collection name is required' }, { status: 400 });
+    }
+
+    const writableWorkspaceId = await getWritableWorkspaceId(userId, workspaceId);
+    if (!writableWorkspaceId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { data: collection, error } = await supabaseAdmin
       .from('api_collections')
       .insert({
         user_id: userId,
+        workspace_id: writableWorkspaceId,
         name,
         description,
-        color: color || '#FF6C37',
+        color: color || '#0969da',
       })
       .select()
       .single();
@@ -90,16 +106,31 @@ export async function DELETE(request: Request) {
     const userId = (session.user as any).id;
     const { searchParams } = new URL(request.url);
     const collectionId = searchParams.get('id');
+    const workspaceId = searchParams.get('workspaceId');
 
     if (!collectionId) {
       return NextResponse.json({ error: 'Collection ID is required' }, { status: 400 });
     }
 
-    const { error } = await supabaseAdmin
+    if (workspaceId) {
+      const membership = await assertWorkspaceAccess(userId, workspaceId, ['owner', 'admin', 'developer']);
+      if (!membership) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
+
+    let deleteQuery = supabaseAdmin
       .from('api_collections')
       .delete()
-      .eq('id', collectionId)
-      .eq('user_id', userId);
+      .eq('id', collectionId);
+
+    if (workspaceId) {
+      deleteQuery = deleteQuery.eq('workspace_id', workspaceId);
+    } else {
+      deleteQuery = deleteQuery.eq('user_id', userId);
+    }
+
+    const { error } = await deleteQuery;
 
     if (error) {
       console.error('Error deleting collection:', error);

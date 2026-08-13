@@ -6,8 +6,8 @@
       <stop offset="100%" style="stop-color:#f5f5f5;stop-opacity:1" />
     </linearGradient>
     <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#FF6C37;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#ff5722;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#0969da;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0550ae;stop-opacity:1" />
     </linearGradient>
   </defs>
   
@@ -15,10 +15,10 @@
   <rect width="1200" height="630" fill="url(#bgGradient)"/>
   
   <!-- Left accent -->
-  <rect x="0" y="0" width="6" height="630" fill="#FF6C37"/>
+  <rect x="0" y="0" width="6" height="630" fill="#0969da"/>
   
   <!-- Logo Circle Background -->
-  <circle cx="150" cy="150" r="120" fill="#FF6C37" opacity="0.1"/>
+  <circle cx="150" cy="150" r="120" fill="#0969da" opacity="0.1"/>
   <circle cx="150" cy="150" r="100" fill="url(#logoGradient)"/>
   
   <!-- Terminal Icon (Logo) -->
@@ -28,9 +28,9 @@
     <!-- Title bar -->
     <rect x="-40" y="-35" width="80" height="15" rx="4" fill="white"/>
     <!-- Dots -->
-    <circle cx="-30" cy="-27.5" r="2" fill="#FF6C37"/>
-    <circle cx="-22" cy="-27.5" r="2" fill="#FF6C37"/>
-    <circle cx="-14" cy="-27.5" r="2" fill="#FF6C37"/>
+    <circle cx="-30" cy="-27.5" r="2" fill="#0969da"/>
+    <circle cx="-22" cy="-27.5" r="2" fill="#0969da"/>
+    <circle cx="-14" cy="-27.5" r="2" fill="#0969da"/>
     <!-- Command line -->
     <text x="-35" y="5" font-family="monospace" font-size="10" fill="white" font-weight="bold">> debug</text>
     <text x="-35" y="20" font-family="monospace" font-size="9" fill="white" opacity="0.8">~/tools</text>
@@ -49,20 +49,20 @@
   <!-- Feature Pills -->
   <g>
     <!-- Pill 1 -->
-    <rect x="320" y="250" width="200" height="50" rx="25" fill="#FF6C37" opacity="0.15" stroke="#FF6C37" stroke-width="2"/>
-    <text x="420" y="285" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#FF6C37" text-anchor="middle">
+    <rect x="320" y="250" width="200" height="50" rx="25" fill="#0969da" opacity="0.15" stroke="#0969da" stroke-width="2"/>
+    <text x="420" y="285" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#0969da" text-anchor="middle">
       30+ Tools
     </text>
     
     <!-- Pill 2 -->
-    <rect x="540" y="250" width="200" height="50" rx="25" fill="#FF6C37" opacity="0.15" stroke="#FF6C37" stroke-width="2"/>
-    <text x="640" y="285" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#FF6C37" text-anchor="middle">
-      Free & Open Source
+    <rect x="540" y="250" width="200" height="50" rx="25" fill="#0969da" opacity="0.15" stroke="#0969da" stroke-width="2"/>
+    <text x="640" y="285" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#0969da" text-anchor="middle">
+      Free &amp; Open Source
     </text>
     
     <!-- Pill 3 -->
-    <rect x="760" y="250" width="200" height="50" rx="25" fill="#FF6C37" opacity="0.15" stroke="#FF6C37" stroke-width="2"/>
-    <text x="860" y="285" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#FF6C37" text-anchor="middle">
+    <rect x="760" y="250" width="200" height="50" rx="25" fill="#0969da" opacity="0.15" stroke="#0969da" stroke-width="2"/>
+    <text x="860" y="285" font-family="Arial, sans-serif" font-size="18" font-weight="600" fill="#0969da" text-anchor="middle">
       Privacy First
     </text>
   </g>
@@ -83,7 +83,7 @@
     
     <!-- Color -->
     <circle cx="300" cy="0" r="35" fill="#f0f0f0"/>
-    <rect x="285" y="-10" width="10" height="10" fill="#FF6C37"/>
+    <rect x="285" y="-10" width="10" height="10" fill="#0969da"/>
     <rect x="300" y="-10" width="10" height="10" fill="#00BCD4"/>
     <rect x="315" y="-10" width="10" height="10" fill="#9C27B0"/>
     
@@ -98,7 +98,7 @@
   </text>
   
   <!-- URL -->
-  <text x="600" y="600" font-family="Arial, sans-serif" font-size="20" font-weight="500" fill="#FF6C37" text-anchor="middle">
+  <text x="600" y="600" font-family="Arial, sans-serif" font-size="20" font-weight="500" fill="#0969da" text-anchor="middle">
     debugtools.org
   </text>
 </svg>

@@ -21,14 +21,25 @@
 }
 
 :root {
-  --background: #eef2f6;
-  --foreground: #171717;
-  --font-sans: Menlo, "Roboto Mono Variable", "Roboto Mono", Monaco, "Cascadia Mono", "Segoe UI Mono", Consolas, "Liberation Mono", monospace;
-  --font-mono: Menlo, "Roboto Mono Variable", "Roboto Mono", Monaco, "Cascadia Mono", "Segoe UI Mono", Consolas, "Liberation Mono", "Courier New", monospace;
-  --primary: #24292f;
-  --primary-hover: #32383f;
-  --border: #e5e7eb;
+  /* Minimal light theme — neutral zinc scale + one accent (Linear/Vercel style) */
+  --background: #ffffff;       /* page background */
+  --surface: #fafafa;          /* subtle raised/inset surfaces (zinc-50) */
+  --foreground: #09090b;       /* primary text (zinc-950) */
+  --muted: #71717a;            /* secondary text (zinc-500) */
+  --border: #e4e4e7;           /* hairline borders (zinc-200) */
   --card-bg: #ffffff;
+
+  /* Single restrained accent for links / active / focus */
+  --accent: #2563eb;           /* blue-600 */
+  --accent-hover: #1d4ed8;     /* blue-700 */
+
+  /* Primary action = near-black (Vercel-style) */
+  --primary: #09090b;
+  --primary-hover: #27272a;
+
+  /* Geist via next/font (geist package exposes these variables) */
+  --font-sans: var(--font-geist-sans), Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), "Roboto Mono", Menlo, monospace;
 }
 
 @layer base {
@@ -44,6 +55,11 @@
     font-family: var(--font-sans) !important;
     background: var(--background);
     color: var(--foreground);
+  }
+
+  ::selection {
+    background: #ddf4ff;
+    color: #0969da;
   }
 
   button,
@@ -100,16 +116,22 @@
 
   /* Link styles */
   a {
-    @apply text-[#FF6C37] hover:text-[#ff5722] transition-colors;
+    @apply text-[#0969da] hover:text-[#0550ae] transition-colors;
   }
 
-  /* Code blocks */
+  /* Inline code */
   code {
-    @apply bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono;
+    @apply bg-surface px-1.5 py-0.5 rounded text-[0.85em] font-mono text-foreground;
   }
 
+  /* Code blocks (dark) */
   pre {
-    @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto;
+    @apply bg-zinc-950 text-zinc-100 p-4 rounded-lg overflow-x-auto;
+  }
+
+  /* Code inside a block must NOT get the inline-code background/padding */
+  pre code {
+    @apply bg-transparent p-0 rounded-none text-inherit;
   }
 }
 
@@ -193,19 +215,20 @@ body {
    Keeps older individual tools visually aligned with the repo/docs shell. */
 .oss-tools-surface [class*="bg-gradient-to"] {
   background-image: none !important;
-  background-color: #f6f8fa !important;
+  background-color: #f8fafc !important;
   color: #24292f !important;
 }
 
 .oss-tools-surface [class*="rounded-xl"],
-.oss-tools-surface [class*="rounded-2xl"] {
-  border-radius: 6px !important;
+.oss-tools-surface [class*="rounded-2xl"],
+.oss-tools-surface [class*="rounded-3xl"] {
+  border-radius: 16px !important;
 }
 
 .oss-tools-surface [class*="shadow-lg"],
 .oss-tools-surface [class*="shadow-xl"],
 .oss-tools-surface [class*="shadow-2xl"] {
-  box-shadow: none !important;
+  box-shadow: 0 18px 55px rgb(15 23 42 / 0.07) !important;
 }
 
 .oss-tools-surface {
@@ -214,13 +237,13 @@ body {
 
 .oss-tools-surface > div,
 .oss-tools-surface > section {
-  filter: drop-shadow(0 18px 40px rgb(27 31 36 / 0.05));
+  filter: drop-shadow(0 18px 40px rgb(15 23 42 / 0.04));
 }
 
 .oss-tools-surface section,
 .oss-tools-surface .card,
 .oss-tools-surface [class*="border"][class*="bg-white"] {
-  border-color: #c8d1dc !important;
+  border-color: rgb(226 232 240 / 0.95) !important;
 }
 
   .oss-tools-surface h1 {
@@ -252,21 +275,33 @@ body {
 .oss-tools-surface textarea,
 .oss-tools-surface input,
 .oss-tools-surface select {
-  border-color: #d0d7de !important;
+  border-color: #cbd5e1 !important;
   color: #24292f !important;
   outline: none !important;
   background-color: #ffffff !important;
 }
 
+.oss-tools-surface .dt-code-textarea {
+  background-color: #292b36 !important;
+  border-color: transparent !important;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.oss-tools-surface .dt-code-textarea:focus {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
   .oss-tools-surface textarea:focus,
   .oss-tools-surface input:focus,
   .oss-tools-surface select:focus {
-    border-color: #0969da !important;
-    box-shadow: 0 0 0 2px rgb(9 105 218 / 0.15) !important;
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 0.12) !important;
   }
 
 .oss-tools-surface button {
-  border-radius: 6px !important;
+  border-radius: 10px !important;
 }
 
 .oss-tools-surface button:not(:disabled) {
@@ -277,24 +312,24 @@ body {
   box-shadow: 0 1px 2px rgb(27 31 36 / 0.08) !important;
 }
 
-  .oss-tools-surface [class*="bg-[#FF6C37]"],
-  .oss-tools-surface [class*="bg-orange-600"],
+  .oss-tools-surface [class*="bg-[#0969da]"],
+  .oss-tools-surface [class*="bg-blue-600"],
   .oss-tools-surface [class*="bg-blue-600"],
   .oss-tools-surface [class*="bg-purple-600"] {
-  background-color: #24292f !important;
+  background-color: #0f172a !important;
   color: #ffffff !important;
 }
 
-.oss-tools-surface [class*="hover:bg-[#ff5722]"]:hover,
-  .oss-tools-surface [class*="hover:bg-orange-700"]:hover,
+.oss-tools-surface [class*="hover:bg-[#0550ae]"]:hover,
+  .oss-tools-surface [class*="hover:bg-blue-700"]:hover,
   .oss-tools-surface [class*="hover:bg-blue-700"]:hover,
   .oss-tools-surface [class*="hover:bg-purple-700"]:hover {
-  background-color: #32383f !important;
+  background-color: #1e293b !important;
   color: #ffffff !important;
 }
 
-.oss-tools-surface [class*="text-[#FF6C37]"],
-.oss-tools-surface [class*="text-orange-600"],
+.oss-tools-surface [class*="text-[#0969da]"],
+.oss-tools-surface [class*="text-blue-600"],
 .oss-tools-surface [class*="text-blue-600"],
 .oss-tools-surface [class*="text-purple-600"],
 .oss-tools-surface [class*="text-blue-500"],
@@ -302,14 +337,14 @@ body {
   color: #0969da !important;
 }
 
-.oss-tools-surface [class*="border-[#FF6C37]"],
+.oss-tools-surface [class*="border-[#0969da]"],
 .oss-tools-surface [class*="border-orange"],
 .oss-tools-surface [class*="border-blue"],
 .oss-tools-surface [class*="border-purple"] {
   border-color: #d0d7de !important;
 }
 
-.oss-tools-surface [class*="bg-orange-50"],
+.oss-tools-surface [class*="bg-blue-50"],
 .oss-tools-surface [class*="bg-blue-50"],
 .oss-tools-surface [class*="bg-purple-50"],
 .oss-tools-surface [class*="bg-pink-50"] {
@@ -323,4 +358,231 @@ body {
 .oss-tools-surface .bg-gray-900,
 .oss-tools-surface [class*="bg-gray-900"] {
   background-color: #101418 !important;
+}
+
+/* API Workbench redesign layer.
+   Flat, dense REST-client layout inspired by Hoppscotch. */
+.dt-api-workbench {
+  background: #f6f8fb !important;
+  color: #111827 !important;
+  font-family: "Geist", "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  letter-spacing: 0;
+}
+
+.dt-api-workbench button,
+.dt-api-workbench input,
+.dt-api-workbench select,
+.dt-api-workbench textarea {
+  font-family: inherit !important;
+}
+
+.dt-api-workbench code,
+.dt-api-workbench pre,
+.dt-api-workbench .font-mono,
+.dt-api-workbench .monaco-editor {
+  font-family: "Roboto Mono Variable", "Roboto Mono", "SFMono-Regular", Menlo, Consolas, monospace !important;
+}
+
+.dt-api-workbench h1,
+.dt-api-workbench h2,
+.dt-api-workbench h3 {
+  letter-spacing: -0.01em !important;
+}
+
+.dt-api-workbench input,
+.dt-api-workbench select,
+.dt-api-workbench textarea {
+  border-color: #d1d5db !important;
+  background-color: #ffffff !important;
+}
+
+.dt-api-workbench input:focus,
+.dt-api-workbench select:focus,
+.dt-api-workbench textarea:focus {
+  border-color: #6d5dfc !important;
+  box-shadow: 0 0 0 3px rgb(109 93 252 / 0.14) !important;
+}
+
+.dt-api-workbench .monaco-editor,
+.dt-api-workbench .monaco-editor-background,
+.dt-api-workbench .monaco-editor .margin {
+  background-color: #f8fafc !important;
+}
+
+.dt-api-workbench [class*="bg-[#101011]"],
+.dt-api-workbench [class*="bg-[#121214]"],
+.dt-api-workbench [class*="bg-[#141416]"],
+.dt-api-workbench [class*="bg-[#151516]"],
+.dt-api-workbench [class*="bg-[#171719]"],
+.dt-api-workbench [class*="bg-[#1c1c20]"],
+.dt-api-workbench [class*="bg-[#1f1f24]"] {
+  background-color: #ffffff !important;
+}
+
+.dt-api-workbench [class*="bg-[#202024]"],
+.dt-api-workbench [class*="bg-[#24242a]"],
+.dt-api-workbench [class*="bg-[#252234]"],
+.dt-api-workbench [class*="bg-[#27272d]"],
+.dt-api-workbench [class*="bg-[#29292f]"],
+.dt-api-workbench [class*="bg-[#2a2a30]"],
+.dt-api-workbench [class*="bg-[#2b2b31]"],
+.dt-api-workbench [class*="bg-[#302a4a]"] {
+  background-color: #f8fafc !important;
+}
+
+.dt-api-workbench [class*="bg-[#242233]"] {
+  background-color: #eef2ff !important;
+}
+
+.dt-api-workbench [class*="border-[#24242a]"],
+.dt-api-workbench [class*="border-[#25252b]"],
+.dt-api-workbench [class*="border-[#26262c]"],
+.dt-api-workbench [class*="border-[#2b2b31]"],
+.dt-api-workbench [class*="border-[#34343b]"],
+.dt-api-workbench [class*="border-[#3a335f]"] {
+  border-color: #d8dee8 !important;
+}
+
+.dt-api-workbench [class*="text-[#f2f2f3]"],
+.dt-api-workbench [class*="text-[#f4f4f5]"],
+.dt-api-workbench [class*="text-[#d7d7dc]"] {
+  color: #111827 !important;
+}
+
+.dt-api-workbench [class*="text-[#aaaab3]"],
+.dt-api-workbench [class*="text-[#a4a4ad]"],
+.dt-api-workbench [class*="text-[#9b9ba5]"],
+.dt-api-workbench [class*="text-[#85858e]"],
+.dt-api-workbench [class*="text-[#777781]"] {
+  color: #475569 !important;
+}
+
+.dt-api-workbench [class*="text-[#8f83ff]"],
+.dt-api-workbench [class*="text-[#c8c2ff]"] {
+  color: #4f46e5 !important;
+}
+
+.dt-api-workbench [class*="border-[#6d5dfc]"],
+.dt-api-workbench [class*="border-b-[#6d5dfc]"] {
+  border-color: #4f46e5 !important;
+}
+
+.dt-api-workbench [class*="bg-[#6d5dfc]"] {
+  background-color: #4f46e5 !important;
+}
+
+.dt-api-workbench [class*="hover:bg-[#5948f2]"]:hover,
+.dt-api-workbench [class*="hover:bg-[#302a4a]"]:hover,
+.dt-api-workbench [class*="hover:bg-[#27272d]"]:hover,
+.dt-api-workbench [class*="hover:bg-[#24242a]"]:hover,
+.dt-api-workbench [class*="hover:bg-[#1c1c20]"]:hover,
+.dt-api-workbench [class*="hover:bg-[#202024]"]:hover {
+  background-color: #eef2ff !important;
+}
+
+.dt-api-workbench [class*="hover:text-white"]:hover {
+  color: #111827 !important;
+}
+
+.dt-api-workbench [class*="border-b-2"][class*="text-white"],
+.dt-api-workbench [class*="bg-[#1c1c20]"][class*="text-white"],
+.dt-api-workbench [class*="bg-[#252234]"][class*="text-white"],
+.dt-api-workbench [class*="bg-[#27272d]"][class*="text-white"] {
+  color: #111827 !important;
+}
+
+.dt-api-workbench [class*="bg-[#6d5dfc]"][class*="text-white"],
+.dt-api-workbench [class*="bg-[#0969da]"][class*="text-white"],
+.dt-api-workbench [class*="bg-blue-600"][class*="text-white"],
+.dt-api-workbench [class*="bg-red-700"][class*="text-white"] {
+  color: #ffffff !important;
+}
+
+.dt-api-workbench [class*="text-emerald-300"] {
+  color: #047857 !important;
+}
+
+.dt-api-workbench [class*="text-sky-300"] {
+  color: #0369a1 !important;
+}
+
+.dt-api-workbench [class*="text-amber-300"],
+.dt-api-workbench [class*="text-amber-200"] {
+  color: #b45309 !important;
+}
+
+.dt-api-workbench [class*="text-rose-300"] {
+  color: #be123c !important;
+}
+
+.dt-api-workbench [class*="shadow-black"] {
+  box-shadow: 0 14px 50px rgb(15 23 42 / 0.08) !important;
+}
+
+.dt-api-workbench [class*="ring-[#34343b]"],
+.dt-api-workbench [class*="ring-[#3a335f]"] {
+  --tw-ring-color: #d8dee8 !important;
+}
+
+.dt-api-workbench [class*="placeholder:text-[#777781]"]::placeholder {
+  color: #64748b !important;
+}
+
+.oss-tools-surface .dt-api-workbench {
+  filter: none !important;
+}
+
+.oss-tools-surface .dt-api-workbench [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+.oss-tools-surface .dt-api-workbench [class*="bg-[#eef2f7]"],
+.oss-tools-surface .dt-api-workbench [class*="bg-[#f8fafc]"],
+.oss-tools-surface .dt-api-workbench [class*="bg-gray-50"] {
+  background-color: #fbfbfc !important;
+}
+
+.oss-tools-surface .dt-api-workbench [class*="border-[#d8e0ea]"],
+.oss-tools-surface .dt-api-workbench [class*="border-[#e2e8f0]"],
+.oss-tools-surface .dt-api-workbench [class*="border-gray-200"] {
+  border-color: #e5e7eb !important;
+}
+
+.oss-tools-surface .dt-api-workbench [class*="bg-[#0969da]"],
+.oss-tools-surface .dt-api-workbench [class*="bg-blue-600"] {
+  background-color: #6d5dfc !important;
+}
+
+.oss-tools-surface .dt-api-workbench [class*="hover:bg-[#0550ae]"]:hover,
+.oss-tools-surface .dt-api-workbench [class*="hover:bg-blue-700"]:hover {
+  background-color: #5948f2 !important;
+}
+
+.oss-tools-surface .dt-api-workbench [class*="text-[#0969da]"],
+.oss-tools-surface .dt-api-workbench [class*="text-blue-600"] {
+  color: #6d5dfc !important;
+}
+
+.oss-tools-surface .dt-api-workbench [class*="border-[#0969da]"],
+.oss-tools-surface .dt-api-workbench [class*="border-blue"] {
+  border-color: #6d5dfc !important;
+}
+
+.oss-tools-surface .dt-api-workbench .rounded-xl,
+.oss-tools-surface .dt-api-workbench .rounded-2xl {
+  border-radius: 8px !important;
+}
+
+.oss-tools-surface .dt-api-workbench button {
+  border-radius: 6px !important;
+}
+
+.oss-tools-surface .dt-api-workbench select,
+.oss-tools-surface .dt-api-workbench input,
+.oss-tools-surface .dt-api-workbench textarea {
+  border-radius: 6px !important;
+}
+
+.dt-api-workbench ::selection {
+  background: rgb(109 93 252 / 0.18);
 }

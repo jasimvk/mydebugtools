@@ -39,6 +39,8 @@ export interface SavedRequest {
   body: string;
   contentType: ContentType;
   authConfig: AuthConfig;
+  preRequestScript?: string;
+  testScript?: string;
   description?: string;
   createdAt: number;
   updatedAt: number;
@@ -71,7 +73,7 @@ export function addRequestToCollections(
   });
 }
 
-export function useCollections(privateMode = false) {
+export function useCollections(privateMode = false, workspaceId?: string) {
   const { data: session } = useSession();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,6 +124,12 @@ export function useCollections(privateMode = false) {
       return;
     }
 
+    if (!workspaceId) {
+      setCollections([]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       
@@ -130,7 +138,7 @@ export function useCollections(privateMode = false) {
       const localCollections: Collection[] = localCollectionsStr ? JSON.parse(localCollectionsStr) : [];
       
       // Fetch cloud collections
-      const response = await fetch('/api/collections');
+      const response = await fetch(`/api/collections?workspaceId=${encodeURIComponent(workspaceId)}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch collections');
@@ -143,7 +151,7 @@ export function useCollections(privateMode = false) {
         id: col.id,
         name: col.name,
         description: col.description || '',
-        color: col.color || '#FF6C37',
+        color: col.color || '#0969da',
         createdAt: new Date(col.created_at).getTime(),
         updatedAt: new Date(col.updated_at).getTime(),
         requests: (col.api_requests || []).map((req: any) => ({
@@ -155,6 +163,8 @@ export function useCollections(privateMode = false) {
           body: req.body || '',
           contentType: (req.headers?.find((h: any) => h.key === 'Content-Type')?.value || 'application/json') as ContentType,
           authConfig: req.auth_config || { type: 'none' as AuthType },
+          preRequestScript: req.pre_request_script || '',
+          testScript: req.test_script || '',
           description: req.description || '',
           createdAt: new Date(req.created_at).getTime(),
           updatedAt: new Date(req.updated_at).getTime(),
@@ -179,7 +189,8 @@ export function useCollections(privateMode = false) {
               body: JSON.stringify({
                 name: localCol.name,
                 description: localCol.description,
-                color: localCol.color
+                color: localCol.color,
+                workspaceId
               })
             });
 
@@ -200,6 +211,8 @@ export function useCollections(privateMode = false) {
                       headers: req.headers,
                       body: req.body,
                       authConfig: req.authConfig,
+                      preRequestScript: req.preRequestScript,
+                      testScript: req.testScript,
                       description: req.description
                     })
                   });
@@ -214,14 +227,14 @@ export function useCollections(privateMode = false) {
         }
         
         // Reload to get the synced collections
-        const reloadResponse = await fetch('/api/collections');
+        const reloadResponse = await fetch(`/api/collections?workspaceId=${encodeURIComponent(workspaceId)}`);
         if (reloadResponse.ok) {
           const reloadData = await reloadResponse.json();
           const reloadedCollections = reloadData.map((col: any) => ({
             id: col.id,
             name: col.name,
             description: col.description || '',
-            color: col.color || '#FF6C37',
+            color: col.color || '#0969da',
             createdAt: new Date(col.created_at).getTime(),
             updatedAt: new Date(col.updated_at).getTime(),
             requests: (col.api_requests || []).map((req: any) => ({
@@ -233,6 +246,8 @@ export function useCollections(privateMode = false) {
               body: req.body || '',
               contentType: (req.headers?.find((h: any) => h.key === 'Content-Type')?.value || 'application/json') as ContentType,
               authConfig: req.auth_config || { type: 'none' as AuthType },
+              preRequestScript: req.pre_request_script || '',
+              testScript: req.test_script || '',
               description: req.description || '',
               createdAt: new Date(req.created_at).getTime(),
               updatedAt: new Date(req.updated_at).getTime(),
@@ -273,7 +288,7 @@ export function useCollections(privateMode = false) {
     };
 
     // If logged in, save to cloud
-    if (session?.user && !privateMode) {
+    if (session?.user && !privateMode && workspaceId) {
       try {
         const response = await fetch('/api/collections', {
           method: 'POST',
@@ -281,7 +296,8 @@ export function useCollections(privateMode = false) {
           body: JSON.stringify({
             name,
             description,
-            color: newCollection.color
+            color: newCollection.color,
+            workspaceId
           })
         });
 
@@ -312,9 +328,9 @@ export function useCollections(privateMode = false) {
   // Delete collection
   const deleteCollection = async (collectionId: string) => {
     // If logged in and cloud ID, delete from cloud
-    if (session?.user && !privateMode && !collectionId.startsWith('local-')) {
+    if (session?.user && !privateMode && workspaceId && !collectionId.startsWith('local-')) {
       try {
-        const response = await fetch(`/api/collections?id=${collectionId}`, {
+        const response = await fetch(`/api/collections?id=${collectionId}&workspaceId=${encodeURIComponent(workspaceId)}`, {
           method: 'DELETE'
         });
 
@@ -349,7 +365,7 @@ export function useCollections(privateMode = false) {
     };
 
     // If logged in and cloud collection, save to cloud
-    if (session?.user && !privateMode && !collectionId.startsWith('local-')) {
+    if (session?.user && !privateMode && workspaceId && !collectionId.startsWith('local-')) {
       try {
         const response = await fetch('/api/requests', {
           method: 'POST',
@@ -439,7 +455,7 @@ export function useCollections(privateMode = false) {
   // Load collections on mount and when session changes
   useEffect(() => {
     loadCollections();
-  }, [session?.user, privateMode]);
+  }, [session?.user, privateMode, workspaceId]);
 
   return {
     collections,
